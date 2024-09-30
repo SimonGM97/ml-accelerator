@@ -5,6 +5,7 @@ from git.repo.base import Repo
 import multiprocessing
 import subprocess
 import os
+from typing import List
 
 
 pd.options.display.max_rows = 500
@@ -38,9 +39,40 @@ class Params:
     BUCKET: str
     CWD: Path
 
-    # DATA CLEANING PARAMETERS
+    """
+    DATA PARAMETERS
+    """
 
-    # MODELING PARAMETERS
+    # DATASET PATHS PARAMETERS
+    TRAINING_PATH: List[str]
+    INFERENCE_PATH: List[str]
+
+    # DATA CLEANING PARAMETERS
+    DATETIME_COLS: List[str]
+    NON_NEG_COLS: List[str]
+
+    # FEATURE ENGINEERING PARAMETERS
+
+    # DATA TRANSFORMING PARAMETERS
+
+    # FEATURE SELECTION PARAMETERS
+    N_FEATURES: int
+
+    """
+    MODELING PARAMETERS
+    """
+
+    # HYPER PARAMETER TUNING
+    ALGORITHMS: List[str]
+    SEARCH_SPACE: dict
+    OPTIMIZATION_METRIC: str
+    LOSS_THRESHOLD: float
+    TIMEOUT_MINS: float
+    MIN_PERFORMANCE: float
+
+    """
+    OTHERS
+    """
 
     # LOG PARAMETERS
     LEVEL: str
@@ -81,28 +113,49 @@ class Params:
         cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
 
         """
-        DATA PARAMETERS
+        DATASET PATHS PARAMETERS
         """
-        DATA_PARAMS: dict = config.get("DATA_PARAMS")
+        DATASET_PATHS_PARAMS: dict = config.get("DATASET_PATHS_PARAMS")
+
+        cls.TRAINING_PATH: List[str] = DATASET_PATHS_PARAMS.get("TRAINING_PATH")
+        cls.INFERENCE_PATH: List[str] = DATASET_PATHS_PARAMS.get("INFERENCE_PATH")
 
         """
         DATA CLEANING PARAMETERS
         """
-        DATA_CLEANING_PARAMS: dict = DATA_PARAMS.get("DATA_CLEANING_PARAMS")
+        DATA_CLEANING_PARAMS: dict = config.get("DATA_CLEANING_PARAMS")
 
-        cls.NON_NEG_COLS: list = DATA_CLEANING_PARAMS.get("NON_NEG_COLS")
+        cls.DATETIME_COLS: List[str] = DATA_CLEANING_PARAMS.get("DATETIME_COLS")
+        cls.NON_NEG_COLS: List[str] = DATA_CLEANING_PARAMS.get("NON_NEG_COLS")
+
+        """
+        FEATURE ENGINEERING PARAMETERS
+        """
+        FEATURE_ENGINEERING_PARAMS: dict = config.get("FEATURE_ENGINEERING_PARAMS")
+
+        """
+        DATA TRANSFORMING PARAMETERS
+        """
+        DATA_TRANSFORMING: dict = config.get("DATA_TRANSFORMING")
         
         """
         FEATURE SELECTION PARAMETERS
         """
-        FEATURE_SELECTION_PARAMS: dict = DATA_PARAMS.get("FEATURE_SELECTION_PARAMS")
+        FEATURE_SELECTION_PARAMS: dict = config.get("FEATURE_SELECTION_PARAMS")
 
         cls.N_FEATURES: list = FEATURE_SELECTION_PARAMS.get("N_FEATURES")
 
         """
-        MODELING PARAMETERS
+        HYPER PARAMETER TUNING PARAMETERS
         """
-        MODELING_PARAMS: dict = config.get("MODELING_PARAMS")
+        HYPER_PARAMETER_TUNING_PARAMS: dict = config.get("HYPER_PARAMETER_TUNING_PARAMS")
+
+        cls.ALGORITHMS: List[str] = HYPER_PARAMETER_TUNING_PARAMS.get("ALGORITHMS")
+        cls.SEARCH_SPACE: dict = HYPER_PARAMETER_TUNING_PARAMS.get("SEARCH_SPACE")
+        cls.OPTIMIZATION_METRIC: str = HYPER_PARAMETER_TUNING_PARAMS.get("OPTIMIZATION_METRIC")
+        cls.LOSS_THRESHOLD: float = HYPER_PARAMETER_TUNING_PARAMS.get("LOSS_THRESHOLD")
+        cls.TIMEOUT_MINS: float = HYPER_PARAMETER_TUNING_PARAMS.get("TIMEOUT_MINS")
+        cls.MIN_PERFORMANCE: float = HYPER_PARAMETER_TUNING_PARAMS.get("MIN_PERFORMANCE")
 
         """
         LOG PARAMETERS

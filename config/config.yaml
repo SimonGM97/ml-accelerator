@@ -9,44 +9,147 @@ ENV_PARAMS:
   ENV: dev
   VERSION: 1.0.0
 
-# DATA PARAMETERS
-DATA_PARAMS: null
-  # DATASET PATHS PARAMETERS
-  DATASET_PATHS_PARAMETERS:
-    TRAINING_PATH:
-      - datasets
-      - training
-    INFERENCE_PATH:
-      - datasets
-      - inference
+"""
+DATA PARAMETERS
+"""
 
-  # DATA CLEANING PARAMETERS
-  DATA_CLEANING_PARAMS:
-    DATETIME_COLS: null
-    NON_NEG_COLS: null
+# DATASET PATHS PARAMETERS
+DATASET_PATHS_PARAMS:
+  TRAINING_PATH:
+    - datasets
+    - training
+  INFERENCE_PATH:
+    - datasets
+    - inference
 
-  # FEATURE ENGINEERING PARAMETERS
-  FEATURE_ENGINEERING_PARAMS: null
+# DATA CLEANING PARAMETERS
+DATA_CLEANING_PARAMS:
+  INTERPOLATE_COLS: null
+  FFILL_COLS: null
 
-  # FEATURE SELECTION PARAMETERS
-  FEATURE_SELECTION_PARAMS:
-    N_FEATURES: null
+# FEATURE ENGINEERING PARAMETERS
+FEATURE_ENGINEERING_PARAMS: null
 
-  # DATA TRANSFORMING PARAMETERS
-  DATA_TRANSFORMING: null
+# DATA TRANSFORMING PARAMETERS
+DATA_TRANSFORMING: null
 
-# MODELING PARAMETERS
-MODELING_PARAMS: null
-  # HYPER PARAMETER TUNING
-  HYPER_PARAMETER_TUNING:
-    ALGORITHMS:
-      - random_forest
-      - lightgbm
-      - xgboost
-    OPTIMIZATION_METRIC: null
-    LOSS_THRESHOLD: null
-    TIMEOUT_MINS: null
-    MIN_PERFORMANCE: null
+# FEATURE SELECTION PARAMETERS
+FEATURE_SELECTION_PARAMS:
+  N_FEATURES: null
+
+"""
+MODELING PARAMETERS
+"""
+
+# HYPER PARAMETER TUNING PARAMETERS
+HYPER_PARAMETER_TUNING_PARAMS:
+  ALGORITHMS:
+    - random_forest
+    - lightgbm
+    - xgboost
+
+  SEARCH_SPACE:
+    - random_forest:
+      - n_estimators:
+        - dist: quniform
+        - min: 15
+        - max: 400
+      - max_depth:
+        - dist: quniform
+        - min: 15
+        - max: 200
+      - min_samples_split:
+        - dist: quniform
+        - min: 5
+        - max: 200
+      - max_features:
+        - dist: choice
+        - choices: 
+          - 1.0
+          - sqrt
+    - lightgbm:
+      - objective:
+        - dist: choice
+        - choices:
+          - regression 
+          - regression_l1 
+          - huber 
+          - quantile 
+          - mape
+      - boosting_type:
+        - dist: choice
+        - choices:
+          - gbdt 
+          - dart
+      - n_estimators:
+        - dist: quniform
+        - min: 5
+        - max: 300
+      - max_depth:
+        - dist: quniform
+        - min: 1
+        - max: 150
+      - min_child_samples:
+        - dist: quniform
+        - min: 5
+        - max: 100
+      - learning_rate:
+        - dist: loguniform
+        - min: 0.001
+        - max: 0.3
+      - num_leaves:
+        - dist: quniform
+        - min: 5
+        - max: 150
+      - colsample_bytree:
+        - dist: uniform
+        - min: 0.6
+        - max: 1.0
+    - xgboost:
+      - objective:
+        - dist: choice
+        - choices:
+          - reg:squarederror
+          - reg:absoluteerror
+          - reg:quantileerror
+      - booster:
+        - dist: choice
+        - choices:
+          - gbtree
+          - dart
+      - eta:
+        - dist: loguniform
+        - min: 0.005
+        - max: 0.4
+      - n_estimators:
+        - dist: quniform
+        - min: 5
+        - max: 250
+      - max_depth:
+        - dist: quniform
+        - min: 1
+        - max: 120
+      - colsample_bytree:
+        - dist: uniform
+        - min: 0.6
+        - max: 1.0
+      - lambda:
+        - dist: loguniform
+        - min: 0.001
+        - max: 5.0
+      - alpha:
+        - dist: loguniform
+        - min: 0.001
+        - max: 5.0
+      - max_leaves:
+        - dist: quniform
+        - min: 5
+        - max: 120
+
+  OPTIMIZATION_METRIC: null
+  LOSS_THRESHOLD: null
+  TIMEOUT_MINS: null
+  MIN_PERFORMANCE: null
 
 # LOGGER PARAMETERS
 LOG_PARAMS: null
