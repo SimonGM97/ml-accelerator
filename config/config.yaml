@@ -1,0 +1,59 @@
+# GENERAL PARAMETERS
+GENERAL_PARAMS:
+  PROJECT_NAME: ml-accelerator
+  TARGET: target_column
+  TASK: classification # regression
+
+# ENVIRONMENT PARAMETERS
+ENV_PARAMS:
+  ENV: dev
+  VERSION: 1.0.0
+
+# DATA PARAMETERS
+DATA_PARAMS: null
+  # DATASET PATHS PARAMETERS
+  DATASET_PATHS_PARAMETERS:
+    TRAINING_PATH:
+      - datasets
+      - training
+    INFERENCE_PATH:
+      - datasets
+      - inference
+
+  # DATA CLEANING PARAMETERS
+  DATA_CLEANING_PARAMS:
+    DATETIME_COLS: null
+    NON_NEG_COLS: null
+
+  # FEATURE ENGINEERING PARAMETERS
+  FEATURE_ENGINEERING_PARAMS: null
+
+  # FEATURE SELECTION PARAMETERS
+  FEATURE_SELECTION_PARAMS:
+    N_FEATURES: null
+
+  # DATA TRANSFORMING PARAMETERS
+  DATA_TRANSFORMING: null
+
+# MODELING PARAMETERS
+MODELING_PARAMS: null
+  # HYPER PARAMETER TUNING
+  HYPER_PARAMETER_TUNING:
+    ALGORITHMS:
+      - random_forest
+      - lightgbm
+      - xgboost
+    OPTIMIZATION_METRIC: null
+    LOSS_THRESHOLD: null
+    TIMEOUT_MINS: null
+    MIN_PERFORMANCE: null
+
+# LOGGER PARAMETERS
+LOG_PARAMS: null
+  LEVEL: INFO # INFO
+  TXT_FMT: null # default
+  JSON_FMT: null # default
+  FILTER_LVLS: null
+  LOG_FILE: null # no log file will be written
+  BACKUP_COUNT: null
+
