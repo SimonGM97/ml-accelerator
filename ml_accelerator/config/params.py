@@ -62,6 +62,16 @@ class Params:
     MODELING PARAMETERS
     """
 
+    # CLASSIFICATION PARAMETERS
+    BALANCE_TRAIN: bool
+    BALANCE_METHOD: str
+    CLASS_WEIGHT: dict
+    CUTOFF: float
+
+    # REGRESSION PARAMETERS
+
+    # FORECASTING PARAMETERS
+
     # HYPER PARAMETER TUNING
     ALGORITHMS: List[str]
     SEARCH_SPACE: dict
@@ -109,7 +119,7 @@ class Params:
         ENV_PARAMS: dict = config.get("ENV_PARAMS")
 
         cls.ENV: str = ENV_PARAMS.get("ENV")
-        cls.BUCKET: str = cls.PROJECT_NAME + "-" + cls.ENV
+        cls.BUCKET: str = ENV_PARAMS.get("BUCKET")
         cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
 
         """
@@ -144,6 +154,26 @@ class Params:
         FEATURE_SELECTION_PARAMS: dict = config.get("FEATURE_SELECTION_PARAMS")
 
         cls.N_FEATURES: list = FEATURE_SELECTION_PARAMS.get("N_FEATURES")
+
+        """
+        CLASSIFICATION PARAMETERS
+        """
+        CLASSIFICATION_PARAMS: dict = config.get("CLASSIFICATION_PARAMS")
+
+        cls.BALANCE_TRAIN: bool = CLASSIFICATION_PARAMS.get("BALANCE_TRAIN")
+        cls.BALANCE_METHOD: str = CLASSIFICATION_PARAMS.get("BALANCE_METHOD")
+        cls.CLASS_WEIGHT: dict = CLASSIFICATION_PARAMS.get("CLASS_WEIGHT")
+        cls.CUTOFF: float = CLASSIFICATION_PARAMS.get("CUTOFF")
+
+        """
+        REGRESSION PARAMETERS
+        """
+        REGRESSION_PARAMS: dict = config.get("REGRESSION_PARAMS")
+
+        """
+        FORECASTING PARAMETERS
+        """
+        FORECASTING_PARAMS: dict = config.get("FORECASTING_PARAMS")
 
         """
         HYPER PARAMETER TUNING PARAMETERS

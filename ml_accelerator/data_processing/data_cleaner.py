@@ -8,6 +8,17 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 from typing import List
 
+# Get logger
+LOGGER = get_logger(
+    name=__name__,
+    level=Params.LEVEL,
+    txt_fmt=Params.TXT_FMT,
+    json_fmt=Params.JSON_FMT,
+    filter_lvls=Params.FILTER_LVLS,
+    log_file=Params.LOG_FILE,
+    backup_count=Params.BACKUP_COUNT
+)
+
 
 class DataCleaner(BaseEstimator, TransformerMixin):
 
