@@ -203,3 +203,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Example
+schemas/iris_schema.yaml

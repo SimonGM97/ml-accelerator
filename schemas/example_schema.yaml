@@ -10,4 +10,4 @@ fields:
     min_value: null
     max_value: null
     allowed_values: null
-    fillna_method: ffill
+    fillna_method: ffill # simple_imputer | interpolate | ffill

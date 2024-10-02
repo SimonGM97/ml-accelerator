@@ -48,8 +48,7 @@ class Params:
     INFERENCE_PATH: List[str]
 
     # DATA CLEANING PARAMETERS
-    DATETIME_COLS: List[str]
-    NON_NEG_COLS: List[str]
+    Z_THRESHOLD: float
 
     # FEATURE ENGINEERING PARAMETERS
 
@@ -135,8 +134,7 @@ class Params:
         """
         DATA_CLEANING_PARAMS: dict = config.get("DATA_CLEANING_PARAMS")
 
-        cls.DATETIME_COLS: List[str] = DATA_CLEANING_PARAMS.get("DATETIME_COLS")
-        cls.NON_NEG_COLS: List[str] = DATA_CLEANING_PARAMS.get("NON_NEG_COLS")
+        cls.Z_THRESHOLD: float = DATA_CLEANING_PARAMS.get("Z_THRESHOLD")
 
         """
         FEATURE ENGINEERING PARAMETERS

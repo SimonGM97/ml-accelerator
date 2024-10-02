@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.impute import SimpleImputer
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from typing import List
+from typing import List, Tuple, Dict
 
 # Get logger
 LOGGER = get_logger(
@@ -87,105 +87,198 @@ class DataCleaner(BaseEstimator, TransformerMixin):
         # self.num_cols = list(df.select_dtypes(include=['number']).columns)
         # self.str_cols = list(df.select_dtypes(exclude=['number']).columns)
 
-    def fit(self, X, y=None):
+    def fit(
+        self, 
+        X: pd.DataFrame, 
+        y: pd.Series = None
+    ):
         # Run self.cleaner_pipeline with fit=True
-        self.cleaner_pipeline(X=X, fit=True)
+        self.cleaner_pipeline(X=X, y=y, fit=True)
 
         return self
     
-    def transform(self, X, y=None):
+    def transform(
+        self, 
+        X: pd.DataFrame, 
+        y: pd.Series = None
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.cleaner_pipeline with fit=False
-        X: pd.DataFrame = self.cleaner_pipeline(X=X, fit=False)
+        X, y = self.cleaner_pipeline(X=X, y=y, fit=False)
         
-        return X
+        return X, y
     
-    def fit_transform(self, X, y=None):
+    def fit_transform(
+        self, 
+        X: pd.DataFrame, 
+        y: pd.Series = None
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.cleaner_pipeline with fit=True
-        X: pd.DataFrame = self.cleaner_pipeline(X=X, fit=True)
+        X, y = self.cleaner_pipeline(X=X, y=y, fit=True)
 
-        return X
+        return X, y
     
     def cleaner_pipeline(
         self,
         X: pd.DataFrame,
+        y: pd.DataFrame,
         fit: bool = False
-    ) -> pd.DataFrame:
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        # Join y & X
+        target: str = y.name
+        df: pd.DataFrame = pd.concat([y, X], axis=1)
+
+        # Delete y & X
+        del y
+        del X
+
         # Drop dummy columns
-        X: pd.DataFrame = self.drop_dummy_columns(X=X)
+        df = self.drop_dummy_columns(df=df)
+
+        # Drop duplicates
+        df = self.drop_duplicates(df=df) 
 
         # Set data types
-        X: pd.DataFrame = self.set_data_types(X=X)
+        df = self.set_data_types(df=df)
 
         # Remove unexpected values
-        X: pd.DataFrame = self.remove_unexpected_values(X=X)
+        df: pd.DataFrame = self.remove_unexpected_values(df=df)
 
         # Remove & correct outliers
         if fit:
-            self.fit_outliers_dict(X=X)
+            self.fit_outliers_dict(df=df)
 
-        X: pd.DataFrame = self.correct_outliers(X=X)
+        df = self.correct_outliers(df=df)
 
         # Cap min values
-        X: pd.DataFrame = self.cap_min_values(X=X)
+        df = self.cap_min_values(df=df)
 
         # Cap max values
-        X: pd.DataFrame = self.cap_max_values(X=X)
+        df = self.cap_max_values(df=df)
 
         # Fill null values
         if fit:
-            self.fit_imputers(X=X)
+            self.fit_imputers(df=df)
 
-        X: pd.DataFrame = self.fill_nulls(X=X)
+        df = self.fill_nulls(df=df)
 
-        return X
+        # Divide X & y
+        X, y = df.drop(columns=[target]), df[target]
+
+        # Delete df
+        del target
+
+        return X, y
     
     def drop_dummy_columns(
         self,
-        X: pd.DataFrame
+        df: pd.DataFrame
     ) -> pd.DataFrame:
         # Drop columns where all values are NaN
-        X.dropna(axis=1, how='all', inplace=True)
+        df.dropna(axis=1, how='all', inplace=True)
 
         # Drop columns with all values equal to 0
-        X = X.loc[:, (X!=0).any(axis=0)]
+        df = df.loc[:, (df!=0).any(axis=0)]
 
         # Drop unexpected columns
-        drop_columns = [c for c in X.columns if c not in [f['name'] for f in self.schema['fields']]]
-        X.drop(columns=drop_columns, inplace=True)
+        drop_columns = [c for c in df.columns if c not in [f['name'] for f in self.schema['fields']]]
+        df.drop(columns=drop_columns, inplace=True)
 
-        return X
+        return df
+
+    def drop_duplicates(
+        self,
+        df: pd.DataFrame
+    ) -> pd.DataFrame:
+        df: pd.DataFrame = (
+            df.loc[:, ~df.columns.duplicated(keep='first')]
+            .drop_duplicates()
+        )
+
+        return df
 
     def set_data_types(
         self,
-        X: pd.DataFrame
+        df: pd.DataFrame
     ) -> pd.DataFrame:
-        return X
+        # Extract expected data dypes
+        map_types: dict = {
+            'string': str,
+            'object': object,
+            'float': float,
+            'float32': np.float32,
+            'float64': np.float64,
+            'int': int,
+            'int32': np.int32,
+            'int64': np.int64
+        }
+
+        expected_dtypes: dict = {
+            field['name']: map_types[field['type']] for field in self.schema['fields']
+        }
+
+        # Transform data types
+        df = df.astype(expected_dtypes)
+
+        return df
     
     def cap_min_values(
         self,
-        X: pd.DataFrame
+        df: pd.DataFrame
     ) -> pd.DataFrame:
-        return X
+        # Extract expected minimum values
+        min_vals: dict = {
+            field['name']: field['min_value'] for field in self.schema['fields']
+            if field['min_value'] is not None
+        }
+
+        # Clip minimum values
+        clip_cols = list(min_vals.keys())
+        df[clip_cols] = df[clip_cols].clip(lower=min_vals)
+
+        return df
 
     def cap_max_values(
         self,
-        X: pd.DataFrame
+        df: pd.DataFrame
     ) -> pd.DataFrame:
-        return X
+        # Extract expected maximum values
+        max_vals: dict = {
+            field['name']: field['max_value'] for field in self.schema['fields']
+            if field['max_value'] is not None
+        }
+
+        # Clip minimum values
+        clip_cols = list(max_vals.keys())
+        df[clip_cols] = df[clip_cols].clip(upper=max_vals)
+
+        return df
 
     def remove_unexpected_values(
         self,
-        X: pd.DataFrame
+        df: pd.DataFrame
     ):
-        return X
+        # Extract allowed values
+        allowed_vals: Dict[str, List[str]] = {
+            field['name']: field['allowed_values'] for field in self.schema['fields']
+            if field['allowed_values'] is not None
+        }
+
+        # Apply filtering for each column based on allowed values
+        def filter_allowed_values(column: pd.Series, allowed: list):
+            return column.where(column.isin(allowed), np.nan)
+
+        for col, allowed in allowed_vals.items():
+            df[col] = filter_allowed_values(df[col], allowed)
+
+        return df
 
     def fit_outliers_dict(
         self,
-        X: pd.DataFrame
+        df: pd.DataFrame
     ) -> None:
         def find_threshold(col: str):
             # Calculate mean & std
-            mean, std = X[col].mean(), X[col].std()
+            mean, std = df[col].mean(), df[col].std()
 
             # Return thresholds
             return mean - self.z_threshold * std, mean + self.z_threshold * std
@@ -196,62 +289,62 @@ class DataCleaner(BaseEstimator, TransformerMixin):
 
     def correct_outliers(
         self,
-        X: pd.DataFrame
+        df: pd.DataFrame
     ) -> pd.DataFrame:
         for col, thresholds in self.outliers_dict.items():
             # Find low outliers mask
-            low_outliers_mask = X[col] < thresholds[0]
+            low_outliers_mask = df[col] < thresholds[0]
 
             # Correct low outliers
-            X.loc[low_outliers_mask, col] = thresholds[0]
+            df.loc[low_outliers_mask, col] = thresholds[0]
 
             # Find high outliers mask
-            high_outliers_mask = X[col] > thresholds[1]
+            high_outliers_mask = df[col] > thresholds[1]
 
             # Replace high outliers
-            X.loc[high_outliers_mask, col] = thresholds[1]
+            df.loc[high_outliers_mask, col] = thresholds[1]
 
-        return X
+        return df
     
     def fit_imputers(
         self,
-        X: pd.DataFrame
+        df: pd.DataFrame
     ) -> None:
         # Update str_imputer
         self.str_imputer = SimpleImputer(strategy='most_frequent', keep_empty_features=True)
         if len(self.str_cols) > 0:
-            self.str_imputer.fit(X[self.str_cols])
+            self.str_imputer.fit(df[self.str_cols])
 
         # Update num_imputer
         self.num_imputer = SimpleImputer(strategy='median', keep_empty_features=True)
         if len(self.num_cols) > 0:
-            self.num_imputer.fit(X[self.num_cols])
+            self.num_imputer.fit(df[self.num_cols])
     
     def fill_nulls(
         self,
-        X: pd.DataFrame
+        df: pd.DataFrame
     ) -> pd.DataFrame:
         # Replace inf values
-        X.replace([np.inf, -np.inf], np.nan, inplace=True)
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)
 
         # Fill ffill columns
-        if len(self.ffill_cols) > 0 and X[self.ffill_cols].isnull().sum().sum() > 0:
-            X[self.ffill_cols] = (
-                X[self.ffill_cols]
+        if len(self.ffill_cols) > 0 and df[self.ffill_cols].isnull().sum().sum() > 0:
+            df[self.ffill_cols] = (
+                df[self.ffill_cols]
                 .ffill()
                 .bfill()
             )
         
         # Fill interpolate columns
-        if len(self.interpolate_cols) > 0 and X[self.interpolate_cols].isnull().sum().sum() > 0:
-            X[self.interpolate_cols] = X[self.interpolate_cols].interpolate(method='linear')
+        if len(self.interpolate_cols) > 0 and df[self.interpolate_cols].isnull().sum().sum() > 0:
+            df[self.interpolate_cols] = df[self.interpolate_cols].interpolate(method='linear')
 
         # Fill SimpleImputer columns
-        if len(self.simple_impute_cols) > 0 and X[self.simple_impute_cols].isnull().sum().sum() > 0:
+        if len(self.simple_impute_cols) > 0 and df[self.simple_impute_cols].isnull().sum().sum() > 0:
             if len(self.str_cols) > 0:
-                X[self.str_cols] = self.str_imputer.transform(X[self.str_cols])
+                df[self.str_cols] = self.str_imputer.transform(df[self.str_cols])
 
             if len(self.num_cols) > 0:
-                X[self.num_cols] = self.num_imputer.transform(X[self.num_cols])
+                df[self.num_cols] = self.num_imputer.transform(df[self.num_cols])
         
-        return X
+        return df
