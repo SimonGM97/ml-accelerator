@@ -61,7 +61,7 @@ FEATURE_SELECTION_PARAMS:
 
 # ML DATASETS PARAMETERS
 ML_DATASETS_PARAMS:
-  TEST_SIZE: 0.2
+  TRAIN_TEST_RATIO: 0.8
 
 # CLASSIFICATION PARAMETERS
 CLASSIFICATION_PARAMS:
@@ -88,104 +88,135 @@ HYPER_PARAMETER_TUNING_PARAMS:
     - xgboost
 
   SEARCH_SPACE:
-    - random_forest:
-      - n_estimators:
-        - dist: quniform
-        - min: 15
-        - max: 400
-      - max_depth:
-        - dist: quniform
-        - min: 15
-        - max: 200
-      - min_samples_split:
-        - dist: quniform
-        - min: 5
-        - max: 200
-      - max_features:
-        - dist: choice
-        - choices: 
+    - algorithm: random_forest
+      hyper_parameters:
+      - parameter_name: n_estimators
+        space:
+          dist: quniform
+          min: 15
+          max: 400
+      - parameter_name: max_depth
+        space:
+          dist: quniform
+          min: 15
+          max: 200
+      - parameter_name: min_samples_split
+        space:
+          dist: quniform
+          min: 5
+          max: 200
+      - parameter_name: max_features
+        space:
+          dist: choice
+          choices: 
           - 1.0
           - sqrt
-    - lightgbm:
-      - objective:
-        - dist: choice
-        - choices:
+    - algorithm: lightgbm
+      hyper_parameters:
+      - parameter_name: objective
+        space:
+          dist: choice
+          choices:
           - regression 
           - regression_l1 
           - huber 
           - quantile 
           - mape
-      - boosting_type:
-        - dist: choice
-        - choices:
+      - parameter_name: boosting_type
+        space:
+          dist: choice
+          choices:
           - gbdt 
           - dart
-      - n_estimators:
-        - dist: quniform
-        - min: 5
-        - max: 300
-      - max_depth:
-        - dist: quniform
-        - min: 1
-        - max: 150
-      - min_child_samples:
-        - dist: quniform
-        - min: 5
-        - max: 100
-      - learning_rate:
-        - dist: loguniform
-        - min: 0.001
-        - max: 0.3
-      - num_leaves:
-        - dist: quniform
-        - min: 5
-        - max: 150
-      - colsample_bytree:
-        - dist: uniform
-        - min: 0.6
-        - max: 1.0
-    - xgboost:
-      - objective:
-        - dist: choice
-        - choices:
+      - parameter_name: n_estimators
+        space:
+          dist: quniform
+          min: 5
+          max: 300
+      - parameter_name: max_depth
+        space:
+          dist: quniform
+          min: 1
+          max: 150
+      - parameter_name: min_child_samples
+        space:
+          dist: quniform
+          min: 5
+          max: 100
+      - parameter_name: learning_rate
+        space:
+          dist: loguniform
+          min: 0.001
+          max: 0.3
+      - parameter_name: num_leaves
+        space:
+          dist: quniform
+          min: 5
+          max: 150
+      - parameter_name: colsample_bytree
+        space:
+          dist: uniform
+          min: 0.6
+          max: 1.0
+    - algorithm: xgboost
+      hyper_parameters:
+      - parameter_name: objective
+        space:
+          dist: choice
+          choices:
           - reg:squarederror
           - reg:absoluteerror
           - reg:quantileerror
-      - booster:
-        - dist: choice
-        - choices:
+      - parameter_name: booster
+        space:
+          dist: choice
+          choices:
           - gbtree
           - dart
-      - eta:
-        - dist: loguniform
-        - min: 0.005
-        - max: 0.4
-      - n_estimators:
-        - dist: quniform
-        - min: 5
-        - max: 250
-      - max_depth:
-        - dist: quniform
-        - min: 1
-        - max: 120
-      - colsample_bytree:
-        - dist: uniform
-        - min: 0.6
-        - max: 1.0
-      - lambda:
-        - dist: loguniform
-        - min: 0.001
-        - max: 5.0
-      - alpha:
-        - dist: loguniform
-        - min: 0.001
-        - max: 5.0
-      - max_leaves:
-        - dist: quniform
-        - min: 5
-        - max: 120
+      - parameter_name: eta
+        space:
+          dist: loguniform
+          min: 0.005
+          max: 0.4
+      - parameter_name: n_estimators
+        space:
+          dist: quniform
+          min: 5
+          max: 250
+      - parameter_name: max_depth
+        space:
+          dist: quniform
+          min: 1
+          max: 120
+      - parameter_name: colsample_bytree
+        space:
+          dist: uniform
+          min: 0.6
+          max: 1.0
+      - parameter_name: lambda
+        space:
+          dist: loguniform
+          min: 0.001
+          max: 5.0
+      - parameter_name: alpha
+        space:
+          dist: loguniform
+          min: 0.001
+          max: 5.0
+      - parameter_name: max_leaves
+        space:
+          dist: quniform
+          min: 5
+          max: 120
 
-  OPTIMIZATION_METRIC: null
+  N_CANDIDATES: 5
+
+  OPTIMIZATION_METRIC: f1_score
+  # Classification: precision, recall, f1_score, roc_auc, accuracy (Accuracy not recommended)
+  # Regression: mape
+  VAL_SPLITS: 3
+
+  MAX_EVALS: 100
   LOSS_THRESHOLD: null
   TIMEOUT_MINS: null
   MIN_PERFORMANCE: null

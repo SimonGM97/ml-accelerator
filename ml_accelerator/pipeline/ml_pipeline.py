@@ -13,6 +13,10 @@ from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import train_test_split
 
 from typing import List, Tuple
+import warnings
+
+# Ignore all FutureWarnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 # Get logger

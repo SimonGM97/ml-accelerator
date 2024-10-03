@@ -96,9 +96,6 @@ class RegressionModel(Model):
 
         # Regression parameters
         self.mape: float = None
-        
-        self.cv_scores: np.ndarray = np.array([])
-        self.test_score: float = None
 
     def correct_hyper_parameters(
         self,

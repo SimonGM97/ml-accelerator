@@ -1,6 +1,10 @@
 from ml_accelerator.config.params import Params
 from ml_accelerator.utils.logging.logger_helper import get_logger
 from ml_accelerator.utils.aws.s3_helper import load_from_s3, save_to_s3
+from ml_accelerator.utils.filesystem.filesystem_helper import (
+    load_from_filesystem,
+    save_to_filesystem
+)
 
 import pandas as pd
 import numpy as np
@@ -9,6 +13,7 @@ import mlflow
 import shap
 import secrets
 import string
+import os
 from pprint import pformat
 from copy import deepcopy
 from typing import List
@@ -47,9 +52,11 @@ class Model(ABC):
         stage: str = 'development',
         algorithm: str = None,
         hyper_parameters: dict = {},
-        target: str = None,
+        target: str = Params.TARGET,
         selected_features: List[str] = None,
-        importance_method: str = 'shap'
+        importance_method: str = Params.IMPORTANCE_METHOD,
+        storage_env: str = Params.STORAGE_ENV,
+        bucket: str = Params.BUCKET
     ) -> None:
         # Register Parameters
         if model_id is not None:
@@ -59,6 +66,9 @@ class Model(ABC):
         
         self.version: int = version
         self.stage: str = stage
+    
+        self.storage_env: str = storage_env
+        self.bucket: str = bucket
 
         # Model Parameters
         self.model = None
@@ -70,13 +80,14 @@ class Model(ABC):
         self.target: str = target
         self.selected_features: List[str] = deepcopy(selected_features)
 
+        # Performance Parameters
+        self.cv_scores: np.ndarray = np.array([])
+        self.test_score: float = 0
+
         # Feature importance Parameters
         self.feature_importance_df: pd.DataFrame = pd.DataFrame(columns=['feature', 'importance'])
         self.importance_method: str = importance_method
         self.shap_values: np.ndarray = None
-
-        # Define s3_path
-        self.s3_path: str = f"{Params.BUCKET}/modeling/models/{self.model_id}"
 
     @property
     def warm_start_params(self) -> dict:
@@ -135,6 +146,19 @@ class Model(ABC):
             metric_name: getattr(metric_name) for metric_name in self.metric_names
         }
 
+    @property
+    def tuning_score(self) -> float:
+        """
+        Defines the validation score as the mean value of the cross validation results.
+        Can be accessed as an attribute.
+
+        :return: (float) mean cross validation score.
+        """
+        if self.cv_scores is not None:
+            # return (np.abs(self.cv_scores - self.cv_scores.mean()) / self.cv_scores.mean()).mean()
+            return self.cv_scores.mean()
+        return None
+
     @abstractmethod
     def fit(
         self,
@@ -148,6 +172,18 @@ class Model(ABC):
         self,
         X: pd.DataFrame
     ) -> np.ndarray:
+        pass
+
+    @abstractmethod
+    def evaluate_val(self):
+        pass
+
+    @abstractmethod
+    def evaluate_test(self):
+        pass
+
+    @abstractmethod
+    def diagnose(self) -> dict:
         pass
 
     def find_feature_importance(
@@ -209,10 +245,12 @@ class Model(ABC):
             try:
                 importance_df: pd.DataFrame = find_shap_feature_importance()
             except Exception as e:
-                LOGGER.warning("Unable to calculate shap feature importance on %s (%s).\n"
-                            "Exception: %s\n"
-                            "Re-trying with native approach.\n",
-                            self.model_id, self.algorithm, e)
+                LOGGER.warning(
+                    "Unable to calculate shap feature importance on %s (%s).\n"
+                    "Exception: %s\n"
+                    "Re-trying with native approach.\n",
+                    self.model_id, self.algorithm, e
+                )
             
                 importance_df: pd.DataFrame = find_native_feature_importance()
         else:
@@ -232,44 +270,94 @@ class Model(ABC):
 
     def save(
         self,
-        to_s3: bool = True,
         log_model: bool = False,
         register_model: bool = False
     ) -> None:
-        """
-        Save to S3
-        """
-        if to_s3:
-            # Save self.model into S3
-            if self.model is not None:
-                save_to_s3(
-                    asset=self.model,
-                    path=f"{self.s3_path}/{self.model_id}_model.pickle"
-                )
+        # Define model_attrs
+        model_attrs: dict = {key: value for (key, value) in self.__dict__.items() if key in self.pickled_attrs}
 
-            # Save other pickle files into S3
-            model_attrs: dict = {key: value for (key, value) in self.__dict__.items() if key in self.pickled_attrs}
-            save_to_s3(
+        if self.storage_env == 'filesystem':
+            """
+            File system
+            """
+            # Define base_path
+            base_path = os.path.join(self.bucket, "models", self.model_id)
+
+            # Save self.model
+            if self.model is not None:
+                save_to_filesystem(
+                    asset=self.model,
+                    path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
+                    partition_column=None
+                )
+            
+            # Save model_attrs
+            save_to_filesystem(
                 asset=model_attrs,
-                path=f"{self.s3_path}/{self.model_id}_model_attrs.pickle"
+                path=os.path.join(base_path, f"{self.model_id}_model_attrs.pickle"),
+                partition_column=None
             )
 
-            # Save csv attrs into S3
+            # Save csv attrs
             for attr_name in self.csv_attrs:
                 df: pd.DataFrame = getattr(self, attr_name)
                 if df is not None:
-                    save_to_s3(
+                    save_to_filesystem(
                         asset=df,
-                        path=f"{self.s3_path}/{self.model_id}_{attr_name}.csv"
+                        path=os.path.join(base_path, f"{self.model_id}_{attr_name}.csv"),
+                        partition_column=None
                     )
 
-            # Save parquet attrs into S3
+            # Save parquet attrs
             for attr_name in self.parquet_attrs:
                 df: pd.DataFrame = getattr(self, attr_name)
                 if df is not None:
                     save_to_s3(
                         asset=df,
-                        path=f"{self.s3_path}/{self.model_id}_{attr_name}.parquet"
+                        path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
+                        partition_column=None
+                    )
+        
+        elif self.storage_env == 'S3':
+            """
+            S3
+            """
+            # Define base_path
+            base_path = f"{self.bucket}/models/{self.model_id}"
+
+            # Save self.model
+            if self.model is not None:
+                save_to_s3(
+                    asset=self.model,
+                    path=f"{base_path}/{self.model_id}_model.pickle",
+                    partition_column=None
+                )
+
+            # Save model_attrs
+            save_to_s3(
+                asset=model_attrs,
+                path=f"{base_path}/{self.model_id}_model_attrs.pickle",
+                partition_column=None
+            )
+
+            # Save csv attrs
+            for attr_name in self.csv_attrs:
+                df: pd.DataFrame = getattr(self, attr_name)
+                if df is not None:
+                    save_to_s3(
+                        asset=df,
+                        path=f"{base_path}/{self.model_id}_{attr_name}.csv",
+                        partition_column=None
+                    )
+
+            # Save parquet attrs
+            for attr_name in self.parquet_attrs:
+                df: pd.DataFrame = getattr(self, attr_name)
+                if df is not None:
+                    save_to_s3(
+                        asset=df,
+                        path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
+                        partition_column=None
                     )
         
         """

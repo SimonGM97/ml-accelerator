@@ -12,6 +12,7 @@ from ml_accelerator.utils.aws.s3_helper import (
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import yaml
 import os
 
 from typing import List, Tuple, Dict
@@ -49,23 +50,33 @@ class DataExtractor:
         self.data_extention: str = data_extention
         self.partition_column: str = partition_column
 
+    def load_schema(
+        self,
+        schema_name: str
+    ) -> dict:
+        # Load schema
+        with open(os.path.join("schemas", f"{schema_name}.yaml")) as file:
+            schema: dict = yaml.load(file, Loader=yaml.FullLoader)
+
+        return schema
+
     def persist_dataset(
         self,
         df: pd.DataFrame,
-        name: str
+        df_name: str
     ) -> None:
         if self.storage_env == 'filesystem':
             # Persist to filesystem
             save_to_filesystem(
                 asset=df,
-                path=os.path.join(self.bucket, *self.training_path, f"{name}.{self.data_extention}"),
+                path=os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}"),
                 partition_column=self.partition_column
             )
         elif self.storage_env == 'S3':
             # Persist to S3
             save_to_s3(
                 asset=df,
-                path=f"{self.bucket}/{'/'.join(self.training_path)}/{name}.{self.data_extention}",
+                path=f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}",
                 partition_column=self.partition_column
             )
         else:
@@ -73,17 +84,17 @@ class DataExtractor:
 
     def load_dataset(
         self,
-        name: str
+        df_name: str
     ) -> pd.DataFrame:
         if self.storage_env == 'filesystem':
             # Load from filesystem
             df: pd.DataFrame = load_from_filesystem(
-                path=os.path.join(self.bucket, *self.training_path, f"{name}.{self.data_extention}")
+                path=os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}")
             )
         elif self.storage_env == 'S3':
             # Load from S3
             df: pd.DataFrame = load_from_s3(
-                path=f"{self.bucket}/{'/'.join(self.training_path)}/{name}.{self.data_extention}"
+                path=f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}"
             )
         else:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
@@ -106,6 +117,6 @@ if __name__ == "__main__":
 
     # Load dataset
     df: pd.DataFrame = sns.load_dataset(Params.DATASET_NAME)
-    
+
     # Persist dataset
-    DE.persist_dataset(df=df, name=f"{Params.DATASET_NAME}_raw_data")
+    DE.persist_dataset(df=df, df_name=f"{Params.DATASET_NAME}_raw_data")

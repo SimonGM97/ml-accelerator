@@ -102,6 +102,7 @@ class ClassificationModel(Model):
         target: str = Params.TARGET,
         selected_features: List[str] = None,
         importance_method: str = Params.IMPORTANCE_METHOD,
+        bucket: str = Params.BUCKET,
         cutoff: float = None
     ) -> None:
         # Instanciate parent class to inherit attrs & methods
@@ -113,7 +114,8 @@ class ClassificationModel(Model):
             hyper_parameters=hyper_parameters,
             target=target,
             selected_features=selected_features,
-            importance_method=importance_method
+            importance_method=importance_method,
+            bucket=bucket
         )
 
         # Correct self.hyperparameters
@@ -135,9 +137,6 @@ class ClassificationModel(Model):
         self.fpr: np.ndarray = None 
         self.tpr: np.ndarray = None 
         self.thresholds: np.ndarray = None 
-        
-        self.cv_scores: np.ndarray = np.array([])
-        self.test_score: float = 0
 
     def correct_hyper_parameters(
         self,
@@ -338,8 +337,8 @@ class ClassificationModel(Model):
         # Evaluate Model using Cross Validation
         self.cv_scores = cross_val_score(
             self.model, 
-            X_train.values.astype(float),
-            y_train[self.target].values.astype(int).ravel(),
+            X_train.values,
+            y_train.values.ravel(),
             cv=splits, 
             scoring=scorer,
             n_jobs=-1
@@ -448,5 +447,12 @@ class ClassificationModel(Model):
         # Assign cutoff
         self.cutoff = optimal_cutoff
 
-        LOGGER.info('Optimal cutoff for %s: %s (F1 Score %s).\n', 
-                    self.model_id, round(self.cutoff, 3), optimal_f1_score)
+        LOGGER.info(
+            'Optimal cutoff for %s: %s (F1 Score %s).\n', 
+            self.model_id, round(self.cutoff, 3), optimal_f1_score
+        )
+
+    def diagnose(self) -> dict:
+        return {
+            'needs_repair': False
+        }
