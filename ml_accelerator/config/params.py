@@ -36,16 +36,24 @@ class Params:
 
     # ENVIRONMENT PARAMETERS
     ENV: str
+    VERSION: str
+    REGION: str
     BUCKET: str
     CWD: Path
+    STORAGE_ENV: str
+    COMPUTE_ENV: str
 
     """
     DATA PARAMETERS
     """
 
-    # DATASET PATHS PARAMETERS
+    # STORAGE PARAMETERS
+    DATASET_NAME: str
     TRAINING_PATH: List[str]
     INFERENCE_PATH: List[str]
+    MODEL_PATH: List[str]
+    DATA_EXTENTION: str
+    PARTITION_COLUMN: str
 
     # DATA CLEANING PARAMETERS
     Z_THRESHOLD: float
@@ -53,6 +61,7 @@ class Params:
     # FEATURE ENGINEERING PARAMETERS
 
     # DATA TRANSFORMING PARAMETERS
+    ENCODE_TARGET: bool
 
     # FEATURE SELECTION PARAMETERS
     N_FEATURES: int
@@ -60,6 +69,9 @@ class Params:
     """
     MODELING PARAMETERS
     """
+
+    # ML DATASETS PARAMETERS
+    TEST_SIZE: float
 
     # CLASSIFICATION PARAMETERS
     BALANCE_TRAIN: bool
@@ -79,6 +91,9 @@ class Params:
     TIMEOUT_MINS: float
     MIN_PERFORMANCE: float
 
+    # FEATURE IMPORTANCE PARAMETERS
+    IMPORTANCE_METHOD: str
+
     """
     OTHERS
     """
@@ -90,6 +105,10 @@ class Params:
     FILTER_LVLS: str
     LOG_FILE: str
     BACKUP_COUNT: int
+
+    # DEPLOYMENT PARAMETERS
+
+    # INFRASTRUCTURE PARAMETERS
 
     # COMPUTE PARAMETERS
     GPUS: str
@@ -111,6 +130,7 @@ class Params:
 
         cls.PROJECT_NAME: str = GENERAL_PARAMS.get("PROJECT_NAME")
         cls.TARGET: str = GENERAL_PARAMS.get("TARGET")
+        cls.TASK: str = GENERAL_PARAMS.get("TASK")
 
         """
         ENVIRONMENT PARAMETERS
@@ -118,23 +138,32 @@ class Params:
         ENV_PARAMS: dict = config.get("ENV_PARAMS")
 
         cls.ENV: str = ENV_PARAMS.get("ENV")
+        cls.VERSION: str = ENV_PARAMS.get("VERSION")
+        cls.REGION: str = ENV_PARAMS.get("REGION")
         cls.BUCKET: str = ENV_PARAMS.get("BUCKET")
+        cls.STORAGE_ENV: str = ENV_PARAMS.get("STORAGE_ENV")
+        cls.COMPUTE_ENV: str = ENV_PARAMS.get("COMPUTE_ENV")
         cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
 
         """
-        DATASET PATHS PARAMETERS
+        STORAGE PARAMETERS
         """
-        DATASET_PATHS_PARAMS: dict = config.get("DATASET_PATHS_PARAMS")
+        STORAGE_PARAMS: dict = config.get("STORAGE_PARAMS")
+        PATHS_PARAMS: dict = STORAGE_PARAMS.get("PATHS_PARAMS")
 
-        cls.TRAINING_PATH: List[str] = DATASET_PATHS_PARAMS.get("TRAINING_PATH")
-        cls.INFERENCE_PATH: List[str] = DATASET_PATHS_PARAMS.get("INFERENCE_PATH")
+        cls.DATASET_NAME: str = PATHS_PARAMS.get("DATASET_NAME")
+        cls.TRAINING_PATH: List[str] = PATHS_PARAMS.get("TRAINING_PATH")
+        cls.INFERENCE_PATH: List[str] = PATHS_PARAMS.get("INFERENCE_PATH")
+        cls.MODEL_PATH: List[str] = PATHS_PARAMS.get("MODEL_PATH")
+        cls.DATA_EXTENTION: str = STORAGE_PARAMS.get("DATA_EXTENTION")
+        cls.PARTITION_COLUMN: str = STORAGE_PARAMS.get("PARTITION_COLUMN")
 
         """
         DATA CLEANING PARAMETERS
         """
         DATA_CLEANING_PARAMS: dict = config.get("DATA_CLEANING_PARAMS")
 
-        cls.Z_THRESHOLD: float = DATA_CLEANING_PARAMS.get("Z_THRESHOLD")
+        cls.OUTLIER_Z_THRESHOLD: float = DATA_CLEANING_PARAMS.get("OUTLIER_Z_THRESHOLD")
 
         """
         FEATURE ENGINEERING PARAMETERS
@@ -144,7 +173,11 @@ class Params:
         """
         DATA TRANSFORMING PARAMETERS
         """
-        DATA_TRANSFORMING: dict = config.get("DATA_TRANSFORMING")
+        DATA_TRANSFORMING_PARAMS: dict = config.get("DATA_TRANSFORMING_PARAMS")
+
+        cls.ENCODE_TARGET: bool = DATA_TRANSFORMING_PARAMS.get("ENCODE_TARGET")
+        cls.SCALE_NUM_FEATURES: bool = DATA_TRANSFORMING_PARAMS.get("SCALE_NUM_FEATURES")
+        cls.ENCODE_CAT_FEATURES: bool = DATA_TRANSFORMING_PARAMS.get("ENCODE_CAT_FEATURES")
         
         """
         FEATURE SELECTION PARAMETERS
@@ -152,6 +185,13 @@ class Params:
         FEATURE_SELECTION_PARAMS: dict = config.get("FEATURE_SELECTION_PARAMS")
 
         cls.N_FEATURES: list = FEATURE_SELECTION_PARAMS.get("N_FEATURES")
+
+        """
+        ML DATASETS PARAMETERS
+        """
+        ML_DATASETS_PARAMS: dict = config.get("ML_DATASETS_PARAMS")
+
+        cls.TEST_SIZE: float = ML_DATASETS_PARAMS.get("TEST_SIZE")
 
         """
         CLASSIFICATION PARAMETERS
@@ -186,6 +226,13 @@ class Params:
         cls.MIN_PERFORMANCE: float = HYPER_PARAMETER_TUNING_PARAMS.get("MIN_PERFORMANCE")
 
         """
+        FEATURE IMPORTANCE PARAMETERS
+        """
+        FEATURE_IMPORTANCE_PARAMS: dict = config.get("FEATURE_IMPORTANCE_PARAMS")
+
+        cls.IMPORTANCE_METHOD: str = FEATURE_IMPORTANCE_PARAMS.get("IMPORTANCE_METHOD")
+
+        """
         LOG PARAMETERS
         """
         LOG_PARAMS: dict = config.get("LOG_PARAMS")
@@ -196,6 +243,16 @@ class Params:
         cls.FILTER_LVLS: str = LOG_PARAMS.get("FILTER_LVLS")
         cls.LOG_FILE: str = LOG_PARAMS.get("LOG_FILE")
         cls.BACKUP_COUNT: int = LOG_PARAMS.get("BACKUP_COUNT")
+
+        """
+        DEPLOYMENT PARAMETERS
+        """
+        DEPLOYMENT_PARAMS: dict = config.get("DEPLOYMENT_PARAMS")
+
+        """
+        INFRASTRUCTURE PARAMETERS
+        """
+        INFRASTRUCTURE_PARAMS: dict = config.get("INFRASTRUCTURE_PARAMS")
         
         """
         COMPUTE PARAMETERS

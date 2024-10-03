@@ -2,12 +2,14 @@ import pandas as pd
 import numpy as np
 import pyarrow.parquet as pq
 import pyarrow as pa
+import os
 from io import BytesIO, StringIO
 import s3fs
 import boto3
 from botocore.exceptions import ClientError
 import pickle
 import json
+import yaml
 
 
 def get_secrets(secret_name: str = 'access_keys') -> str:
@@ -31,8 +33,12 @@ def get_secrets(secret_name: str = 'access_keys') -> str:
 
     return secret
 
-# Define region
-REGION = "sa-east-1"
+# Load config file
+with open(os.path.join("config", "config.yaml")) as file:
+    config: dict = yaml.load(file, Loader=yaml.FullLoader)
+
+# Load region
+REGION = config["ENV_PARAMS"]["REGION"]
 
 # Extract secrets
 ACCESS_KEYS = get_secrets(secret_name='access_keys')
@@ -94,9 +100,10 @@ def load_from_s3(path: str):
     return asset
 
 
-def write_to_s3(
+def save_to_s3(
     asset, 
-    path: str
+    path: str,
+    partition_column: str = None
 ):
     # Extract bucket, key & format
     bucket, key = path.split('/')[0], '/'.join(path.split('/')[1:])

@@ -1,4 +1,4 @@
-from config.params import Params
+from ml_accelerator.config.params import Params
 from ml_accelerator.modeling.model import Model
 from ml_accelerator.utils.logging.logger_helper import get_logger
 
@@ -96,12 +96,12 @@ class ClassificationModel(Model):
         self,
         model_id: str = None,
         version: int = 1,
-        stage: str = 'staging',
+        stage: str = 'development',
         algorithm: str = None,
         hyper_parameters: dict = {},
-        target: str = None,
+        target: str = Params.TARGET,
         selected_features: List[str] = None,
-        importance_method: str = None,
+        importance_method: str = Params.IMPORTANCE_METHOD,
         cutoff: float = None
     ) -> None:
         # Instanciate parent class to inherit attrs & methods
@@ -227,18 +227,23 @@ class ClassificationModel(Model):
 
     def fit(
         self,
-        y_train: pd.DataFrame = None,
-        X_train: pd.DataFrame = None
+        X: pd.DataFrame,
+        y: pd.Series = None
     ) -> None:
         """
         Method to fit self.model.
 
-        :param `y_train`: (pd.DataFrame) Binary & balanced train target.
-        :param `X_train`: (pd.DataFrame) Train features.
+        :param `y`: (pd.DataFrame) Binary & balanced train target.
+        :param `X`: (pd.DataFrame) Train features.
         """
+        # Build self.model, if required
+        if self.model is None:
+            self.build()
+        
+        # Fit self.model
         self.model.fit(
-            X_train.values.astype(float), 
-            y_train[self.target].values.astype(int).ravel()
+            X.values, 
+            y.values.ravel()
         )
         
         # Update Version
@@ -336,7 +341,8 @@ class ClassificationModel(Model):
             X_train.values.astype(float),
             y_train[self.target].values.astype(int).ravel(),
             cv=splits, 
-            scoring=scorer
+            scoring=scorer,
+            n_jobs=-1
         )
         
         if debug:

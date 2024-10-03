@@ -1,9 +1,10 @@
-from config.params import Params
+from ml_accelerator.config.params import Params
 from ml_accelerator.utils.logging.logger_helper import get_logger
-from ml_accelerator.utils.aws.s3_helper import load_from_s3, write_to_s3
+from ml_accelerator.utils.aws.s3_helper import load_from_s3, save_to_s3
 
 import pandas as pd
 import numpy as np
+from abc import ABC, abstractmethod
 import mlflow
 import shap
 import secrets
@@ -25,7 +26,7 @@ LOGGER = get_logger(
 )
 
 
-class Model:
+class Model(ABC):
 
     # Pickled attrs
     pickled_attrs = []
@@ -43,12 +44,12 @@ class Model:
         self,
         model_id: str = None,
         version: int = 1,
-        stage: str = 'staging',
+        stage: str = 'development',
         algorithm: str = None,
         hyper_parameters: dict = {},
         target: str = None,
         selected_features: List[str] = None,
-        importance_method: str = None
+        importance_method: str = 'shap'
     ) -> None:
         # Register Parameters
         if model_id is not None:
@@ -134,6 +135,21 @@ class Model:
             metric_name: getattr(metric_name) for metric_name in self.metric_names
         }
 
+    @abstractmethod
+    def fit(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series = None
+    ) -> None:
+        pass
+    
+    @abstractmethod
+    def predict(
+        self,
+        X: pd.DataFrame
+    ) -> np.ndarray:
+        pass
+
     def find_feature_importance(
         self,
         X_test: pd.DataFrame,
@@ -148,7 +164,7 @@ class Model:
         :param `find_new_shap_values`: (bool) Wether or not to calculate new shaply values.
         :param `debug`: (bool) Wether or not to show top feature importances, for debugging purposes.
         """
-        try:
+        def find_shap_feature_importance() -> pd.DataFrame:
             if find_new_shap_values or self.shap_values is None:
                 LOGGER.info('Calculating new shaply values for %s.', self.model_id)
 
@@ -162,7 +178,7 @@ class Model:
                 explainer = shap.TreeExplainer(self.model)
 
                 # Calculate shap values
-                self.shap_values: np.ndarray = explainer.shap_values(X_test)
+                self.shap_values = explainer.shap_values(X_test)
 
             # Find the sum of feature values
             shap_sum = np.abs(self.shap_values).mean(0).sum(0)
@@ -174,12 +190,10 @@ class Model:
             })
 
             self.importance_method = 'shap'
-        except Exception as e:
-            LOGGER.warning("Unable to calculate shap feature importance on %s (%s).\n"
-                           "Exception: %s\n"
-                           "Re-trying with native approach.\n",
-                           self.model_id, self.algorithm, e)
-            
+
+            return importance_df
+        
+        def find_native_feature_importance() -> pd.DataFrame:
             # Define DataFrame to describe importances on (utilizing native feature importance calculation method)
             importance_df = pd.DataFrame({
                 'feature': X_test.columns.tolist(),
@@ -188,6 +202,21 @@ class Model:
 
             self.shap_values = None
             self.importance_method = f'native_{self.algorithm}'
+
+            return importance_df
+
+        if self.importance_method == 'shap':
+            try:
+                importance_df: pd.DataFrame = find_shap_feature_importance()
+            except Exception as e:
+                LOGGER.warning("Unable to calculate shap feature importance on %s (%s).\n"
+                            "Exception: %s\n"
+                            "Re-trying with native approach.\n",
+                            self.model_id, self.algorithm, e)
+            
+                importance_df: pd.DataFrame = find_native_feature_importance()
+        else:
+            importance_df: pd.DataFrame = find_native_feature_importance()
 
         # Sort DataFrame by shap_value
         importance_df.sort_values(by=['importance'], ascending=False, ignore_index=True, inplace=True)
@@ -213,14 +242,14 @@ class Model:
         if to_s3:
             # Save self.model into S3
             if self.model is not None:
-                write_to_s3(
+                save_to_s3(
                     asset=self.model,
                     path=f"{self.s3_path}/{self.model_id}_model.pickle"
                 )
 
             # Save other pickle files into S3
             model_attrs: dict = {key: value for (key, value) in self.__dict__.items() if key in self.pickled_attrs}
-            write_to_s3(
+            save_to_s3(
                 asset=model_attrs,
                 path=f"{self.s3_path}/{self.model_id}_model_attrs.pickle"
             )
@@ -229,7 +258,7 @@ class Model:
             for attr_name in self.csv_attrs:
                 df: pd.DataFrame = getattr(self, attr_name)
                 if df is not None:
-                    write_to_s3(
+                    save_to_s3(
                         asset=df,
                         path=f"{self.s3_path}/{self.model_id}_{attr_name}.csv"
                     )
@@ -238,7 +267,7 @@ class Model:
             for attr_name in self.parquet_attrs:
                 df: pd.DataFrame = getattr(self, attr_name)
                 if df is not None:
-                    write_to_s3(
+                    save_to_s3(
                         asset=df,
                         path=f"{self.s3_path}/{self.model_id}_{attr_name}.parquet"
                     )

@@ -1,5 +1,5 @@
 # Use a python base image
-FROM python:3.10.8
+FROM python:3.10.8-slim
 
 # Switch to /tmp dir
 WORKDIR /tmp

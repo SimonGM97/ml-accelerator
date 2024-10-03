@@ -20,10 +20,6 @@ __pycache__/
 # System-specific files
 .DS_Store
 
-# IDE and editor specific files
-.vscode/
-.idea/
-
 # AWS credentials
 .aws/
 
@@ -32,6 +28,21 @@ __pycache__/
 
 # Test
 .pytest_cache/
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
 
 # Archive
 .archive/
@@ -87,21 +98,6 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
 
 # Translations
 *.mo
@@ -206,3 +202,9 @@ cython_debug/
 
 # Example
 schemas/iris_schema.yaml
+
+# Dummy buckets
+ml-accelerator-dev
+ml-accelerator-prod
+iris-classification-dev
+iris-classification-prod

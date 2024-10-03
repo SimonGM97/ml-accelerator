@@ -4,7 +4,6 @@ from ml_accelerator.utils.logging.logger_helper import get_logger
 import pandas as pd
 import numpy as np
 from sklearn.impute import SimpleImputer
-from sklearn.base import BaseEstimator, TransformerMixin
 
 from typing import List, Tuple, Dict
 
@@ -20,20 +19,25 @@ LOGGER = get_logger(
 )
 
 
-class DataCleaner(BaseEstimator, TransformerMixin):
+class DataCleaner:
 
     def __init__(
         self,
-        schema: dict = None,
-        z_threshold: float = 2.5
+        schema: dict,
+        z_threshold: float = Params.OUTLIER_Z_THRESHOLD
     ) -> None:
+        # Instanciate parent classes
+        super().__init__()
+
         # Set attributes
         self.schema: dict = schema
         self.z_threshold: float = z_threshold
 
         # Set default attributes
+        self.target: str = None
+
         self.num_cols: List[str] = None
-        self.str_cols: List[str] = None
+        self.cat_cols: List[str] = None
         self.datetime_cols: List[str] = None
 
         self.ffill_cols: List[str] = None
@@ -41,61 +45,6 @@ class DataCleaner(BaseEstimator, TransformerMixin):
         self.simple_impute_cols: List[str] = None
 
         self.outliers_dict: dict = None
-
-        # Set column attributes
-        self.find_column_attrs()
-
-    def find_column_attrs(self) -> None:
-        # Fill num_cols & str_cols
-        if self.schema is not None:
-            # Set self.num_cols
-            self.num_cols: List[str] = [
-                field['name'] for field in self.schema['fields']
-                if field['type'] in ['int', 'float']
-            ]
-
-            # Set self.str_cols
-            self.str_cols: List[str] = [
-                field['name'] for field in self.schema['fields']
-                if field['type'] in ['string']
-            ]
-
-            # Set self.datetime_cols
-            self.datetime_cols: List[str] = [
-                field['name'] for field in self.schema['fields']
-                if field['type'] in ['datetime']
-            ]
-
-            # Set self.ffill_cols
-            self.ffill_cols: List[str] = [
-                field['name'] for field in self.schema['fields']
-                if field['fillna_method'] == 'ffill'
-            ]
-
-            # Set self.interpolate_cols
-            self.interpolate_cols: List[str] = [
-                field['name'] for field in self.schema['fields']
-                if field['fillna_method'] == 'interpolate'
-            ]
-
-            # Set self.simple_impute_cols
-            self.simple_impute_cols: List[str] = [
-                field['name'] for field in self.schema['fields']
-                if field['fillna_method'] == 'simple_imputer'
-            ]
-        
-        # self.num_cols = list(df.select_dtypes(include=['number']).columns)
-        # self.str_cols = list(df.select_dtypes(exclude=['number']).columns)
-
-    def fit(
-        self, 
-        X: pd.DataFrame, 
-        y: pd.Series = None
-    ):
-        # Run self.cleaner_pipeline with fit=True
-        self.cleaner_pipeline(X=X, y=y, fit=True)
-
-        return self
     
     def transform(
         self, 
@@ -120,12 +69,11 @@ class DataCleaner(BaseEstimator, TransformerMixin):
     def cleaner_pipeline(
         self,
         X: pd.DataFrame,
-        y: pd.DataFrame,
+        y: pd.DataFrame = None,
         fit: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        # Join y & X
-        target: str = y.name
-        df: pd.DataFrame = pd.concat([y, X], axis=1)
+        # Merge datasets
+        df = self.merge_datasets(X=X, y=y)
 
         # Delete y & X
         del y
@@ -134,6 +82,9 @@ class DataCleaner(BaseEstimator, TransformerMixin):
         # Drop dummy columns
         df = self.drop_dummy_columns(df=df)
 
+        # Find column attributes
+        self.find_column_attrs(df=df)
+
         # Drop duplicates
         df = self.drop_duplicates(df=df) 
 
@@ -141,12 +92,13 @@ class DataCleaner(BaseEstimator, TransformerMixin):
         df = self.set_data_types(df=df)
 
         # Remove unexpected values
-        df: pd.DataFrame = self.remove_unexpected_values(df=df)
-
-        # Remove & correct outliers
+        df = self.remove_unexpected_values(df=df)
+        
+        # Fit self.outliers_dict
         if fit:
             self.fit_outliers_dict(df=df)
-
+        
+        # Remove & correct outliers
         df = self.correct_outliers(df=df)
 
         # Cap min values
@@ -155,20 +107,49 @@ class DataCleaner(BaseEstimator, TransformerMixin):
         # Cap max values
         df = self.cap_max_values(df=df)
 
-        # Fill null values
+        # Fit SimpleImputers
         if fit:
             self.fit_imputers(df=df)
 
+        # Fill null values
         df = self.fill_nulls(df=df)
 
         # Divide X & y
-        X, y = df.drop(columns=[target]), df[target]
+        X, y = self.divide_datasets(df=df)
 
         # Delete df
-        del target
+        del df
 
         return X, y
     
+    def merge_datasets(
+        self,
+        X: pd.DataFrame,
+        y: pd.DataFrame = None
+    ) -> pd.DataFrame:
+        if y is not None:
+            # Define target
+            self.target: str = y.name
+
+            # Concatenate datasets
+            df: pd.DataFrame = pd.concat([y, X], axis=1)
+        else:
+            df: pd.DataFrame = X.copy(deep=True)
+
+        return df
+    
+    def divide_datasets(
+        self,
+        df: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        if self.target is not None and self.target in df.columns:
+            # Divide df into X & y
+            X, y = df.drop(columns=[self.target]), df[self.target]
+
+            return X, y
+        else:
+            return df, None
+
     def drop_dummy_columns(
         self,
         df: pd.DataFrame
@@ -184,6 +165,51 @@ class DataCleaner(BaseEstimator, TransformerMixin):
         df.drop(columns=drop_columns, inplace=True)
 
         return df
+
+    def find_column_attrs(
+        self,
+        df: pd.DataFrame
+    ) -> None:
+        # Fill num_cols & str_cols
+        if self.schema is not None:
+            # Set self.num_cols
+            self.num_cols: List[str] = [
+                field['name'] for field in self.schema['fields']
+                if field['type'] in ['int', 'float'] and field['name'] in df.columns
+            ]
+
+            # Set self.cat_cols
+            self.cat_cols: List[str] = [
+                field['name'] for field in self.schema['fields']
+                if field['type'] in ['string'] and field['name'] in df.columns
+            ]
+
+            # Set self.datetime_cols
+            self.datetime_cols: List[str] = [
+                field['name'] for field in self.schema['fields']
+                if field['type'] in ['datetime'] and field['name'] in df.columns
+            ]
+
+            # Set self.ffill_cols
+            self.ffill_cols: List[str] = [
+                field['name'] for field in self.schema['fields']
+                if field['fillna_method'] == 'ffill' and field['name'] in df.columns
+            ]
+
+            # Set self.interpolate_cols
+            self.interpolate_cols: List[str] = [
+                field['name'] for field in self.schema['fields']
+                if field['fillna_method'] == 'interpolate' and field['name'] in df.columns
+            ]
+
+            # Set self.simple_impute_cols
+            self.simple_impute_cols: List[str] = [
+                field['name'] for field in self.schema['fields']
+                if field['fillna_method'] == 'simple_imputer' and field['name'] in df.columns
+            ]
+        
+        # self.num_cols = list(df.select_dtypes(include=['number']).columns)
+        # self.cat_cols = list(df.select_dtypes(exclude=['number']).columns)
 
     def drop_duplicates(
         self,
@@ -214,6 +240,7 @@ class DataCleaner(BaseEstimator, TransformerMixin):
 
         expected_dtypes: dict = {
             field['name']: map_types[field['type']] for field in self.schema['fields']
+            if field['name'] in df.columns
         }
 
         # Transform data types
@@ -260,7 +287,7 @@ class DataCleaner(BaseEstimator, TransformerMixin):
         # Extract allowed values
         allowed_vals: Dict[str, List[str]] = {
             field['name']: field['allowed_values'] for field in self.schema['fields']
-            if field['allowed_values'] is not None
+            if field['allowed_values'] is not None and field['name'] in df.columns
         }
 
         # Apply filtering for each column based on allowed values
@@ -312,8 +339,8 @@ class DataCleaner(BaseEstimator, TransformerMixin):
     ) -> None:
         # Update str_imputer
         self.str_imputer = SimpleImputer(strategy='most_frequent', keep_empty_features=True)
-        if len(self.str_cols) > 0:
-            self.str_imputer.fit(df[self.str_cols])
+        if len(self.cat_cols) > 0:
+            self.str_imputer.fit(df[self.cat_cols])
 
         # Update num_imputer
         self.num_imputer = SimpleImputer(strategy='median', keep_empty_features=True)
@@ -341,10 +368,16 @@ class DataCleaner(BaseEstimator, TransformerMixin):
 
         # Fill SimpleImputer columns
         if len(self.simple_impute_cols) > 0 and df[self.simple_impute_cols].isnull().sum().sum() > 0:
-            if len(self.str_cols) > 0:
-                df[self.str_cols] = self.str_imputer.transform(df[self.str_cols])
+            if len(self.cat_cols) > 0:
+                df[self.cat_cols] = self.str_imputer.transform(df[self.cat_cols])
 
             if len(self.num_cols) > 0:
                 df[self.num_cols] = self.num_imputer.transform(df[self.num_cols])
         
         return df
+
+    def load(self) -> None:
+        pass
+
+    def save(self) -> None:
+        pass
