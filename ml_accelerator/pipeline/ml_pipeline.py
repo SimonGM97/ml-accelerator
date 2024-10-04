@@ -4,6 +4,7 @@ from ml_accelerator.data_processing.data_transforming import DataTransformer
 from ml_accelerator.modeling.models.classification_model import ClassificationModel
 from ml_accelerator.modeling.models.regression_model import RegressionModel
 from ml_accelerator.utils.logging.logger_helper import get_logger
+from ml_accelerator.utils.timing.timing_helper import timing
 
 import pandas as pd
 import numpy as np
@@ -126,6 +127,7 @@ class MLPipeline:
         
         return X_train, X_test, y_train, y_test
 
+    @timing
     def fit(
         self,
         X_train: pd.DataFrame,
@@ -140,6 +142,7 @@ class MLPipeline:
         # Fit the model
         self.model.fit(X=X_train, y=y_train)
 
+    @timing
     def predict(
         self,
         X_test: pd.DataFrame,
@@ -156,6 +159,7 @@ class MLPipeline:
 
         return y_pred
 
+    @timing
     def fit_predict(
         self,
         X_train: pd.DataFrame,

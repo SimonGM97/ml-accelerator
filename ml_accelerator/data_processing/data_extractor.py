@@ -35,7 +35,7 @@ class DataExtractor:
         self,
         bucket: str = Params.BUCKET,
         cwd: str = Params.CWD,
-        storage_env: str = Params.STORAGE_ENV,
+        storage_env: str = Params.DATA_STORAGE_ENV,
         training_path: List[str] = Params.TRAINING_PATH,
         inference_path: List[str] = Params.INFERENCE_PATH,
         data_extention: str = Params.DATA_EXTENTION,
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     DE: DataExtractor = DataExtractor(
         bucket=Params.BUCKET,
         cwd=Params.CWD,
-        storage_env=Params.STORAGE_ENV,
+        storage_env=Params.DATA_STORAGE_ENV,
         training_path=Params.TRAINING_PATH,
         inference_path=Params.INFERENCE_PATH
     )

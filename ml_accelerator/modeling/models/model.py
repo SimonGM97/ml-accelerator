@@ -55,9 +55,11 @@ class Model(ABC):
         hyper_parameters: dict = {},
         target: str = Params.TARGET,
         selected_features: List[str] = None,
+        optimization_metric: str = Params.OPTIMIZATION_METRIC,
         importance_method: str = Params.IMPORTANCE_METHOD,
-        storage_env: str = Params.STORAGE_ENV,
-        bucket: str = Params.BUCKET
+        storage_env: str = Params.MODEL_STORAGE_ENV,
+        bucket: str = Params.BUCKET,
+        models_path: List[str] = Params.MODELS_PATH
     ) -> None:
         # Register Parameters
         if model_id is not None:
@@ -67,9 +69,11 @@ class Model(ABC):
         
         self.version: int = version
         self.stage: str = stage
-    
+
+        # Storage Parameters
         self.storage_env: str = storage_env
         self.bucket: str = bucket
+        self.models_path: List[str] = models_path
 
         # Model Parameters
         self.model = None
@@ -82,13 +86,18 @@ class Model(ABC):
         self.selected_features: List[str] = deepcopy(selected_features)
 
         # Performance Parameters
+        self.optimization_metric: str = optimization_metric
         self.cv_scores: np.ndarray = np.array([])
-        self.test_score: float = 0
+        self.test_score: float = None
 
         # Feature importance Parameters
         self.feature_importance_df: pd.DataFrame = pd.DataFrame(columns=['feature', 'importance'])
         self.importance_method: str = importance_method
         self.shap_values: np.ndarray = None
+
+    """
+    Properties
+    """
 
     @property
     def warm_start_params(self) -> dict:
@@ -148,7 +157,7 @@ class Model(ABC):
         }
 
     @property
-    def tuning_score(self) -> float:
+    def val_score(self) -> float:
         """
         Defines the validation score as the mean value of the cross validation results.
         Can be accessed as an attribute.
@@ -159,6 +168,10 @@ class Model(ABC):
             # return (np.abs(self.cv_scores - self.cv_scores.mean()) / self.cv_scores.mean()).mean()
             return self.cv_scores.mean()
         return None
+
+    """
+    Abstract methods
+    """
 
     @abstractmethod
     def fit(
@@ -176,7 +189,13 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def evaluate_val(self):
+    def evaluate_val(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.DataFrame,
+        splits: int,
+        debug: bool = False
+    ) -> None:
         pass
 
     @abstractmethod
@@ -186,6 +205,10 @@ class Model(ABC):
     @abstractmethod
     def diagnose(self) -> dict:
         pass
+
+    """
+    Feature Importance
+    """
 
     def find_feature_importance(
         self,
@@ -269,224 +292,246 @@ class Model(ABC):
         if debug:
             LOGGER.debug('Shap importance df (top 20): \n%s\n', importance_df.iloc[:20].to_string())
 
-    def save(
-        self,
-        log_model: bool = False,
-        register_model: bool = False
-    ) -> None:
+    """
+    Save Methods
+    """
+
+    def save(self) -> None:
+        if self.storage_env == 'filesystem':
+            # Save to filesystem
+            self.save_to_filesystem()
+
+        elif self.storage_env == 'S3':
+            # Save to S3
+            self.save_to_s3()
+        
+        elif self.storage_env == 'ml_flow':
+            # Register model
+            self.register_model()
+
+    def save_to_filesystem(self) -> None:
+        # Define model_attrs
+        model_attrs: dict = {
+            key: value for (key, value) in self.__dict__.items() if key in self.pickled_attrs
+        }
+
+        # Define base_path
+        base_path = os.path.join(self.bucket, "models", self.model_id)
+
+        # Save self.model
+        if self.model is not None:
+            save_to_filesystem(
+                asset=self.model,
+                path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
+                partition_column=None,
+                overwrite=True
+            )
+        
+        # Save model_attrs
+        save_to_filesystem(
+            asset=model_attrs,
+            path=os.path.join(base_path, f"{self.model_id}_model_attrs.pickle"),
+            partition_column=None,
+            overwrite=True
+        )
+
+        # Save csv attrs
+        for attr_name in self.csv_attrs:
+            df: pd.DataFrame = getattr(self, attr_name)
+            if df is not None:
+                save_to_filesystem(
+                    asset=df,
+                    path=os.path.join(base_path, f"{self.model_id}_{attr_name}.csv"),
+                    partition_column=None,
+                    overwrite=True
+                )
+
+        # Save parquet attrs
+        for attr_name in self.parquet_attrs:
+            df: pd.DataFrame = getattr(self, attr_name)
+            if df is not None:
+                save_to_s3(
+                    asset=df,
+                    path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
+                    partition_column=self.partition_cols.get("attr_name"),
+                    overwrite=True
+                )
+
+    def save_to_s3(self) -> None:
         # Define model_attrs
         model_attrs: dict = {key: value for (key, value) in self.__dict__.items() if key in self.pickled_attrs}
 
-        if self.storage_env == 'filesystem':
-            """
-            File system
-            """
-            # Define base_path
-            base_path = os.path.join(self.bucket, "models", self.model_id)
+        # Define base_path
+        base_path = f"{self.bucket}/models/{self.model_id}"
 
-            # Save self.model
-            if self.model is not None:
-                save_to_filesystem(
-                    asset=self.model,
-                    path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
-                    partition_column=None,
-                    overwrite=True
-                )
-            
-            # Save model_attrs
-            save_to_filesystem(
-                asset=model_attrs,
-                path=os.path.join(base_path, f"{self.model_id}_model_attrs.pickle"),
+        # Save self.model
+        if self.model is not None:
+            save_to_s3(
+                asset=self.model,
+                path=f"{base_path}/{self.model_id}_model.pickle",
                 partition_column=None,
                 overwrite=True
             )
 
-            # Save csv attrs
-            for attr_name in self.csv_attrs:
-                df: pd.DataFrame = getattr(self, attr_name)
-                if df is not None:
-                    save_to_filesystem(
-                        asset=df,
-                        path=os.path.join(base_path, f"{self.model_id}_{attr_name}.csv"),
-                        partition_column=None,
-                        overwrite=True
-                    )
+        # Save model_attrs
+        save_to_s3(
+            asset=model_attrs,
+            path=f"{base_path}/{self.model_id}_model_attrs.pickle",
+            partition_column=None,
+            overwrite=True
+        )
 
-            # Save parquet attrs
-            for attr_name in self.parquet_attrs:
-                df: pd.DataFrame = getattr(self, attr_name)
-                if df is not None:
-                    save_to_s3(
-                        asset=df,
-                        path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
-                        partition_column=self.partition_cols.get("attr_name"),
-                        overwrite=True
-                    )
+        # Save csv attrs
+        for attr_name in self.csv_attrs:
+            df: pd.DataFrame = getattr(self, attr_name)
+            if df is not None:
+                save_to_s3(
+                    asset=df,
+                    path=f"{base_path}/{self.model_id}_{attr_name}.csv",
+                    partition_column=None,
+                    overwrite=True
+                )
+
+        # Save parquet attrs
+        for attr_name in self.parquet_attrs:
+            df: pd.DataFrame = getattr(self, attr_name)
+            if df is not None:
+                save_to_s3(
+                    asset=df,
+                    path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
+                    partition_column=self.partition_cols.get("attr_name"),
+                    overwrite=True
+                )
+
+    
+    """
+    Load Methods
+    """
+
+    def load(self) -> None:
+        if self.storage_env == 'filesystem':
+            # Load from filesystem
+            self.load_from_filesystem()            
         
         elif self.storage_env == 'S3':
-            """
-            S3
-            """
-            # Define base_path
-            base_path = f"{self.bucket}/models/{self.model_id}"
+            # Load from S3
+            self.load_from_s3()
+        
+        elif self.storage_env == 'mlflow':
+            # Load registered model from ML Flow
+            self.load_registered_model()
 
-            # Save self.model
-            if self.model is not None:
-                save_to_s3(
-                    asset=self.model,
-                    path=f"{base_path}/{self.model_id}_model.pickle",
-                    partition_column=None,
-                    overwrite=True
-                )
+    def load_from_filesystem(self) -> None:
+        # Define base_path
+        base_path = os.path.join(self.bucket, *self.models_path, self.model_id)
 
-            # Save model_attrs
-            save_to_s3(
-                asset=model_attrs,
-                path=f"{base_path}/{self.model_id}_model_attrs.pickle",
-                partition_column=None,
-                overwrite=True
+        # Load self.model
+        self.model = load_from_filesystem(
+            path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
+            partition_cols=None,
+            filters=None
+        )
+        
+        # Load model_attrs
+        model_attrs: dict = load_from_filesystem(
+            path=os.path.join(base_path, f"{self.model_id}_model_attrs.pickle"),
+            partition_cols=None,
+            filters=None
+        )
+
+        # Assign pickled attrs
+        for attr_name, attr_value in model_attrs.items():
+            if attr_name in self.pickled_attrs:
+                setattr(self, attr_name, attr_value)
+
+        # Load csv attrs
+        for attr_name in self.csv_attrs:
+            # Load attribute
+            df: pd.DataFrame = load_from_filesystem(
+                path=os.path.join(base_path, f"{self.model_id}_{attr_name}.csv"),
+                partition_cols=None,
+                filters=None
             )
 
-            # Save csv attrs
-            for attr_name in self.csv_attrs:
-                df: pd.DataFrame = getattr(self, attr_name)
-                if df is not None:
-                    save_to_s3(
-                        asset=df,
-                        path=f"{base_path}/{self.model_id}_{attr_name}.csv",
-                        partition_column=None,
-                        overwrite=True
-                    )
+            # Assign attribute
+            setattr(self, attr_name, df)
 
-            # Save parquet attrs
-            for attr_name in self.parquet_attrs:
-                df: pd.DataFrame = getattr(self, attr_name)
-                if df is not None:
-                    save_to_s3(
-                        asset=df,
-                        path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
-                        partition_column=self.partition_cols.get("attr_name"),
-                        overwrite=True
-                    )
-        
-        """
-        ML Flow
-        """
-        if log_model:
-            # Save Model to tracking system
-            self.log_model()
+        # Load parquet attrs
+        for attr_name in self.parquet_attrs:
+            # Load attribute
+            df: pd.DataFrame = load_from_filesystem(
+                path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
+                partition_column=self.partition_cols.get("attr_name"),
+                filters=None
+            )
 
-        if register_model:
-            # Register Model
-            if self.stage != 'development':
-                self.register_model()
+            # Assign attribute
+            setattr(self, attr_name, df)
 
-    def log_model(self):
-        pass
+    def load_from_s3(self) -> None:
+        # Define base_path
+        base_path = f"{self.bucket}/{'/'.join(self.models_path)}/{self.model_id}"
+
+        # Load self.model
+        self.model = load_from_s3(
+            path=f"{base_path}/{self.model_id}_model.pickle",
+            partition_cols=None,
+            filters=None
+        )
+
+        # Load pickled attrs
+        model_attrs: dict = load_from_s3(
+            path=f"{base_path}/{self.model_id}_model_attrs.pickle",
+            partition_cols=None,
+            filters=None
+        )
+
+        # Assign pickled attrs
+        for attr_name, attr_value in model_attrs.items():
+            if attr_name in self.pickled_attrs:
+                setattr(self, attr_name, attr_value)
+
+        # Load csv files
+        for attr_name in self.csv_attrs:
+            # Load attribute
+            df: pd.DataFrame = load_from_s3(
+                path=f"{base_path}/{self.model_id}_{attr_name}.csv",
+                partition_cols=None,
+                filters=None
+            )
+
+            # Assign attribute
+            setattr(self, attr_name, df)
+
+        # Load parquet attrs
+        for attr_name in self.parquet_attrs:
+            # Load attribute
+            df: pd.DataFrame = load_from_s3(
+                path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
+                partition_column=self.partition_cols.get("attr_name"),
+                filters=None
+            )
+
+            # Assign attribute
+            setattr(self, attr_name, df)
+
+    """
+    MLFlow Methods
+    """
 
     def register_model(self):
         pass
 
-    def load(self) -> None:
-        if self.storage_env == 'filesystem':
-            """
-            Filesystem
-            """
-            # Define base_path
-            base_path = os.path.join(self.bucket, "models", self.model_id)
+    def log_model(self):
+        # Save Model to tracking system
+        pass
 
-            # Load self.model
-            self.model = load_from_filesystem(
-                path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
-                partition_cols=None,
-                filters=None
-            )
-            
-            # Load model_attrs
-            model_attrs: dict = load_from_filesystem(
-                path=os.path.join(base_path, f"{self.model_id}_model_attrs.pickle"),
-                partition_cols=None,
-                filters=None
-            )
-
-            # Assign pickled attrs
-            for attr_name, attr_value in model_attrs.items():
-                if attr_name in self.pickled_attrs:
-                    setattr(self, attr_name, attr_value)
-
-            # Load csv attrs
-            for attr_name in self.csv_attrs:
-                # Load attribute
-                df: pd.DataFrame = load_from_filesystem(
-                    path=os.path.join(base_path, f"{self.model_id}_{attr_name}.csv"),
-                    partition_cols=None,
-                    filters=None
-                )
-
-                # Assign attribute
-                setattr(self, attr_name, df)
-
-            # Load parquet attrs
-            for attr_name in self.parquet_attrs:
-                # Load attribute
-                df: pd.DataFrame = load_from_filesystem(
-                    path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
-                    partition_column=self.partition_cols.get("attr_name"),
-                    filters=None
-                )
-
-                # Assign attribute
-                setattr(self, attr_name, df)
-        
-        elif self.storage_env == 'S3':
-            """
-            S3
-            """
-            # Define base_path
-            base_path = f"{self.bucket}/models/{self.model_id}"
-
-            # Load self.model
-            self.model = load_from_s3(
-                path=f"{base_path}/{self.model_id}_model.pickle",
-                partition_cols=None,
-                filters=None
-            )
-
-            # Load pickled attrs
-            model_attrs: dict = load_from_s3(
-                path=f"{base_path}/{self.model_id}_model_attrs.pickle",
-                partition_cols=None,
-                filters=None
-            )
-
-            # Assign pickled attrs
-            for attr_name, attr_value in model_attrs.items():
-                if attr_name in self.pickled_attrs:
-                    setattr(self, attr_name, attr_value)
-
-            # Load csv files
-            for attr_name in self.csv_attrs:
-                # Load attribute
-                df: pd.DataFrame = load_from_s3(
-                    path=f"{base_path}/{self.model_id}_{attr_name}.csv",
-                    partition_cols=None,
-                    filters=None
-                )
-
-                # Assign attribute
-                setattr(self, attr_name, df)
-
-            # Load parquet attrs
-            for attr_name in self.parquet_attrs:
-                # Load attribute
-                df: pd.DataFrame = load_from_s3(
-                    path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
-                    partition_column=self.partition_cols.get("attr_name"),
-                    filters=None
-                )
-
-                # Assign attribute
-                setattr(self, attr_name, df)
+    def load_registered_model(self) -> None:
+        pass
+    
+    """
+    Other methods
+    """
 
     def __repr__(self) -> str:
         # Define register attributes

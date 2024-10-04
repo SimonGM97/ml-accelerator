@@ -15,8 +15,10 @@ ENV_PARAMS:
   VERSION: 1.0.0
   REGION: sa-east-1
   BUCKET: iris-classification-dev
-  STORAGE_ENV: filesystem
+  DATA_STORAGE_ENV: filesystem
   # filesystem, S3
+  MODEL_STORAGE_ENV: filesystem
+  # filesystem, S3, mlflow
   COMPUTE_ENV: local
   # local, sagemaker
 
@@ -35,7 +37,7 @@ STORAGE_PARAMS:
     INFERENCE_PATH:
       - datasets
       - inference
-    MODEL_PATH:
+    MODELS_PATH:
       - models
   
   DATA_EXTENTION: csv
@@ -62,11 +64,6 @@ FEATURE_SELECTION_PARAMS:
 # # # # #
 # MODELING PARAMETERS
 # # # # #
-
-# MODEL STORAGE PARAMETERS
-MODEL_STORAGE_PARAMS:
-  MODEL_STORAGE: filesystem
-  # filesystem, S3, mlflow
 
 # ML DATASETS PARAMETERS
 ML_DATASETS_PARAMS:

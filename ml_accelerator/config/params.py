@@ -45,7 +45,8 @@ class Params:
     REGION: str
     BUCKET: str
     CWD: Path
-    STORAGE_ENV: str
+    DATA_STORAGE_ENV: str
+    MODEL_STORAGE_ENV: str
     COMPUTE_ENV: str
 
     """
@@ -55,7 +56,7 @@ class Params:
     DATASET_NAME: str
     TRAINING_PATH: List[str]
     INFERENCE_PATH: List[str]
-    MODEL_PATH: List[str]
+    MODELS_PATH: List[str]
     DATA_EXTENTION: str
     PARTITION_COLUMN: str
 
@@ -73,9 +74,6 @@ class Params:
     """
     MODELING PARAMETERS
     """
-    # MODEL STORAGE PARAMETERS
-    MODEL_STORAGE: str
-
     # ML DATASETS PARAMETERS
     TEST_SIZE: float
 
@@ -148,7 +146,8 @@ class Params:
         cls.VERSION: str = ENV_PARAMS.get("VERSION")
         cls.REGION: str = ENV_PARAMS.get("REGION")
         cls.BUCKET: str = ENV_PARAMS.get("BUCKET")
-        cls.STORAGE_ENV: str = ENV_PARAMS.get("STORAGE_ENV")
+        cls.DATA_STORAGE_ENV: str = ENV_PARAMS.get("DATA_STORAGE_ENV")
+        cls.MODEL_STORAGE_ENV: str = ENV_PARAMS.get("MODEL_STORAGE_ENV")
         cls.COMPUTE_ENV: str = ENV_PARAMS.get("COMPUTE_ENV")
         cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
 
@@ -162,7 +161,7 @@ class Params:
         cls.DATASET_NAME: str = STORAGE_PARAMS.get("DATASET_NAME")
         cls.TRAINING_PATH: List[str] = PATHS_PARAMS.get("TRAINING_PATH")
         cls.INFERENCE_PATH: List[str] = PATHS_PARAMS.get("INFERENCE_PATH")
-        cls.MODEL_PATH: List[str] = PATHS_PARAMS.get("MODEL_PATH")
+        cls.MODELS_PATH: List[str] = PATHS_PARAMS.get("MODELS_PATH")
         cls.DATA_EXTENTION: str = STORAGE_PARAMS.get("DATA_EXTENTION")
         cls.PARTITION_COLUMN: str = STORAGE_PARAMS.get("PARTITION_COLUMN")
 
@@ -189,11 +188,6 @@ class Params:
         """
         MODELING PARAMETERS
         """
-        # MODEL STORAGE PARAMETERS
-        MODEL_STORAGE_PARAMS: dict = config.get("MODEL_STORAGE_PARAMS")
-
-        cls.MODEL_STORAGE: str = MODEL_STORAGE_PARAMS.get("MODEL_STORAGE")
-
         # ML DATASETS PARAMETERS
         ML_DATASETS_PARAMS: dict = config.get("ML_DATASETS_PARAMS")
 

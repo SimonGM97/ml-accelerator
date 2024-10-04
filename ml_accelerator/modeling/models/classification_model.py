@@ -101,8 +101,11 @@ class ClassificationModel(Model):
         hyper_parameters: dict = {},
         target: str = Params.TARGET,
         selected_features: List[str] = None,
+        optimization_metric: str = Params.OPTIMIZATION_METRIC,
         importance_method: str = Params.IMPORTANCE_METHOD,
+        storage_env: str = Params.MODEL_STORAGE_ENV,
         bucket: str = Params.BUCKET,
+        models_path: str = Params.MODELS_PATH,
         cutoff: float = None
     ) -> None:
         # Instanciate parent class to inherit attrs & methods
@@ -114,8 +117,11 @@ class ClassificationModel(Model):
             hyper_parameters=hyper_parameters,
             target=target,
             selected_features=selected_features,
+            optimization_metric=optimization_metric,
             importance_method=importance_method,
-            bucket=bucket
+            storage_env=storage_env,
+            bucket=bucket,
+            models_path=models_path
         )
 
         # Correct self.hyperparameters
@@ -291,7 +297,7 @@ class ClassificationModel(Model):
 
         :return: (np.ndarray) New probabilistic inferences.
         """
-        y_score = self.model.predict_proba(X.values.astype(float))[:, 1]
+        y_score = self.model.predict_proba(X.values)[:, 1]
 
         if (
             self.algorithm == 'xgboost' 
@@ -304,9 +310,8 @@ class ClassificationModel(Model):
 
     def evaluate_val(
         self,
-        y_train: pd.DataFrame,
         X_train: pd.DataFrame,
-        eval_metric: str,
+        y_train: pd.DataFrame,
         splits: int,
         debug: bool = False
     ) -> None:
@@ -314,31 +319,30 @@ class ClassificationModel(Model):
         Method that will define a score metric (based on the eval_metric parameter) and will leverage
         the cross validation technique to obtain the validation scores.
 
-        :param `y_train`: (pd.DataFrame) binary & balanced train target.
         :param `X_train`: (pd.DataFrame) Train features.
-        :param `eval_metric`: (str) Metric to measure on each split of the cross validation.
+        :param `y_train`: (pd.DataFrame) binary & balanced train target.
         :param `splits`: (int) Number of splits to perform in the cross validation.
         :param `debug`: (bool) Wether or not to show self.cv_scores, for debugging purposes.
         """
         # Define scorer
-        if eval_metric == 'f1_score':
+        if self.optimization_metric == 'f1_score':
             scorer = make_scorer(f1_score)
-        elif eval_metric == 'precision':
+        elif self.optimization_metric == 'precision':
             scorer = make_scorer(precision_score)
-        elif eval_metric == 'recall':
+        elif self.optimization_metric == 'recall':
             scorer = make_scorer(recall_score)
-        elif eval_metric == 'roc_auc':
+        elif self.optimization_metric == 'roc_auc':
             scorer = make_scorer(roc_auc_score)
-        elif eval_metric == 'accuracy':
+        elif self.optimization_metric == 'accuracy':
             scorer = make_scorer(accuracy_score)
         else:
-            raise Exception(f'Invalid "eval_metric": {eval_metric}.\n\n')
+            raise Exception(f'Invalid "self.optimization_metric": {self.optimization_metric}.\n\n')
 
         # Evaluate Model using Cross Validation
         self.cv_scores = cross_val_score(
-            self.model, 
-            X_train.values,
-            y_train.values.ravel(),
+            estimator=self.model, 
+            X=X_train.values,
+            y=y_train.values.ravel(),
             cv=splits, 
             scoring=scorer,
             n_jobs=-1
@@ -351,7 +355,6 @@ class ClassificationModel(Model):
         self,
         y_test: pd.DataFrame,
         X_test: pd.DataFrame,
-        eval_metric: str,
         debug: bool = False
     ) -> None:
         """
@@ -399,21 +402,21 @@ class ClassificationModel(Model):
         self.fpr, self.tpr, self.thresholds = roc_curve(y_test, y_score)
 
         # Define test score
-        if eval_metric == 'f1_score':
+        if self.optimization_metric == 'f1_score':
             self.test_score = self.f1_score
-        elif eval_metric == 'precision':
+        elif self.optimization_metric == 'precision':
             self.test_score = self.precision_score
-        elif eval_metric == 'recall':
+        elif self.optimization_metric == 'recall':
             self.test_score = self.recall_score
-        elif eval_metric == 'roc_auc':
+        elif self.optimization_metric == 'roc_auc':
             self.test_score = self.roc_auc_score
-        elif eval_metric == 'accuracy':
+        elif self.optimization_metric == 'accuracy':
             self.test_score = self.accuracy_score
         else:
-            raise Exception(f'Invalid "eval_metric": {eval_metric}.\n\n')
+            raise Exception(f'Invalid "self.optimization_metric": {self.optimization_metric}.\n\n')
 
         if debug:
-            LOGGER.debug('self.test_score (%s): %s', eval_metric, self.test_score)
+            LOGGER.debug('self.test_score (%s): %s', self.optimization_metric, self.test_score)
 
     def optimize_cutoff(
         self,

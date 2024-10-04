@@ -2,8 +2,10 @@ from ml_accelerator.config.params import Params
 from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.modeling.models.classification_model import ClassificationModel
 from ml_accelerator.modeling.models.regression_model import RegressionModel
+from ml_accelerator.modeling.model_registry import ModelRegistry
 from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger
+from ml_accelerator.utils.timing.timing_helper import timing
 
 from hyperopt import fmin, hp, tpe, SparkTrials, STATUS_OK, atpe
 from hyperopt.fmin import generate_trials_to_calculate
@@ -45,12 +47,15 @@ class ModelTuner:
         target: str = Params.TARGET,
         task: str = Params.TASK,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
+        importance_method: str = Params.IMPORTANCE_METHOD,
         n_candidates: int = Params.N_CANDIDATES,
         min_performance: float = Params.MIN_PERFORMANCE,
         val_splits: int = Params.VAL_SPLITS,
         train_test_ratio: float = Params.TRAIN_TEST_RATIO,
-        importance_method: str = Params.IMPORTANCE_METHOD,
-        bucket: str = Params.BUCKET
+        model_storage_env: str = Params.MODEL_STORAGE_ENV,
+        data_storage_env: str = Params.DATA_STORAGE_ENV,
+        bucket: str = Params.BUCKET,
+        models_path: List[str] = Params.MODELS_PATH
     ) -> None:
         # Define attributes
         self.algorithms: List[str] = algorithms
@@ -58,15 +63,19 @@ class ModelTuner:
 
         self.target: str = target
         self.task: str = task
+
         self.optimization_metric: str = optimization_metric
+        self.importance_method: str = importance_method
 
         self.n_candidates: int = n_candidates
         self.min_performance: float = min_performance
         self.val_splits: int = val_splits
         self.train_test_ratio: float = train_test_ratio
-        self.importance_method: str = importance_method
-
+        
+        self.model_storage_env: str = model_storage_env
+        self.data_storage_env: str = data_storage_env
         self.bucket: str = bucket
+        self.models_path: List[str] = models_path
 
         # Define search space parameters
         self.int_parameters: List[str] = None
@@ -79,7 +88,18 @@ class ModelTuner:
         )
 
         # Define default attrs
+        self.model_registry: ModelRegistry = ModelRegistry(
+            n_candidates=self.n_candidates,
+            task=self.task,
+            data_storage_env=self.data_storage_env,
+            model_storage_env=self.model_storage_env,
+            bucket=self.bucket,
+            models_path=self.models_path
+        )
         self.dev_models: List[Model] = None
+
+        # Load self.dev_models
+        self.load()
 
     def extract_search_space_params(
         self,
@@ -276,17 +296,37 @@ class ModelTuner:
             choice_parameters='values'
         )[0]
 
-        # Add fixed parameters
+        # Add register Parameters
         if 'model_id' not in parameters.keys():
             parameters['model_id'] = None
         if 'version' not in parameters.keys():
             parameters['version'] = 0
         if 'stage' not in parameters.keys():
             parameters['stage'] = 'development'
+
+        # Storage Parameters
+        if 'storage_env' not in parameters.keys():
+            parameters['storage_env'] = self.model_storage_env
+        if 'bucket' not in parameters.keys():
+            parameters['bucket'] = self.bucket
+        if 'models_path' not in parameters.keys():
+            parameters['models_path'] = self.models_path
+
+        # Data Parameters
         if 'target' not in parameters.keys():
             parameters['target'] = self.target
+        if 'selected_features' not in parameters.keys():
+            parameters['selected_features'] = deepcopy(selected_features)
+
+        # Performance Parameters
+        if 'optimization_metric' not in parameters.keys():
+            parameters['optimization_metric'] = self.optimization_metric
+
+        # Feature importance Parameters
         if 'importance_method' not in parameters.keys():
             parameters['importance_method'] = self.importance_method
+
+        # Others
         if 'cutoff' not in parameters.keys() and self.task == 'classification':
             parameters['cutoff'] = 0.5
         if 'model_type' in parameters.keys():
@@ -296,10 +336,6 @@ class ModelTuner:
         parameters = self.prepare_hyper_parameters(
             parameters=parameters
         )
-
-        # Add selected features
-        if 'selected_features' not in parameters.keys():
-            parameters['selected_features'] = deepcopy(selected_features)
 
         if debug:
             print("new parameters:\n"
@@ -360,17 +396,16 @@ class ModelTuner:
         model.evaluate_val(
             X_train=X_train,
             y_train=y_train,
-            eval_metric=self.optimization_metric,
             splits=self.val_splits,
             debug=debug
         )
 
         # Log dev model
-        if model.tuning_score >= self.min_performance:
+        if model.val_score >= self.min_performance:
             self.update_dev_models(new_candidate=model)
 
         # Return Loss
-        return {'loss': -model.tuning_score, 'status': STATUS_OK}
+        return {'loss': -model.val_score, 'status': STATUS_OK}
         # except Exception as e:
         #     LOGGER.warning(
         #         'Skipping iteration.\n'
@@ -387,7 +422,7 @@ class ModelTuner:
         if new_candidate.model_id not in [m.model_id for m in self.dev_models]:
             if (
                 len(self.dev_models) < self.n_candidates
-                or new_candidate.tuning_score > self.dev_models[-1].tuning_score
+                or new_candidate.val_score > self.dev_models[-1].val_score
             ):
                 # Add new_candidate to self.dev_models
                 self.dev_models.append(new_candidate)
@@ -395,24 +430,20 @@ class ModelTuner:
                 # Drop duplicate Models (keeping most performant)
                 self.dev_models = self.model_registry.drop_duplicate_models(
                     models=self.dev_models,
-                    from_=None,
-                    trading_metric=False,
-                    by_table='val',
-                    debug=False
+                    score_to_prioritize='val_score'
                 )
             
                 # Sort Models
                 self.dev_models = self.model_registry.sort_models(
                     models=self.dev_models,
-                    trading_metric=False,
-                    by_table='val'
+                    by='val_score'
                 )
 
                 if len(self.dev_models) > self.n_candidates:
                     self.dev_models = self.dev_models[:self.n_candidates]
                 
                 if new_candidate.model_id in [m.model_id for m in self.dev_models]:
-                    print(f'Model {new_candidate.model_id} ({new_candidate.stage} | {new_candidate.model_class}) was added to self.dev_models.\n')
+                    print(f'Model {new_candidate.model_id} ({new_candidate.stage}) was added to self.dev_models.\n')
         else:
             LOGGER.warning(
                 '%s is already in dev_models.\n'
@@ -420,6 +451,7 @@ class ModelTuner:
                 new_candidate.model_id
             )
 
+    @timing
     def tune_models(
         self,
         ml_dataset: pd.DataFrame,
@@ -431,7 +463,15 @@ class ModelTuner:
         pass
 
     def load(self) -> None:
-        pass
+        # Load registry
+        self.model_registry.load_registry()
+
+        # Load Registry Models
+        self.dev_models: List[Model] = (
+            [self.model_registry.load_prod_model()]
+            + self.model_registry.load_staging_models()
+            + self.model_registry.load_dev_models()
+        )
 
 
 # conda deactivate
@@ -445,12 +485,15 @@ if __name__ == "__main__":
         target=Params.TARGET,
         task=Params.TASK,
         optimization_metric=Params.OPTIMIZATION_METRIC,
+        importance_method=Params.IMPORTANCE_METHOD,
         n_candidates=Params.N_CANDIDATES,
         min_performance=Params.MIN_PERFORMANCE,
         val_splits=Params.VAL_SPLITS,
         train_test_ratio=Params.TRAIN_TEST_RATIO,
-        importance_method=Params.IMPORTANCE_METHOD,
-        bucket=Params.BUCKET
+        model_storage_env=Params.MODEL_STORAGE_ENV,
+        data_storage_env=Params.DATA_STORAGE_ENV,
+        bucket=Params.BUCKET,
+        models_path=Params.MODELS_PATH
     )
 
     # pprint(Params.SEARCH_SPACE)
