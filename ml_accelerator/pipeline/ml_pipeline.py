@@ -1,8 +1,8 @@
 from ml_accelerator.config.params import Params
 from ml_accelerator.data_processing.data_cleaning import DataCleaner
 from ml_accelerator.data_processing.data_transforming import DataTransformer
-from ml_accelerator.modeling.classification_model import ClassificationModel
-from ml_accelerator.modeling.regression_model import RegressionModel
+from ml_accelerator.modeling.models.classification_model import ClassificationModel
+from ml_accelerator.modeling.models.regression_model import RegressionModel
 from ml_accelerator.utils.logging.logger_helper import get_logger
 
 import pandas as pd

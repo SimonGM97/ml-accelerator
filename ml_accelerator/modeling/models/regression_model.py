@@ -1,5 +1,5 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.modeling.model import Model
+from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.utils.logging.logger_helper import get_logger
 
 import pandas as pd

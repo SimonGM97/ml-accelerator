@@ -1,7 +1,7 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.modeling.model import Model
-from ml_accelerator.modeling.classification_model import ClassificationModel
-from ml_accelerator.modeling.regression_model import RegressionModel
+from ml_accelerator.modeling.models.model import Model
+from ml_accelerator.modeling.models.classification_model import ClassificationModel
+from ml_accelerator.modeling.models.regression_model import RegressionModel
 from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger
 

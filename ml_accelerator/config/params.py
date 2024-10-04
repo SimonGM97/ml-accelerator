@@ -31,8 +31,13 @@ def find_base_repo_root(project_name: str) -> Path:
 class Params:
     initialized: bool = False
 
-    # GENERAL PARAMETERS
+    """
+    GENERAL PARAMETERS
+    """
+    # PROJECT PARAMETERS
     PROJECT_NAME: str
+    TARGET: str
+    TASK: str
 
     # ENVIRONMENT PARAMETERS
     ENV: str
@@ -44,9 +49,8 @@ class Params:
     COMPUTE_ENV: str
 
     """
-    DATA PARAMETERS
+    DATA PROCESSING PARAMETERS
     """
-
     # STORAGE PARAMETERS
     DATASET_NAME: str
     TRAINING_PATH: List[str]
@@ -69,6 +73,8 @@ class Params:
     """
     MODELING PARAMETERS
     """
+    # MODEL STORAGE PARAMETERS
+    MODEL_STORAGE: str
 
     # ML DATASETS PARAMETERS
     TEST_SIZE: float
@@ -100,7 +106,6 @@ class Params:
     """
     OTHERS
     """
-
     # LOG PARAMETERS
     LEVEL: str
     TXT_FMT: str
@@ -129,15 +134,14 @@ class Params:
         """
         GENERAL PARAMETERS
         """
-        GENERAL_PARAMS: dict = config.get("GENERAL_PARAMS")
+        # PROJECT PARAMETERS
+        PROJECT_PARAMS: dict = config.get("PROJECT_PARAMS")
 
-        cls.PROJECT_NAME: str = GENERAL_PARAMS.get("PROJECT_NAME")
-        cls.TARGET: str = GENERAL_PARAMS.get("TARGET")
-        cls.TASK: str = GENERAL_PARAMS.get("TASK")
+        cls.PROJECT_NAME: str = PROJECT_PARAMS.get("PROJECT_NAME")
+        cls.TARGET: str = PROJECT_PARAMS.get("TARGET")
+        cls.TASK: str = PROJECT_PARAMS.get("TASK")
 
-        """
-        ENVIRONMENT PARAMETERS
-        """
+        # ENVIRONMENT PARAMETERS
         ENV_PARAMS: dict = config.get("ENV_PARAMS")
 
         cls.ENV: str = ENV_PARAMS.get("ENV")
@@ -149,8 +153,9 @@ class Params:
         cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
 
         """
-        STORAGE PARAMETERS
+        DATA PARAMETERS
         """
+        # STORAGE PARAMETERS
         STORAGE_PARAMS: dict = config.get("STORAGE_PARAMS")
         PATHS_PARAMS: dict = STORAGE_PARAMS.get("PATHS_PARAMS")
 
@@ -161,44 +166,40 @@ class Params:
         cls.DATA_EXTENTION: str = STORAGE_PARAMS.get("DATA_EXTENTION")
         cls.PARTITION_COLUMN: str = STORAGE_PARAMS.get("PARTITION_COLUMN")
 
-        """
-        DATA CLEANING PARAMETERS
-        """
+        # DATA CLEANING PARAMETERS
         DATA_CLEANING_PARAMS: dict = config.get("DATA_CLEANING_PARAMS")
 
         cls.OUTLIER_Z_THRESHOLD: float = DATA_CLEANING_PARAMS.get("OUTLIER_Z_THRESHOLD")
 
-        """
-        FEATURE ENGINEERING PARAMETERS
-        """
+        # FEATURE ENGINEERING PARAMETERS
         FEATURE_ENGINEERING_PARAMS: dict = config.get("FEATURE_ENGINEERING_PARAMS")
 
-        """
-        DATA TRANSFORMING PARAMETERS
-        """
+        # DATA TRANSFORMING PARAMETERS
         DATA_TRANSFORMING_PARAMS: dict = config.get("DATA_TRANSFORMING_PARAMS")
 
         cls.ENCODE_TARGET: bool = DATA_TRANSFORMING_PARAMS.get("ENCODE_TARGET")
         cls.SCALE_NUM_FEATURES: bool = DATA_TRANSFORMING_PARAMS.get("SCALE_NUM_FEATURES")
         cls.ENCODE_CAT_FEATURES: bool = DATA_TRANSFORMING_PARAMS.get("ENCODE_CAT_FEATURES")
         
-        """
-        FEATURE SELECTION PARAMETERS
-        """
+        # FEATURE SELECTION PARAMETERS
         FEATURE_SELECTION_PARAMS: dict = config.get("FEATURE_SELECTION_PARAMS")
 
         cls.N_FEATURES: list = FEATURE_SELECTION_PARAMS.get("N_FEATURES")
 
         """
-        ML DATASETS PARAMETERS
+        MODELING PARAMETERS
         """
+        # MODEL STORAGE PARAMETERS
+        MODEL_STORAGE_PARAMS: dict = config.get("MODEL_STORAGE_PARAMS")
+
+        cls.MODEL_STORAGE: str = MODEL_STORAGE_PARAMS.get("MODEL_STORAGE")
+
+        # ML DATASETS PARAMETERS
         ML_DATASETS_PARAMS: dict = config.get("ML_DATASETS_PARAMS")
 
         cls.TRAIN_TEST_RATIO: float = ML_DATASETS_PARAMS.get("TRAIN_TEST_RATIO")
 
-        """
-        CLASSIFICATION PARAMETERS
-        """
+        # CLASSIFICATION PARAMETERS
         CLASSIFICATION_PARAMS: dict = config.get("CLASSIFICATION_PARAMS")
 
         cls.BALANCE_TRAIN: bool = CLASSIFICATION_PARAMS.get("BALANCE_TRAIN")
@@ -206,19 +207,13 @@ class Params:
         cls.CLASS_WEIGHT: dict = CLASSIFICATION_PARAMS.get("CLASS_WEIGHT")
         cls.CUTOFF: float = CLASSIFICATION_PARAMS.get("CUTOFF")
 
-        """
-        REGRESSION PARAMETERS
-        """
+        # REGRESSION PARAMETERS
         REGRESSION_PARAMS: dict = config.get("REGRESSION_PARAMS")
 
-        """
-        FORECASTING PARAMETERS
-        """
+        # FORECASTING PARAMETERS
         FORECASTING_PARAMS: dict = config.get("FORECASTING_PARAMS")
 
-        """
-        HYPER PARAMETER TUNING PARAMETERS
-        """
+        # HYPER PARAMETER TUNING PARAMETERS
         HYPER_PARAMETER_TUNING_PARAMS: dict = config.get("HYPER_PARAMETER_TUNING_PARAMS")
 
         cls.ALGORITHMS: List[str] = HYPER_PARAMETER_TUNING_PARAMS.get("ALGORITHMS")
@@ -231,16 +226,15 @@ class Params:
         cls.TIMEOUT_MINS: float = HYPER_PARAMETER_TUNING_PARAMS.get("TIMEOUT_MINS")
         cls.MIN_PERFORMANCE: float = HYPER_PARAMETER_TUNING_PARAMS.get("MIN_PERFORMANCE")
 
-        """
-        FEATURE IMPORTANCE PARAMETERS
-        """
+        # FEATURE IMPORTANCE PARAMETERS
         FEATURE_IMPORTANCE_PARAMS: dict = config.get("FEATURE_IMPORTANCE_PARAMS")
 
         cls.IMPORTANCE_METHOD: str = FEATURE_IMPORTANCE_PARAMS.get("IMPORTANCE_METHOD")
 
         """
-        LOG PARAMETERS
+        OTHERS
         """
+        # LOG PARAMETERS
         LOG_PARAMS: dict = config.get("LOG_PARAMS")
 
         cls.LEVEL: str = LOG_PARAMS.get("LEVEL")
@@ -250,19 +244,13 @@ class Params:
         cls.LOG_FILE: str = LOG_PARAMS.get("LOG_FILE")
         cls.BACKUP_COUNT: int = LOG_PARAMS.get("BACKUP_COUNT")
 
-        """
-        DEPLOYMENT PARAMETERS
-        """
+        # DEPLOYMENT PARAMETERS
         DEPLOYMENT_PARAMS: dict = config.get("DEPLOYMENT_PARAMS")
 
-        """
-        INFRASTRUCTURE PARAMETERS
-        """
+        # INFRASTRUCTURE PARAMETERS
         INFRASTRUCTURE_PARAMS: dict = config.get("INFRASTRUCTURE_PARAMS")
         
-        """
-        COMPUTE PARAMETERS
-        """
+        # COMPUTE PARAMETERS
         def get_gpu_count():
             cmd = "system_profiler SPDisplaysDataType | grep Chipset"
             output = subprocess.check_output(cmd, shell=True).decode("utf-8")

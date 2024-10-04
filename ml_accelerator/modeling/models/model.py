@@ -41,6 +41,7 @@ class Model(ABC):
 
     # Parquet attrs
     parquet_attrs = []
+    partition_cols = {}
 
     # Metrics
     metric_names = []
@@ -288,14 +289,16 @@ class Model(ABC):
                 save_to_filesystem(
                     asset=self.model,
                     path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
-                    partition_column=None
+                    partition_column=None,
+                    overwrite=True
                 )
             
             # Save model_attrs
             save_to_filesystem(
                 asset=model_attrs,
                 path=os.path.join(base_path, f"{self.model_id}_model_attrs.pickle"),
-                partition_column=None
+                partition_column=None,
+                overwrite=True
             )
 
             # Save csv attrs
@@ -305,7 +308,8 @@ class Model(ABC):
                     save_to_filesystem(
                         asset=df,
                         path=os.path.join(base_path, f"{self.model_id}_{attr_name}.csv"),
-                        partition_column=None
+                        partition_column=None,
+                        overwrite=True
                     )
 
             # Save parquet attrs
@@ -315,7 +319,8 @@ class Model(ABC):
                     save_to_s3(
                         asset=df,
                         path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
-                        partition_column=None
+                        partition_column=self.partition_cols.get("attr_name"),
+                        overwrite=True
                     )
         
         elif self.storage_env == 'S3':
@@ -330,14 +335,16 @@ class Model(ABC):
                 save_to_s3(
                     asset=self.model,
                     path=f"{base_path}/{self.model_id}_model.pickle",
-                    partition_column=None
+                    partition_column=None,
+                    overwrite=True
                 )
 
             # Save model_attrs
             save_to_s3(
                 asset=model_attrs,
                 path=f"{base_path}/{self.model_id}_model_attrs.pickle",
-                partition_column=None
+                partition_column=None,
+                overwrite=True
             )
 
             # Save csv attrs
@@ -347,7 +354,8 @@ class Model(ABC):
                     save_to_s3(
                         asset=df,
                         path=f"{base_path}/{self.model_id}_{attr_name}.csv",
-                        partition_column=None
+                        partition_column=None,
+                        overwrite=True
                     )
 
             # Save parquet attrs
@@ -357,7 +365,8 @@ class Model(ABC):
                     save_to_s3(
                         asset=df,
                         path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
-                        partition_column=None
+                        partition_column=self.partition_cols.get("attr_name"),
+                        overwrite=True
                     )
         
         """
@@ -378,34 +387,105 @@ class Model(ABC):
     def register_model(self):
         pass
 
-    def load(
-        self,
-        from_s3: bool = True
-    ) -> None:
-        """
-        Load from S3
-        """
-        if from_s3:
-            # Load self.model from S3
-            self.model = load_from_s3(path=f"{self.s3_path}/{self.model_id}_model.pickle")
+    def load(self) -> None:
+        if self.storage_env == 'filesystem':
+            """
+            Filesystem
+            """
+            # Define base_path
+            base_path = os.path.join(self.bucket, "models", self.model_id)
 
-            # Load pickled attrs from S3
-            model_attrs: dict = load_from_s3(path=f"{self.s3_path}/{self.model_id}_model_attrs.pickle")
+            # Load self.model
+            self.model = load_from_filesystem(
+                path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
+                partition_cols=None,
+                filters=None
+            )
+            
+            # Load model_attrs
+            model_attrs: dict = load_from_filesystem(
+                path=os.path.join(base_path, f"{self.model_id}_model_attrs.pickle"),
+                partition_cols=None,
+                filters=None
+            )
 
+            # Assign pickled attrs
             for attr_name, attr_value in model_attrs.items():
                 if attr_name in self.pickled_attrs:
                     setattr(self, attr_name, attr_value)
 
-            # Load csv files from S3
+            # Load csv attrs
             for attr_name in self.csv_attrs:
-                df: pd.DataFrame = load_from_s3(path=f"{self.s3_path}/{self.model_id}_{attr_name}.csv")
+                # Load attribute
+                df: pd.DataFrame = load_from_filesystem(
+                    path=os.path.join(base_path, f"{self.model_id}_{attr_name}.csv"),
+                    partition_cols=None,
+                    filters=None
+                )
 
+                # Assign attribute
                 setattr(self, attr_name, df)
 
-            # Load parquet attrs from S3
+            # Load parquet attrs
             for attr_name in self.parquet_attrs:
-                df: pd.DataFrame = load_from_s3(path=f"{self.s3_path}/{self.model_id}_{attr_name}.parquet")
+                # Load attribute
+                df: pd.DataFrame = load_from_filesystem(
+                    path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
+                    partition_column=self.partition_cols.get("attr_name"),
+                    filters=None
+                )
 
+                # Assign attribute
+                setattr(self, attr_name, df)
+        
+        elif self.storage_env == 'S3':
+            """
+            S3
+            """
+            # Define base_path
+            base_path = f"{self.bucket}/models/{self.model_id}"
+
+            # Load self.model
+            self.model = load_from_s3(
+                path=f"{base_path}/{self.model_id}_model.pickle",
+                partition_cols=None,
+                filters=None
+            )
+
+            # Load pickled attrs
+            model_attrs: dict = load_from_s3(
+                path=f"{base_path}/{self.model_id}_model_attrs.pickle",
+                partition_cols=None,
+                filters=None
+            )
+
+            # Assign pickled attrs
+            for attr_name, attr_value in model_attrs.items():
+                if attr_name in self.pickled_attrs:
+                    setattr(self, attr_name, attr_value)
+
+            # Load csv files
+            for attr_name in self.csv_attrs:
+                # Load attribute
+                df: pd.DataFrame = load_from_s3(
+                    path=f"{base_path}/{self.model_id}_{attr_name}.csv",
+                    partition_cols=None,
+                    filters=None
+                )
+
+                # Assign attribute
+                setattr(self, attr_name, df)
+
+            # Load parquet attrs
+            for attr_name in self.parquet_attrs:
+                # Load attribute
+                df: pd.DataFrame = load_from_s3(
+                    path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
+                    partition_column=self.partition_cols.get("attr_name"),
+                    filters=None
+                )
+
+                # Assign attribute
                 setattr(self, attr_name, df)
 
     def __repr__(self) -> str:

@@ -13,7 +13,7 @@ import yaml
 import logging
 from pathlib import Path
 from tqdm import tqdm
-from typing import Set
+from typing import List, Set, Tuple, Any
 from pprint import pprint
 
 
@@ -65,7 +65,11 @@ FS = s3fs.S3FileSystem(
 )
 
 
-def load_from_s3(path: str):
+def load_from_s3(
+    path: str,
+    partition_cols: List[str] = None,
+    filters: List[Tuple[str, str, List[str]]] = None
+) -> Any:
     # Extract bucket, key & format
     bucket, key = path.split('/')[0], '/'.join(path.split('/')[1:])
     read_format = key.split('.')[-1]
@@ -81,6 +85,45 @@ def load_from_s3(path: str):
         asset: pd.DataFrame = pd.read_csv(
             StringIO(obj['Body'].read().decode('utf-8'))
         )
+    
+    elif read_format == 'parquet':
+        # Remove extention
+        prefix = key.replace(".parquet", "")
+
+        # Find files
+        files = FS.glob(f's3://{bucket}/{prefix}/*/*.parquet')
+        if len(files) == 0:
+            files = FS.glob(f's3://{bucket}/{prefix}/*/*/*.parquet')
+            if len(files) == 0:
+                files = f"s3://{bucket}/{prefix}/dataset-0.parquet"
+
+        # Create a Parquet dataset
+        dataset = pq.ParquetDataset(
+            path_or_paths=files,
+            filesystem=FS,
+            filters=filters
+        )
+
+        # Read the dataset into a Pandas DataFrame
+        asset: pd.DataFrame = dataset.read_pandas().to_pandas()
+
+        # # Sort index, drop duplicated indexes & drop unrequired columns
+        # drop_cols = [
+        #     'month',
+        #     'bimester',
+        #     'quarter',
+        #     'year',
+        #     'year_month',
+        #     'year_bimester',
+        #     'year_quarter'
+        # ]
+
+        # asset: pd.DataFrame = (
+        #     asset
+        #     .sort_index(ascending=True)
+        #     .loc[~asset.index.duplicated(keep='last')]
+        #     .drop(columns=drop_cols, errors='ignore')
+        # )
 
     elif read_format == 'pickle':
         # Retrieve stored object
@@ -115,8 +158,9 @@ def load_from_s3(path: str):
 def save_to_s3(
     asset, 
     path: str,
-    partition_column: str = None
-):
+    partition_cols: List[str] = None,
+    overwrite: bool = True
+) -> None:
     # Extract bucket, key & format
     bucket, key = path.split('/')[0], '/'.join(path.split('/')[1:])
     write_format = key.split('.')[-1]
@@ -125,6 +169,7 @@ def save_to_s3(
     delete_from_s3(path=path)
 
     if write_format == 'csv':
+        # Copy asset
         asset: pd.DataFrame = asset.copy(deep=True)
 
         # Convert DataFrame to CSV in memory (StringIO)
@@ -137,6 +182,45 @@ def save_to_s3(
             Key=key,
             Body=csv_buffer.getvalue()
         )
+
+    elif write_format == 'parquet':
+        # Copy asset
+        asset: pd.DataFrame = asset.copy(deep=True)
+
+        # Remove extention
+        prefix = key.replace(".parquet", "")
+
+        # Extract existing_data_behavior
+        if overwrite:
+            # Delete all found files before writing a new one
+            existing_data_behavior = 'delete_matching'
+        else:
+            # (Append) Overwrite new partitions while leaving old ones
+            existing_data_behavior = 'overwrite_or_ignore'
+
+        # Write PyArrow Table as a parquet file, partitioned by year_quarter
+        if overwrite:
+            if partition_cols is None:
+                delete_from_s3(path=f'{bucket}/{prefix}/dataset-0.parquet')
+            else:
+                # Delete objects
+                delete_s3_directory(
+                    bucket=bucket, 
+                    directory=prefix
+                )
+        
+        pq.write_to_dataset(
+            pa.Table.from_pandas(asset),
+            root_path=f's3://{bucket}/{prefix}',
+            partition_cols=partition_cols,
+            filesystem=FS,
+            schema=pa.Schema.from_pandas(asset),
+            basename_template='dataset-{i}.parquet',
+            use_threads=True,
+            compression='snappy',
+            existing_data_behavior=existing_data_behavior
+        )
+
     elif write_format == 'pickle':
         # Save new object
         S3_CLIENT.put_object(
@@ -157,7 +241,7 @@ def save_to_s3(
 
 def delete_from_s3(
     path: str
-):
+) -> None:
     bucket, key = path.split('/')[0], '/'.join(path.split('/')[1:])
 
     S3_CLIENT.delete_object(

@@ -1,7 +1,7 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.modeling.model import Model
-from ml_accelerator.modeling.classification_model import ClassificationModel
-from ml_accelerator.modeling.regression_model import RegressionModel
+from ml_accelerator.modeling.models.model import Model
+from ml_accelerator.modeling.models.classification_model import ClassificationModel
+from ml_accelerator.modeling.models.regression_model import RegressionModel
 from ml_accelerator.utils.aws.s3_helper import (
     load_from_s3,
     save_to_s3,
@@ -646,11 +646,15 @@ class ModelRegistry:
         # Read forced_model
         if self.storage_env == 'filesystem':
             forced_model: dict = load_from_filesystem(
-                path=os.path.join(Params.BUCKET, "models", "forced_model.json")
+                path=os.path.join(Params.BUCKET, "models", "forced_model.json"),
+                partition_cols=None,
+                filters=None
             )
         elif self.storage_env == 'S3':
             forced_model: dict = load_from_s3(
-                path=f"{self.bucket}/models/forced_model.json"
+                path=f"{self.bucket}/models/forced_model.json",
+                partition_cols=None,
+                filters=None
             )
         else:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
@@ -661,11 +665,15 @@ class ModelRegistry:
         # Read registry
         if self.storage_env == 'filesystem':
             self.registry: Dict[str, List[List[str, str]]] = load_from_filesystem(
-                path=os.path.join(Params.BUCKET, "models", "model_registry.json")
+                path=os.path.join(Params.BUCKET, "models", "model_registry.json"),
+                partition_cols=None,
+                filters=None
             )
         elif self.storage_env == 'S3':
             self.registry: Dict[str, List[List[str, str]]] = load_from_s3(
-                path=f"{self.bucket}/models/model_registry.json"
+                path=f"{self.bucket}/models/model_registry.json",
+                partition_cols=None,
+                filters=None
             )
         else:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
@@ -676,13 +684,15 @@ class ModelRegistry:
             save_to_filesystem(
                 asset=self.registry,
                 path=os.path.join(Params.BUCKET, "models", "model_registry.json"),
-                partition_column=None
+                partition_column=None,
+                overwrite=True
             )
         elif self.storage_env == 'S3':
             save_to_s3(
                 asset=self.registry,
                 path=os.path.join(Params.BUCKET, "models", "model_registry.json"),
-                partition_column=None
+                partition_column=None,
+                overwrite=True
             )
         else:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')

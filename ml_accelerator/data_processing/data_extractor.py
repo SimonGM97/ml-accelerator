@@ -63,38 +63,47 @@ class DataExtractor:
     def persist_dataset(
         self,
         df: pd.DataFrame,
-        df_name: str
+        df_name: str,
+        overwrite: bool = True
     ) -> None:
         if self.storage_env == 'filesystem':
             # Persist to filesystem
             save_to_filesystem(
                 asset=df,
                 path=os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}"),
-                partition_column=self.partition_column
+                partition_column=self.partition_column,
+                overwrite=overwrite
             )
         elif self.storage_env == 'S3':
             # Persist to S3
             save_to_s3(
                 asset=df,
                 path=f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}",
-                partition_column=self.partition_column
+                partition_column=self.partition_column,
+                overwrite=overwrite
             )
         else:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
 
     def load_dataset(
         self,
-        df_name: str
+        df_name: str,
+        partition_cols: List[str] = None,
+        filters: List[Tuple[str, str, List[str]]] = None
     ) -> pd.DataFrame:
         if self.storage_env == 'filesystem':
             # Load from filesystem
             df: pd.DataFrame = load_from_filesystem(
-                path=os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}")
+                path=os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}"),
+                partition_cols=partition_cols,
+                filters=filters
             )
         elif self.storage_env == 'S3':
             # Load from S3
             df: pd.DataFrame = load_from_s3(
-                path=f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}"
+                path=f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}",
+                partition_cols=partition_cols,
+                filters=filters
             )
         else:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')

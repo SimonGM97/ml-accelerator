@@ -1,5 +1,9 @@
+# # # # #
 # GENERAL PARAMETERS
-GENERAL_PARAMS:
+# # # # #
+
+# PROJECT PARAMETERS
+PROJECT_PARAMS:
   PROJECT_NAME: ml-accelerator
   TARGET: species # target column
   TASK: classification 
@@ -17,7 +21,7 @@ ENV_PARAMS:
   # local, sagemaker
 
 # # # # #
-# DATA PARAMETERS
+# DATA PROCESSING PARAMETERS
 # # # # # 
 
 # STORAGE PARAMETERS
@@ -58,6 +62,11 @@ FEATURE_SELECTION_PARAMS:
 # # # # #
 # MODELING PARAMETERS
 # # # # #
+
+# MODEL STORAGE PARAMETERS
+MODEL_STORAGE_PARAMS:
+  MODEL_STORAGE: filesystem
+  # filesystem, S3, mlflow
 
 # ML DATASETS PARAMETERS
 ML_DATASETS_PARAMS:
