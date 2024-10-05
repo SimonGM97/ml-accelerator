@@ -58,7 +58,7 @@ class Params:
     INFERENCE_PATH: List[str]
     MODELS_PATH: List[str]
     DATA_EXTENTION: str
-    PARTITION_COLUMN: str
+    PARTITION_COLUMNS: str
 
     # DATA CLEANING PARAMETERS
     Z_THRESHOLD: float
@@ -163,7 +163,7 @@ class Params:
         cls.INFERENCE_PATH: List[str] = PATHS_PARAMS.get("INFERENCE_PATH")
         cls.MODELS_PATH: List[str] = PATHS_PARAMS.get("MODELS_PATH")
         cls.DATA_EXTENTION: str = STORAGE_PARAMS.get("DATA_EXTENTION")
-        cls.PARTITION_COLUMN: str = STORAGE_PARAMS.get("PARTITION_COLUMN")
+        cls.PARTITION_COLUMNS: str = STORAGE_PARAMS.get("PARTITION_COLUMNS")
 
         # DATA CLEANING PARAMETERS
         DATA_CLEANING_PARAMS: dict = config.get("DATA_CLEANING_PARAMS")

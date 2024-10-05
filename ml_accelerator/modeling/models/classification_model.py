@@ -353,8 +353,8 @@ class ClassificationModel(Model):
 
     def evaluate_test(
         self,
-        y_test: pd.DataFrame,
         X_test: pd.DataFrame,
+        y_test: pd.DataFrame,        
         debug: bool = False
     ) -> None:
         """
@@ -372,7 +372,7 @@ class ClassificationModel(Model):
         :param `debug`: (bool) Wether or not to show self.test_score, for debugging purposes.
         """
         # Prepare y_test
-        y_test = y_test.values.astype(int)
+        y_test = y_test.values
 
         # Predict test values
         y_pred = self.predict(X=X_test)

@@ -39,7 +39,7 @@ class DataExtractor:
         training_path: List[str] = Params.TRAINING_PATH,
         inference_path: List[str] = Params.INFERENCE_PATH,
         data_extention: str = Params.DATA_EXTENTION,
-        partition_column: str = Params.PARTITION_COLUMN
+        partition_cols: str = Params.PARTITION_COLUMNS
     ) -> None:
         # Set attributes
         self.bucket: str = bucket
@@ -48,7 +48,7 @@ class DataExtractor:
         self.training_path: List[str] = training_path
         self.inference_path: List[str] = inference_path
         self.data_extention: str = data_extention
-        self.partition_column: str = partition_column
+        self.partition_cols: str = partition_cols
 
     def load_schema(
         self,
@@ -71,7 +71,7 @@ class DataExtractor:
             save_to_filesystem(
                 asset=df,
                 path=os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}"),
-                partition_column=self.partition_column,
+                partition_cols=self.partition_cols,
                 overwrite=overwrite
             )
         elif self.storage_env == 'S3':
@@ -79,7 +79,7 @@ class DataExtractor:
             save_to_s3(
                 asset=df,
                 path=f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}",
-                partition_column=self.partition_column,
+                partition_cols=self.partition_cols,
                 overwrite=overwrite
             )
         else:
@@ -88,21 +88,20 @@ class DataExtractor:
     def load_dataset(
         self,
         df_name: str,
-        partition_cols: List[str] = None,
         filters: List[Tuple[str, str, List[str]]] = None
     ) -> pd.DataFrame:
         if self.storage_env == 'filesystem':
             # Load from filesystem
             df: pd.DataFrame = load_from_filesystem(
                 path=os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}"),
-                partition_cols=partition_cols,
+                partition_cols=self.partition_cols,
                 filters=filters
             )
         elif self.storage_env == 'S3':
             # Load from S3
             df: pd.DataFrame = load_from_s3(
                 path=f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}",
-                partition_cols=partition_cols,
+                partition_cols=self.partition_cols,
                 filters=filters
             )
         else:

@@ -110,14 +110,29 @@ class Model(ABC):
         algorithms: List[str] = Params.ALGORITHMS
 
         params = {
-            # General Parameters
-            'algorithm': self.algorithm,
-
-            # Register Parameters            
+            # Register Parameters
             'model_id': self.model_id,
             'version': self.version,
             'stage': self.stage,
 
+            # Storage Parameters
+            'storage_env': self.storage_env,
+            'bucket': self.bucket,
+            'models_path': self.models_path,
+
+            # Model Parameters
+            'algorithm': self.algorithm,
+
+            # Data Parameters
+            'target': self.target,
+            'selected_features': self.selected_features,
+
+            # Performance Parameters
+            'optimization_metric': self.optimization_metric,
+
+            # Feature importance Parameters
+            'importance_method': self.importance_method,
+            
             # Others
             'model_type': algorithms.index(self.algorithm)
         }
@@ -174,6 +189,13 @@ class Model(ABC):
     """
 
     @abstractmethod
+    def build(
+        self,
+        debug: bool = False
+    ) -> None:
+        pass
+
+    @abstractmethod
     def fit(
         self,
         X: pd.DataFrame,
@@ -199,7 +221,12 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def evaluate_test(self):
+    def evaluate_test(
+        self,
+        X_test: pd.DataFrame,
+        y_test: pd.DataFrame,        
+        debug: bool = False
+    ):
         pass
 
     @abstractmethod
@@ -408,29 +435,38 @@ class Model(ABC):
     Load Methods
     """
 
-    def load(self) -> None:
+    def load(
+        self,
+        light: bool = False
+    ) -> None:
         if self.storage_env == 'filesystem':
             # Load from filesystem
-            self.load_from_filesystem()            
+            self.load_from_filesystem(light=light)            
         
         elif self.storage_env == 'S3':
             # Load from S3
-            self.load_from_s3()
+            self.load_from_s3(light=light)
         
         elif self.storage_env == 'mlflow':
             # Load registered model from ML Flow
-            self.load_registered_model()
+            self.load_registered_model(light=light)
 
-    def load_from_filesystem(self) -> None:
+    def load_from_filesystem(
+        self,
+        light: bool = False
+    ) -> None:
         # Define base_path
         base_path = os.path.join(self.bucket, *self.models_path, self.model_id)
 
         # Load self.model
-        self.model = load_from_filesystem(
-            path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
-            partition_cols=None,
-            filters=None
-        )
+        if not light:
+            self.model = load_from_filesystem(
+                path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
+                partition_cols=None,
+                filters=None
+            )
+        else:
+            self.model = None
         
         # Load model_attrs
         model_attrs: dict = load_from_filesystem(
@@ -468,16 +504,22 @@ class Model(ABC):
             # Assign attribute
             setattr(self, attr_name, df)
 
-    def load_from_s3(self) -> None:
+    def load_from_s3(
+        self,
+        light: bool = False
+    ) -> None:
         # Define base_path
         base_path = f"{self.bucket}/{'/'.join(self.models_path)}/{self.model_id}"
 
         # Load self.model
-        self.model = load_from_s3(
-            path=f"{base_path}/{self.model_id}_model.pickle",
-            partition_cols=None,
-            filters=None
-        )
+        if not light:
+            self.model = load_from_s3(
+                path=f"{base_path}/{self.model_id}_model.pickle",
+                partition_cols=None,
+                filters=None
+            )
+        else:
+            self.model = None
 
         # Load pickled attrs
         model_attrs: dict = load_from_s3(
@@ -526,9 +568,26 @@ class Model(ABC):
         # Save Model to tracking system
         pass
 
-    def load_registered_model(self) -> None:
+    def load_registered_model(
+        self,
+        light: bool = False
+    ) -> None:
         pass
     
+    def load_logged_model(
+        self,
+        light: bool = False
+    ) -> None:
+        pass
+
+    def update_version_stage(self) -> None:
+        # Update MLFlow registry version & stage
+        Params.ml_client.transition_model_version_stage(
+            name=self.model_name,
+            version=self.version,
+            stage=self.stage
+        )
+
     """
     Other methods
     """

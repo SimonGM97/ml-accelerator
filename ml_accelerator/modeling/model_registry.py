@@ -63,18 +63,28 @@ class ModelRegistry:
         self.bucket: str = bucket
         self.models_path: List[str] = models_path
 
-        # Define self.registry
-        self.registry: Dict[str, List[List[str, str]]] = {
+        # Define default models
+        self.prod_model: Model = None
+        self.staging_models: List[Model] = None
+        self.dev_models: List[Model] = None
+
+        # Define self.registry_dict
+        self.registry_dict: Dict[str, List[str]] = {
             "production": [], 
             "staging": [], 
             "development": []
         }
 
-        self.load_registry()
+        self.load_registry_dict()
+
+    """
+    Model Loading Methods
+    """
 
     def load_model(
         self, 
-        model_id: str
+        model_id: str,
+        light: bool = False
     ) -> Model:
         try:
             # Instanciate Model
@@ -84,7 +94,7 @@ class ModelRegistry:
                 model = RegressionModel(model_id=model_id)
 
             # Load Model
-            model.load()
+            model.load(light=light)
 
             return model
         except Exception as e:
@@ -95,75 +105,122 @@ class ModelRegistry:
             )
             return
 
-    def load_dev_models(self) -> List[Model]:
+    def load_dev_models(
+        self,
+        light: bool = False
+    ) -> List[Model]:
         # Load Staging Models
         dev_models = []
 
         LOGGER.info('Loading dev models:')
-        for model_id in tqdm(self.registry['development']):
-            dev_models.append(self.load_model(model_id=model_id))
+        for model_id in tqdm(self.registry_dict['development']):
+            dev_models.append(self.load_model(
+                model_id=model_id,
+                light=light
+            ))
         
         return [model for model in dev_models if model is not None]
     
-    def load_staging_models(self) -> List[Model]:
+    def load_staging_models(
+        self,
+        light: bool = False
+    ) -> List[Model]:
         # Load Staging Models
         stage_models = []
 
         LOGGER.info('Loading staging models:')
-        for model_id in tqdm(self.registry['staging']):
-            stage_models.append(self.load_model(model_id=model_id))
+        for model_id in tqdm(self.registry_dict['staging']):
+            stage_models.append(self.load_model(
+                model_id=model_id,
+                light=light
+            ))
         
         return [model for model in stage_models if model is not None]
     
-    def load_prod_model(self) -> Model:
+    def load_prod_model(
+        self,
+        light: bool = False
+    ) -> Model:
         """
         Method for the production model.
 
         :return: (Model) Production model.
         """
         LOGGER.info('Loading prod model')
-        if len(self.registry['production']) > 0:
+        if len(self.registry_dict['production']) > 0:
             # Find champion reg
-            model_id = self.registry['production'][0]
+            model_id = self.registry_dict['production'][0]
 
             # Load and return champion model
-            return self.load_model(model_id=model_id)
+            return self.load_model(
+                model_id=model_id,
+                light=light
+            )
         return None
     
-    @staticmethod
-    def sort_models(
-        models: List[Model],
-        by: str = 'test_score'
-    ) -> List[Model]: 
-        if by not in ['val_score', 'test_score']:
-            LOGGER.critical('Invalid "by" parameter: %s', by)
-            raise Exception(f'Invalid "by" parameter: {by}.\n')
-        
-        def sort_fun(model: Model):
-            if by == 'val_score':
-                # Cross validation metric
-                if model.val_score is not None:
-                    return model.val_score
-            elif by == 'test_score':
-                # Test score
-                if model.test_score is not None:
-                    return model.test_score
-            return 0
-        
-        models.sort(key=sort_fun, reverse=True)
+    """
+    Registry Methods
+    """
 
-        return models
+    def update_model_stage(
+        self,
+        model: Model,
+        new_stage: str = None
+    ) -> None:
+        # Define initial stage
+        initial_stage = model.stage
 
-    @staticmethod
-    def needs_repair(d: dict):
-        for value in d.values():
-            if value:
-                return True
-        return False
+        # Check that new stage is different from actual stage
+        if initial_stage == new_stage:
+            return
+        
+        # Update model stage
+        model.stage == new_stage
+
+        # Update self.registry_dict
+        self.registry_dict[initial_stage].remove(model.model_id)
+        self.registry_dict[new_stage].append(model.model_id)
+
+        # Update self.champion, self.staging_models & self.development_models
+        if initial_stage == 'development':
+            self.dev_models.remove(model)
+        elif initial_stage == 'staging':
+            self.staging_models.remove(model)
+        elif initial_stage == 'production':
+            self.prod_model = None
+        
+        if new_stage == 'development':
+            self.dev_models.append(model)
+        elif new_stage == 'staging':
+            self.staging_models.append(model)
+        elif new_stage == 'production':
+            self.prod_model = model
+
+    def debug(self):
+        if self.prod_model is not None:
+            prod_test_score: float = self.prod_model.test_score
+            prod_optim_metric: str = self.prod_model.optimization_metric
+        else:
+            prod_test_score: float = None
+            prod_optim_metric: str = None
+
+        LOGGER.debug(
+            'MLRegistry:\n'
+            '%s\n'
+            'Dev Models: %s\n'
+            'Staging Models: %s\n'
+            'Champion performance: %s (%s)\n'
+            '--------------------------------------------------------------------------\n',
+            pformat(self.registry_dict), len(self.dev_models), len(self.staging_models), 
+            prod_test_score, prod_optim_metric
+        )
+        
+        if self.prod_model is not None:
+            pass
 
     def update_model_stages(
         self,
-        update_champion: bool = False,
+        update_prod_model: bool = False,
         debug: bool = False
     ) -> None:
         """
@@ -173,58 +230,41 @@ class ModelRegistry:
             - The top staging model will compete with the production model (also referred as "champion" model), 
               based on their test performance.
         """
-        def _debug():
-            if champion is not None:
-                champ_val_score: float = champion.val_score
-                champ_test_score: float = champion.test_score
-            else:
-                champ_val_score: float = None
-                champ_test_score: float = None
+        # Load light Models
+        self.champion: Model = self.load_prod_model(light=True)
+        self.staging_models: List[Model] = self.load_staging_models(light=True)
+        self.dev_models: List[Model] = self.load_dev_models(light=True)
 
-            LOGGER.debug(
-                'MLRegistry:\n'
-                '%s\n'
-                'Dev Models: %s\n'
-                'Staging Models: %s\n'
-                'Champion performance: %s [test] | %s [tuning]\n'
-                '--------------------------------------------------------------------------\n',
-                pformat(self.registry), len(dev_models), len(staging_models), 
-                champ_val_score, champ_test_score
+        # Assert that all dev_models & staging_models are not None
+        assert not(any([m is None for m in self.dev_models + self.staging_models]))
+
+        # Downgrade all models to development (except for champion)
+        for model in self.staging_models + self.dev_models:
+            self.update_model_stage(
+                model=model,
+                new_stage='development'
             )
 
-        # Load light Models
-        champion: Model = self.load_prod_model()
-        staging_models: List[Model] = []
-        dev_models: List[Model] = self.load_staging_models() + self.load_dev_models()
-
-        # Assert that all dev_models contain a val_table
-        assert not(any([m is None for m in dev_models]))
-
-        # Degrade all models to development (except for champion)
-        for model in dev_models:
-            # Re-asign stage
-            model.stage = 'development'
-
         # Sort Dev Models (based on validation performance)
-        dev_models: List[Model] = self.sort_models(
-            models=dev_models,
+        self.dev_models: List[Model] = self.sort_models(
+            models=self.dev_models,
             by='val_score'
         )
 
+        if debug:
+            self.debug()
+
         # Test & promote models from staging_candidates
-        for model in dev_models[: self.n_candidates]:
+        for model in self.dev_models[:self.n_candidates]:
             # Diagnose model
             diagnostics_dict = model.diagnose()
 
             if not self.needs_repair(diagnostics_dict):
                 # Promote Model
-                model.stage = 'staging'
-
-                # Add model to staging_models
-                staging_models.append(model)
-
-                # Remove model from dev_models
-                dev_models.remove(model)
+                self.update_model_stage(
+                    model=model,
+                    new_stage='staging'
+                )
             else:
                 LOGGER.warning(
                     '%s was NOT pushed to Staging.\n'
@@ -233,14 +273,13 @@ class ModelRegistry:
                 )
 
         # Sort Staging Models (based on test performance)
-        staging_models: List[Model] = self.sort_models(
-            models=staging_models,
+        self.staging_models: List[Model] = self.sort_models(
+            models=self.staging_models,
             by='test_score'
         )
 
-        # Show registry
         if debug:
-            _debug()
+            self.debug()
 
         # Find forced model ID
         forced_model_id: str = self.load_forced_model()['forced_model_id']
@@ -248,168 +287,106 @@ class ModelRegistry:
         if debug:
             LOGGER.debug('Foreced Model:\n%s\n', pformat(forced_model_id))
 
-        # Update Champion with forced model
+        # Update prod mdoel with forced model
         if forced_model_id is not None:
             LOGGER.warning('Forced model was detected: %s.', forced_model_id)
 
-            # Check if forced model is the same as current champion
-            if champion is not None and forced_model_id == champion.model_id:
-                LOGGER.info(f'Forced Model is the same as current Champion.\n')
+            # Check if forced model is the same as current prod model
+            if self.prod_model is not None and forced_model_id == self.prod_model.model_id:
+                LOGGER.info(f'Forced Model is the same as current Production Model.\n')
             else:
-                # Re-define old & new champion models
-                new_champion: Model = None
-                for model in dev_models + staging_models:
-                    if model.model_id == forced_model_id:
-                        new_champion: Model = model
-
-                if new_champion is None:
-                    LOGGER.warning('Forced Model was not found in current models!')
-                else:
-                    # Define old champion
-                    old_champion: Model = champion
-
-                    # Record Previous Stage
-                    prev_new_champion_stage = new_champion.stage
-
-                    # Promote New Champion
-                    new_champion.stage = 'production'                    
-
-                    # Remove new champion from dev_models or staging_models
-                    if prev_new_champion_stage == 'development':
-                        dev_models.remove(new_champion)
-                    elif prev_new_champion_stage == 'staging':
-                        staging_models.remove(new_champion)
-                    else:
-                        LOGGER.critical(
-                            "new_champion (%s) had an invalid stage: %s.",
-                            new_champion.model_id, prev_new_champion_stage
-                        )
-                        raise Exception(f"new_champion ({new_champion.model_id}) had an invalid stage: {prev_new_champion_stage}.\n\n")
-                    
-                    # Add old champion to staging_models
-                    staging_models.append(old_champion)
-                    
-                    # Save New Champion
-                    new_champion.save()
-
-                    if old_champion is not None:
-                        # Demote Current Champion
-                        old_champion.stage = 'staging'
-                    else:
-                        LOGGER.warning('Old champion was not found!')
-
-                    # Re-assign champion variable
-                    champion: Model= new_champion
-
-        # Define default champion if current champion is None
-        if champion is None:
-            LOGGER.warning(
-                'There was no previous champion.\n'
-                'Therefore, a new provisory champion will be chosen.\n'
-            )
-            
-            # Promote New Champion
-            new_champion: Model = self.sort_models(
-                models=staging_models,
-                by='test_score'
-            )[0]
-
-            new_champion.stage = 'production'
-
-            # Remove model from staging_models
-            staging_models.remove(new_champion)
-
-            # Save new_champion
-            new_champion.save()
-
-            # Re-assign champion variable
-            champion: Model = new_champion
-
-            LOGGER.info('New champion model:\n%s\n', champion)
-
-        elif update_champion:
-            # Pick Challenger
-            challenger: Model = self.sort_models(
-                models=staging_models,
-                by='test_score'
-            )[0]
-
-            if challenger.test_score > champion.test_score:
-                LOGGER.info(
-                    'New Champion mas found: %s - [%s: %s]\n'
-                    'Previous Champion:  %s - [%s: %s]',
-                    challenger.model_id, challenger.optimization_metric, challenger.test_score,
-                    champion.model_id, champion.optimization_metric, champion.test_score
-
+                # Find new prod model
+                new_prod_model: Model = self.load_model(
+                    model_id=forced_model_id,
+                    light=False
                 )
 
-                # Promote Challenger
-                challenger.stage = 'production'
+                if new_prod_model is None:
+                    LOGGER.warning('Forced Model was not found in current models!')
+                else:
+                    # Downgrade current prod model
+                    self.update_model_stage(
+                        model=self.prod_model,
+                        new_stage='staging'
+                    )
 
-                # Remove challenger from staging_models
-                staging_models.remove(challenger)
+                    # Promote new prod model
+                    self.update_model_stage(
+                        model=new_prod_model,
+                        new_stage='production'
+                    )
 
-                # Demote Champion
-                champion.stage = 'staging'
+        # Define default prod model if current prod model is None
+        if self.prod_model is None:
+            LOGGER.warning(
+                'There was no previous production model.\n'
+                'Therefore, a new provisory production model will be chosen.\n'
+            )
+            
+            # Find new production model
+            new_prod_model: Model = self.sort_models(
+                models=self.staging_models,
+                by='test_score'
+            )[0]
 
-                # Add old champion to staging_models
-                staging_models.append(champion)
+            # Promote new prod model
+            self.update_model_stage(
+                model=new_prod_model,
+                new_stage='production'
+            )
 
-                # Save New Champion
-                challenger.save()
+            LOGGER.info('New champion model:\n%s\n', self.prod_model)
 
-                # Re-assign champion variable
-                champion = challenger
+        elif update_prod_model:
+            # Pick Challenger
+            challenger: Model = self.sort_models(
+                models=self.staging_models,
+                by='test_score'
+            )[0]
 
-        """
-        Save Models & Update self.registry
-        """
-        dev_models = self.sort_models(
-            models=dev_models,
+            if challenger.test_score > self.prod_model.test_score:
+                LOGGER.info(
+                    'New production model mas found: %s - [%s: %s]\n'
+                    'Previous production model:  %s - [%s: %s]',
+                    challenger.model_id, challenger.optimization_metric, challenger.test_score,
+                    self.prod_model.model_id, self.prod_model.optimization_metric, self.prod_model.test_score
+                )
+
+                # Downgrade current prod model
+                self.update_model_stage(
+                    model=self.prod_model,
+                    new_stage='staging'
+                )
+
+                # Promote new challenger
+                self.update_model_stage(
+                    model=challenger,
+                    new_stage='production'
+                )
+
+        # Delete unwanted models
+        delete_models = self.sort_models(
+            models=self.dev_models,
             by='val_score'
-        )[: 5]
+        )[5:]
 
-        # Update Dev Registry
-        self.registry['development'] = [
-            m.model_id for m in dev_models if m.val_score > 0
-        ]
-
-        # Save Dev Models
-        for model in dev_models:
-            assert model.stage == 'development'
-
-            # Save Model
-            model.save()
-
-        # Update Staging Registry
-        self.registry['staging'] = [
-            m.model_id for m in staging_models 
-            if m.test_score > 0 # and m.val_table.trading_metric > 0
-        ]
-
-        # Save Staging Models
-        for model in staging_models:
-            assert model.stage == 'staging'
-
-            # Save Model
-            model.save()
-
-        # Update Production Registry
-        self.registry['production'] = [champion.model_id]
-        
-        # Save Production Model
-        assert champion.stage == 'production'
-
-        champion.save()
+        for model in delete_models:
+            self.update_model_stage(
+                model=model,
+                new_stage='delete'
+            )
 
         if debug:
-            _debug()
+            self.debug()
         
         # Clean registry
         self.clean_registry()
 
-        # Save self.registry
-        self.save_registry()
+        # Save self.registry_dict
+        self.save_registry_dict()
+
+        # Save models
+        self.save_models()
 
     """
     Cleaning Methods
@@ -443,9 +420,9 @@ class ModelRegistry:
         """
         # Load model ids
         model_ids: List[str] = (
-            self.registry["production"] +
-            self.registry["staging"] +
-            self.registry["development"]
+            self.registry_dict["production"] +
+            self.registry_dict["staging"] +
+            self.registry_dict["development"]
         )
 
         for root, directories, files in os.walk(
@@ -461,9 +438,9 @@ class ModelRegistry:
     def clean_s3_models(self) -> None:
         # Load model ids
         model_ids: List[str] = (
-            self.registry["production"] +
-            self.registry["staging"] +
-            self.registry["development"]
+            self.registry_dict["production"] +
+            self.registry_dict["staging"] +
+            self.registry_dict["development"]
         )
 
         for key in find_keys(
@@ -484,6 +461,32 @@ class ModelRegistry:
     Utils Methods
     """
 
+    @staticmethod
+    def sort_models(
+        models: List[Model],
+        by: str = 'test_score'
+    ) -> List[Model]: 
+        if by not in ['val_score', 'test_score']:
+            LOGGER.critical('Invalid "by" parameter: %s', by)
+            raise Exception(f'Invalid "by" parameter: {by}.\n')
+        
+        def sort_fun(model: Model):
+            score: float = getattr(model, by)
+            if score is not None:
+                return score
+            return 0
+        
+        models.sort(key=sort_fun, reverse=True)
+
+        return models
+
+    @staticmethod
+    def needs_repair(d: dict) -> bool:
+        for value in d.values():
+            if value:
+                return True
+        return False
+
     def find_repeated_models(
         self,
         new_model: Model, 
@@ -492,7 +495,11 @@ class ModelRegistry:
         # Validate models
         if models is None:
             # Extract models
-            model_ids = self.registry['production'] + self.registry['staging'] + self.registry['development']            
+            model_ids = (
+                self.registry_dict['production'] 
+                + self.registry_dict['staging'] 
+                + self.registry_dict['development']
+            )
             models = [self.load_model(model_id=model_id) for model_id in model_ids]
 
         def extract_tuple_attrs(model: Model):
@@ -524,11 +531,15 @@ class ModelRegistry:
         self,
         models: List[Model] = None,
         score_to_prioritize: str = 'test_score'
-    ):
+    ) -> List[Model]:
         # Validate models
         if models is None:
             # Extract models
-            model_ids = self.registry['production'] + self.registry['staging'] + self.registry['development']            
+            model_ids = (
+                self.registry_dict['production'] 
+                + self.registry_dict['staging'] 
+                + self.registry_dict['development']
+            )
             models = [self.load_model(model_id=model_id) for model_id in model_ids]
         
         # Find repeated models
@@ -597,16 +608,16 @@ class ModelRegistry:
         
         return forced_model
 
-    def load_registry(self) -> None:
+    def load_registry_dict(self) -> None:
         # Read registry
         if self.data_storage_env == 'filesystem':
-            self.registry: Dict[str, List[List[str, str]]] = load_from_filesystem(
+            self.registry_dict: Dict[str, List[str]] = load_from_filesystem(
                 path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
                 partition_cols=None,
                 filters=None
             )
         elif self.data_storage_env == 'S3':
-            self.registry: Dict[str, List[List[str, str]]] = load_from_s3(
+            self.registry_dict: Dict[str, List[str]] = load_from_s3(
                 path=f"{self.bucket}/utils/model_registry/model_registry.json",
                 partition_cols=None,
                 filters=None
@@ -614,24 +625,37 @@ class ModelRegistry:
         else:
             raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
 
-    def save_registry(self) -> None:
+    def save_registry_dict(self) -> None:
         # Write self.registry
         if self.data_storage_env == 'filesystem':
             save_to_filesystem(
-                asset=self.registry,
+                asset=self.registry_dict,
                 path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
                 partition_column=None,
                 overwrite=True
             )
         elif self.data_storage_env == 'S3':
             save_to_s3(
-                asset=self.registry,
+                asset=self.registry_dict,
                 path=f"{self.bucket}/utils/model_registry/model_registry.json",
                 partition_column=None,
                 overwrite=True
             )
         else:
             raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+
+    def save_models(self) -> None:
+        # Save production model
+        if self.prod_model is not None:
+            self.prod_model.save()
+
+        # Save staging models
+        for model in self.staging_models:
+            model.save()
+
+        # Save development models
+        for model in self.dev_models:
+            model.save()
 
     """
     Other methods

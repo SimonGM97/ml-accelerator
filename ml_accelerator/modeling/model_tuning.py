@@ -96,9 +96,9 @@ class ModelTuner:
             bucket=self.bucket,
             models_path=self.models_path
         )
-        self.dev_models: List[Model] = None
+        self.models: List[Model] = None
 
-        # Load self.dev_models
+        # Load self.models
         self.load()
 
     def extract_search_space_params(
@@ -353,7 +353,8 @@ class ModelTuner:
     def objective(
         self,
         parameters: dict,
-        ml_datasets: Tuple[pd.DataFrame, pd.DataFrame],
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
         selected_features: List[str],
         debug: bool = False
     ) -> dict:
@@ -378,9 +379,6 @@ class ModelTuner:
             debug=debug
         )
 
-        # Extract ML datasets
-        X_train, y_train = ml_datasets
-
         # Instanciate model
         if self.task == 'classification':
             model = ClassificationModel(**parameters)
@@ -402,7 +400,7 @@ class ModelTuner:
 
         # Log dev model
         if model.val_score >= self.min_performance:
-            self.update_dev_models(new_candidate=model)
+            self.update_models(new_candidate=model)
 
         # Return Loss
         return {'loss': -model.val_score, 'status': STATUS_OK}
@@ -415,35 +413,35 @@ class ModelTuner:
         #     )
         #     return {'loss': np.inf, 'status': STATUS_OK}
 
-    def update_dev_models(
+    def update_models(
         self,
         new_candidate: Model
     ) -> None:
-        if new_candidate.model_id not in [m.model_id for m in self.dev_models]:
+        if new_candidate.model_id not in [m.model_id for m in self.models]:
             if (
-                len(self.dev_models) < self.n_candidates
-                or new_candidate.val_score > self.dev_models[-1].val_score
+                len(self.models) < self.n_candidates
+                or new_candidate.val_score > self.models[-1].val_score
             ):
-                # Add new_candidate to self.dev_models
-                self.dev_models.append(new_candidate)
+                # Add new_candidate to self.models
+                self.models.append(new_candidate)
             
                 # Drop duplicate Models (keeping most performant)
-                self.dev_models = self.model_registry.drop_duplicate_models(
-                    models=self.dev_models,
+                self.models = self.model_registry.drop_duplicate_models(
+                    models=self.models,
                     score_to_prioritize='val_score'
                 )
             
                 # Sort Models
-                self.dev_models = self.model_registry.sort_models(
-                    models=self.dev_models,
+                self.models = self.model_registry.sort_models(
+                    models=self.models,
                     by='val_score'
                 )
 
-                if len(self.dev_models) > self.n_candidates:
-                    self.dev_models = self.dev_models[:self.n_candidates]
+                if len(self.models) > self.n_candidates:
+                    self.models = self.models[:self.n_candidates]
                 
-                if new_candidate.model_id in [m.model_id for m in self.dev_models]:
-                    print(f'Model {new_candidate.model_id} ({new_candidate.stage}) was added to self.dev_models.\n')
+                if new_candidate.model_id in [m.model_id for m in self.models]:
+                    print(f'Model {new_candidate.model_id} ({new_candidate.stage}) was added to self.models.\n')
         else:
             LOGGER.warning(
                 '%s is already in dev_models.\n'
@@ -451,26 +449,119 @@ class ModelTuner:
                 new_candidate.model_id
             )
 
+    def evaluate_dev_models(
+        self,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_train: pd.Series,
+        y_test: pd.Series,
+        debug: bool = False
+    ) -> None:
+        for model in self.models:
+            if model.stage == 'development':
+                # Fit model
+                model.fit(X=X_train, y=y_train)
+
+                # Evaluate test
+                model.evaluate_test(
+                    X_test=X_test,
+                    y_test=y_test,
+                    debug=debug
+                )
+
     @timing
     def tune_models(
         self,
-        ml_dataset: pd.DataFrame,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_train: pd.Series,
+        y_test: pd.Series,
         selected_features: List[str],
-        max_evals: int,
-        loss_threshold: float,
-        timeout_mins: float
+        use_warm_start: bool = True,
+        max_evals: int = Params.MAX_EVALS,
+        loss_threshold: float = Params.LOSS_THRESHOLD,
+        timeout_mins: float = Params.TIMEOUT_MINS,
+        debug: bool = False
     ) -> None:
-        pass
+        # Sort self.models by val_score
+        self.models: List[Model] = self.model_registry.sort_models(
+            models=self.models,
+            by='val_score'
+        )
+
+        # Define warm start
+        warm_models = [model for model in self.models if model.algorithm in self.algorithms]
+        if (
+            use_warm_start
+            and len(warm_models) > 0 
+            and warm_models[0].warm_start_params is not None
+        ):
+            best_parameters_to_evaluate = self.parameter_configuration(
+                parameters_list=[warm_models[0].warm_start_params],
+                complete_parameters=True,
+                choice_parameters='index'
+            )
+            trials = generate_trials_to_calculate(best_parameters_to_evaluate)
+
+            if debug:
+                print(f'best_parameters_to_evaluate:')
+                pprint(best_parameters_to_evaluate)
+                print('\n\n')
+        else:
+            trials = None
+
+        # Prepare objective
+        fmin_objective = partial(
+            self.objective,
+            X_train=X_train,
+            y_train=y_train,
+            selected_features=selected_features,
+            debug=False
+        )
+
+        # Run hyperopt searching engine
+        LOGGER.info('Tuning Models (max_evals: %s):', max_evals)
+
+        try:
+            result = fmin(
+                fn=fmin_objective,
+                space=self.search_space,
+                algo=tpe.suggest,
+                max_evals=max_evals,
+                timeout=timeout_mins * 60,
+                loss_threshold=loss_threshold,
+                trials=trials,
+                verbose=True,
+                show_progressbar=True,
+                early_stop_fn=None
+            )
+        except Exception as e:
+            LOGGER.warning(
+                'Exception occured while tuning hyperparameters.\n'
+                'Exception: %s\n', e
+            )
+
+        # Evaluate dev models
+        self.evaluate_dev_models(
+            X_train=X_train,
+            X_test=X_test,
+            y_train=y_train,
+            y_test=y_test,
+            debug=debug
+        )
+
+        # Save models
+        for model in self.models:
+            model.save()
 
     def load(self) -> None:
         # Load registry
-        self.model_registry.load_registry()
+        self.model_registry.load_registry_dict()
 
         # Load Registry Models
-        self.dev_models: List[Model] = (
+        self.models: List[Model] = (
             [self.model_registry.load_prod_model()]
             + self.model_registry.load_staging_models()
-            + self.model_registry.load_dev_models()
         )
 
 
@@ -478,6 +569,19 @@ class ModelTuner:
 # source .ml_accel_venv/bin/activate
 # .ml_accel_venv/bin/python ml_accelerator/modeling/model_tuning.py
 if __name__ == "__main__":
+    from ml_accelerator.data_processing.data_extractor import DataExtractor
+
+    # Load DataExtractor
+    DE = DataExtractor(
+        bucket=Params.BUCKET,
+        cwd=Params.CWD,
+        storage_env=Params.DATA_STORAGE_ENV,
+        training_path=Params.TRAINING_PATH,
+        inference_path=Params.INFERENCE_PATH,
+        data_extention=Params.DATA_EXTENTION,
+        partition_columns=Params.PARTITION_COLUMNS
+    )
+
     # Instanciate ModelTuner
     MT: ModelTuner = ModelTuner(
         algorithms=Params.ALGORITHMS,
@@ -496,4 +600,5 @@ if __name__ == "__main__":
         models_path=Params.MODELS_PATH
     )
 
-    # pprint(Params.SEARCH_SPACE)
+    # Run model tuner
+    MT.tune_models()
