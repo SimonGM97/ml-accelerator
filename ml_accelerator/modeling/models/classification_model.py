@@ -354,7 +354,7 @@ class ClassificationModel(Model):
     def evaluate_test(
         self,
         X_test: pd.DataFrame,
-        y_test: pd.DataFrame,        
+        y_test: pd.DataFrame,
         debug: bool = False
     ) -> None:
         """

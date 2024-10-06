@@ -19,7 +19,7 @@ def load_from_filesystem(
 
     if read_format == 'csv':
         # Load csv file
-        asset: pd.DataFrame = pd.read_csv(path)
+        asset: pd.DataFrame = pd.read_csv(path, index_col=0)
 
     elif read_format == 'parquet':
         # Create a Parquet dataset
@@ -58,15 +58,20 @@ def save_to_filesystem(
     partition_cols: List[str] = None,
     overwrite: bool = True
 ) -> None:
+    # Make sure directory exists
+    if not os.path.exists(path):
+        makedir = '/'.join(path.split('/')[:-1])
+        os.makedirs(makedir)
+
     # Extract format
     save_format = path.split('.')[-1]
 
     if save_format == 'csv':
         # Copy asset
-        asset: pd.DataFrame = asset
+        asset: pd.DataFrame = asset.copy(deep=True)
 
         # Save csv file        
-        asset.to_csv(path)
+        asset.to_csv(path, columns=asset.columns.tolist(), index=True)
 
     elif save_format == 'parquet':
         # Copy asset
@@ -86,7 +91,10 @@ def save_to_filesystem(
         # Write PyArrow Table as a parquet file, partitioned by year_quarter
         if overwrite:
             if partition_cols is None:
-                os.remove(os.path.join(prefix, 'dataset-0.parquet'))
+                try:
+                    os.remove(os.path.join(prefix, 'dataset-0.parquet'))
+                except:
+                    pass
             else:
                 # Delete objects
                 remove_directory(directory=prefix)
@@ -105,7 +113,7 @@ def save_to_filesystem(
 
     elif save_format == 'pickle':
         # Save pickle file
-        with open(os.path.join(path), 'wb') as handle:
+        with open(path, 'wb') as handle:
             pickle.dump(asset, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     elif save_format == 'json':

@@ -3,7 +3,6 @@ from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.modeling.models.classification_model import ClassificationModel
 from ml_accelerator.modeling.models.regression_model import RegressionModel
 from ml_accelerator.modeling.model_registry import ModelRegistry
-from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger
 from ml_accelerator.utils.timing.timing_helper import timing
 
@@ -51,7 +50,6 @@ class ModelTuner:
         n_candidates: int = Params.N_CANDIDATES,
         min_performance: float = Params.MIN_PERFORMANCE,
         val_splits: int = Params.VAL_SPLITS,
-        train_test_ratio: float = Params.TRAIN_TEST_RATIO,
         model_storage_env: str = Params.MODEL_STORAGE_ENV,
         data_storage_env: str = Params.DATA_STORAGE_ENV,
         bucket: str = Params.BUCKET,
@@ -70,7 +68,6 @@ class ModelTuner:
         self.n_candidates: int = n_candidates
         self.min_performance: float = min_performance
         self.val_splits: int = val_splits
-        self.train_test_ratio: float = train_test_ratio
         
         self.model_storage_env: str = model_storage_env
         self.data_storage_env: str = data_storage_env
@@ -114,15 +111,15 @@ class ModelTuner:
             dist: str = space['dist']
 
             if dist == 'choice':
-                self.choice_parameters[f"{algorithm}.{parameter_name}"] = scope['choices']
-                return hp.choice(f"{algorithm}.{parameter_name}", scope['choices'])
+                self.choice_parameters[f"{algorithm}.{parameter_name}"] = space['choices']
+                return hp.choice(f"{algorithm}.{parameter_name}", space['choices'])
             elif dist == 'quniform':
                 self.int_parameters.append(f"{algorithm}.{parameter_name}")
-                return scope.int(hp.quniform(f"{algorithm}.{parameter_name}", scope['min'], scope['max'], 1))
+                return scope.int(hp.quniform(f"{algorithm}.{parameter_name}", space['min'], space['max'], 1))
             elif dist == 'uniform':
-                return hp.uniform(f"{algorithm}.{parameter_name}", scope['min'], scope['max'])
+                return hp.uniform(f"{algorithm}.{parameter_name}", space['min'], space['max'])
             elif dist == 'loguniform':
-                return hp.loguniform(f"{algorithm}.{parameter_name}", np.log(scope['min']), np.log(scope['max']))
+                return hp.loguniform(f"{algorithm}.{parameter_name}", np.log(space['min']), np.log(space['max']))
             else:
                 raise Exception(f'Invalid "dist" was found: "{dist}"')
 
@@ -131,7 +128,7 @@ class ModelTuner:
         self.int_parameters: List[str] = []
         self.choice_parameters: Dict[str, List[str]] = {}
 
-        for choice in self.model_type_choices:
+        for choice in search_space:
             # Extract algorithm & hyper_parameters
             algorithm: str = choice['algorithm']
             hyper_parameters: List[dict] = choice['hyper_parameters']
@@ -144,7 +141,7 @@ class ModelTuner:
                 f"{algorithm}.{hyper_parameter['parameter_name']}": extract_space(
                     algorithm=algorithm,
                     parameter_name=hyper_parameter['parameter_name'],
-                    scope=hyper_parameter['space']
+                    space=hyper_parameter['space']
                 )
                 for hyper_parameter in hyper_parameters
             }
@@ -371,6 +368,7 @@ class ModelTuner:
 
         :return: (dict) Loss function with the validation performance of the ML classification model.
         """
+        debug = True
         # try:
         # Parameter configuration
         parameters = self.prepare_parameters(
@@ -453,19 +451,35 @@ class ModelTuner:
         self,
         X_train: pd.DataFrame,
         X_test: pd.DataFrame,
-        y_train: pd.Series,
+        y_train: pd.DataFrame,
         y_test: pd.Series,
         debug: bool = False
     ) -> None:
+        """
+        Method that evaluates the development models on the test set, defined in the MLPipeline.
+
+        :param `debug`: (bool) Wether or not to show self.dev_models performances logs for debugging purposes.
+        """
         for model in self.models:
             if model.stage == 'development':
                 # Fit model
-                model.fit(X=X_train, y=y_train)
-
-                # Evaluate test
+                model.fit(
+                    X=X_train,
+                    y=y_train,
+                    debug=debug
+                )
+                
+                # Evaluate model on test set & find model.test_score
                 model.evaluate_test(
                     X_test=X_test,
                     y_test=y_test,
+                    debug=debug
+                )
+
+                # Find Model feature importance
+                model.find_feature_importance(
+                    X_test=X_test,
+                    find_new_shap_values=True,
                     debug=debug
                 )
 
@@ -522,24 +536,24 @@ class ModelTuner:
         # Run hyperopt searching engine
         LOGGER.info('Tuning Models (max_evals: %s):', max_evals)
 
-        try:
-            result = fmin(
-                fn=fmin_objective,
-                space=self.search_space,
-                algo=tpe.suggest,
-                max_evals=max_evals,
-                timeout=timeout_mins * 60,
-                loss_threshold=loss_threshold,
-                trials=trials,
-                verbose=True,
-                show_progressbar=True,
-                early_stop_fn=None
-            )
-        except Exception as e:
-            LOGGER.warning(
-                'Exception occured while tuning hyperparameters.\n'
-                'Exception: %s\n', e
-            )
+        # try:
+        result = fmin(
+            fn=fmin_objective,
+            space=self.search_space,
+            algo=tpe.suggest,
+            max_evals=max_evals,
+            timeout=timeout_mins * 60,
+            loss_threshold=loss_threshold,
+            trials=trials,
+            verbose=True,
+            show_progressbar=True,
+            early_stop_fn=None
+        )
+        # except Exception as e:
+        #     LOGGER.warning(
+        #         'Exception occured while tuning hyperparameters.\n'
+        #         'Exception: %s\n', e
+        #     )
 
         # Evaluate dev models
         self.evaluate_dev_models(
@@ -550,9 +564,22 @@ class ModelTuner:
             debug=debug
         )
 
-        # Save models
+        # Save dev models
         for model in self.models:
-            model.save()
+            if model.stage == 'development':
+                model.save()
+
+        # Update registry_dict with new development models
+        self.model_registry.registry_dict["development"] = (
+            self.model_registry.registry_dict["development"] +
+            [m.model_id for m in self.models if m.stage == 'development']
+        )
+
+        # Update model stages
+        self.model_registry.update_model_stages(
+            update_prod_model=False,
+            debug=debug
+        )
 
     def load(self) -> None:
         # Load registry
@@ -564,41 +591,5 @@ class ModelTuner:
             + self.model_registry.load_staging_models()
         )
 
-
-# conda deactivate
-# source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python ml_accelerator/modeling/model_tuning.py
-if __name__ == "__main__":
-    from ml_accelerator.data_processing.data_extractor import DataExtractor
-
-    # Load DataExtractor
-    DE = DataExtractor(
-        bucket=Params.BUCKET,
-        cwd=Params.CWD,
-        storage_env=Params.DATA_STORAGE_ENV,
-        training_path=Params.TRAINING_PATH,
-        inference_path=Params.INFERENCE_PATH,
-        data_extention=Params.DATA_EXTENTION,
-        partition_columns=Params.PARTITION_COLUMNS
-    )
-
-    # Instanciate ModelTuner
-    MT: ModelTuner = ModelTuner(
-        algorithms=Params.ALGORITHMS,
-        search_space=Params.SEARCH_SPACE,
-        target=Params.TARGET,
-        task=Params.TASK,
-        optimization_metric=Params.OPTIMIZATION_METRIC,
-        importance_method=Params.IMPORTANCE_METHOD,
-        n_candidates=Params.N_CANDIDATES,
-        min_performance=Params.MIN_PERFORMANCE,
-        val_splits=Params.VAL_SPLITS,
-        train_test_ratio=Params.TRAIN_TEST_RATIO,
-        model_storage_env=Params.MODEL_STORAGE_ENV,
-        data_storage_env=Params.DATA_STORAGE_ENV,
-        bucket=Params.BUCKET,
-        models_path=Params.MODELS_PATH
-    )
-
-    # Run model tuner
-    MT.tune_models()
+        # Drop null models
+        self.models = [m for m in self.models if m is not None]

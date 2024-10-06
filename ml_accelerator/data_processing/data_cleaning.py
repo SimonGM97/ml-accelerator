@@ -1,9 +1,17 @@
 from ml_accelerator.config.params import Params
+from ml_accelerator.utils.datasets.data_helper import DataHelper
 from ml_accelerator.utils.logging.logger_helper import get_logger
+from ml_accelerator.utils.aws.s3_helper import load_from_s3, save_to_s3
+from ml_accelerator.utils.filesystem.filesystem_helper import (
+    load_from_filesystem,
+    save_to_filesystem
+)
 
 import pandas as pd
 import numpy as np
 from sklearn.impute import SimpleImputer
+import gc
+import os
 
 from typing import List, Tuple, Dict
 
@@ -19,23 +27,33 @@ LOGGER = get_logger(
 )
 
 
-class DataCleaner:
+class DataCleaner(DataHelper):
+
+    # Pickled attrs
+    pickled_attrs = [
+        'outliers_dict',
+        'str_imputer',
+        'num_imputer'
+    ]
 
     def __init__(
         self,
-        schema: dict,
+        target: str = Params.TARGET,
+        dataset_name: str = Params.DATASET_NAME,
         z_threshold: float = Params.OUTLIER_Z_THRESHOLD
     ) -> None:
         # Instanciate parent classes
-        super().__init__()
+        super().__init__(
+            target=target,
+            dataset_name=dataset_name
+        )
 
         # Set attributes
-        self.schema: dict = schema
+        self.target: str = target
+        self.dataset_name: str = dataset_name
         self.z_threshold: float = z_threshold
 
         # Set default attributes
-        self.target: str = None
-
         self.num_cols: List[str] = None
         self.cat_cols: List[str] = None
         self.datetime_cols: List[str] = None
@@ -44,12 +62,18 @@ class DataCleaner:
         self.interpolate_cols: List[str] = None
         self.simple_impute_cols: List[str] = None
 
+        # Load attrs
         self.outliers_dict: dict = None
+        self.str_imputer: SimpleImputer = None
+        self.num_imputer: SimpleImputer = None
+
+        # Load self.schema
+        self.schema: dict = self.load_schema()
     
     def transform(
         self, 
         X: pd.DataFrame, 
-        y: pd.Series = None
+        y: pd.DataFrame = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.cleaner_pipeline with fit=False
         X, y = self.cleaner_pipeline(X=X, y=y, fit=False)
@@ -59,7 +83,7 @@ class DataCleaner:
     def fit_transform(
         self, 
         X: pd.DataFrame, 
-        y: pd.Series = None
+        y: pd.DataFrame = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.cleaner_pipeline with fit=True
         X, y = self.cleaner_pipeline(X=X, y=y, fit=True)
@@ -75,9 +99,11 @@ class DataCleaner:
         # Merge datasets
         df = self.merge_datasets(X=X, y=y)
 
-        # Delete y & X
-        del y
+        # Delete X & y
         del X
+        if y is not None:
+            del y
+        gc.collect()
 
         # Drop dummy columns
         df = self.drop_dummy_columns(df=df)
@@ -119,6 +145,7 @@ class DataCleaner:
 
         # Delete df
         del df
+        gc.collect()
 
         return X, y
     
@@ -128,9 +155,6 @@ class DataCleaner:
         y: pd.DataFrame = None
     ) -> pd.DataFrame:
         if y is not None:
-            # Define target
-            self.target: str = y.name
-
             # Concatenate datasets
             df: pd.DataFrame = pd.concat([y, X], axis=1)
         else:
@@ -144,7 +168,7 @@ class DataCleaner:
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         if self.target is not None and self.target in df.columns:
             # Divide df into X & y
-            X, y = df.drop(columns=[self.target]), df[self.target]
+            X, y = df.drop(columns=[self.target]), df[[self.target]]
 
             return X, y
         else:
@@ -310,6 +334,7 @@ class DataCleaner:
             # Return thresholds
             return mean - self.z_threshold * std, mean + self.z_threshold * std
         
+        # Populate self.outliers_dict
         self.outliers_dict = {
             col: find_threshold(col) for col in self.num_cols
         }
@@ -376,8 +401,10 @@ class DataCleaner:
         
         return df
 
-    def load(self) -> None:
-        pass
-
     def save(self) -> None:
-        pass
+        # Run self.save_transformer
+        self.save_transformer(transformer_name='data_cleaner')
+
+    def load(self) -> None:
+        # Run self.load_transformer
+        self.load_transformer(transformer_name='data_cleaner')

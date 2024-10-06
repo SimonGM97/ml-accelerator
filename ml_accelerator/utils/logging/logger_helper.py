@@ -7,6 +7,8 @@ from logging.handlers import (
 )
 import traceback
 import sys
+import inspect
+from pprint import pformat
 from typing import List
 
 """
@@ -131,6 +133,7 @@ class LevelFilter(logging.Filter):
         if record.levelno in self.levels:
             return True
 
+
 def get_logger(
     name: str = None, 
     level: str = None,
@@ -245,3 +248,35 @@ def get_logger(
     sys.excepthook = handle_exception
 
     return logger
+
+
+def log_params(
+    logger: logging.Logger,
+    extra: dict = None,
+    **params
+) -> None:
+    # Find file that called the function
+    frame = inspect.currentframe()
+    file_name = frame.f_back.f_code.co_filename.split('/')[-1]
+
+    # Extract initial logger_msg
+    logger_msg = {
+        'data_processing.py': "\nDATA PROCESSING PARAMS:\n",
+        'tuning.py': "\nMODEL TUNING PARAMS:\n"
+    }.get(file_name, None)
+
+    if logger_msg is None:
+        logger.critical('Invalid "file_name" was extracted: %s.', file_name)
+        raise Exception(f'Invalid "file_name" was extracted: {file_name}.\n')
+
+    logger_params = []
+
+    for param_name, param_val in params.items():
+        if isinstance(param_val, dict):
+            logger_msg += "%s:\n%s\n\n"
+            logger_params.extend([param_name, pformat(param_val)])
+        else:
+            logger_msg += "%s: %s (%s)\n"
+            logger_params.extend([param_name, param_val, type(param_val)])
+    
+    logger.info(logger_msg, *logger_params, extra=extra)

@@ -52,10 +52,14 @@ class Params:
     """
     DATA PROCESSING PARAMETERS
     """
+    # EXTRACT TRANSFORM LOAD PARAMETERS
+    ETL_SOURCE: str
+
     # STORAGE PARAMETERS
     DATASET_NAME: str
     TRAINING_PATH: List[str]
     INFERENCE_PATH: List[str]
+    TRANSFORMERS_PATH: List[str]
     MODELS_PATH: List[str]
     DATA_EXTENTION: str
     PARTITION_COLUMNS: str
@@ -154,6 +158,11 @@ class Params:
         """
         DATA PARAMETERS
         """
+        # EXTRACT TRANSFORM LOAD PARAMETERS
+        ETL_PARAMS: dict = config.get("ETL_PARAMS")
+
+        cls.ETL_SOURCE: str = ETL_PARAMS.get("ETL_SOURCE")
+
         # STORAGE PARAMETERS
         STORAGE_PARAMS: dict = config.get("STORAGE_PARAMS")
         PATHS_PARAMS: dict = STORAGE_PARAMS.get("PATHS_PARAMS")
@@ -161,6 +170,7 @@ class Params:
         cls.DATASET_NAME: str = STORAGE_PARAMS.get("DATASET_NAME")
         cls.TRAINING_PATH: List[str] = PATHS_PARAMS.get("TRAINING_PATH")
         cls.INFERENCE_PATH: List[str] = PATHS_PARAMS.get("INFERENCE_PATH")
+        cls.TRANSFORMERS_PATH: List[str] = PATHS_PARAMS.get("TRANSFORMERS_PATH")
         cls.MODELS_PATH: List[str] = PATHS_PARAMS.get("MODELS_PATH")
         cls.DATA_EXTENTION: str = STORAGE_PARAMS.get("DATA_EXTENTION")
         cls.PARTITION_COLUMNS: str = STORAGE_PARAMS.get("PARTITION_COLUMNS")
@@ -191,7 +201,7 @@ class Params:
         # ML DATASETS PARAMETERS
         ML_DATASETS_PARAMS: dict = config.get("ML_DATASETS_PARAMS")
 
-        cls.TRAIN_TEST_RATIO: float = ML_DATASETS_PARAMS.get("TRAIN_TEST_RATIO")
+        cls.TEST_SIZE: float = ML_DATASETS_PARAMS.get("TEST_SIZE")
 
         # CLASSIFICATION PARAMETERS
         CLASSIFICATION_PARAMS: dict = config.get("CLASSIFICATION_PARAMS")

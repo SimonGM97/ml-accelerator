@@ -1,4 +1,5 @@
 from ml_accelerator.config.params import Params
+from ml_accelerator.utils.datasets.data_helper import DataHelper
 from ml_accelerator.utils.logging.logger_helper import get_logger
 
 import pandas as pd
@@ -19,18 +20,31 @@ LOGGER = get_logger(
 )
 
 
-class DataTransformer:
+class DataTransformer(DataHelper):
+
+    # Pickled attrs
+    pickled_attrs = [
+        'label_encoder',
+        'num_scaler',
+        'cat_ohe'
+    ]
 
     def __init__(
         self,
+        target: str = Params.TARGET,
+        dataset_name: str = Params.DATASET_NAME,
         encode_target: bool = Params.ENCODE_TARGET,
         scale_num_features: bool = Params.SCALE_NUM_FEATURES,
         encode_cat_features: bool = Params.ENCODE_CAT_FEATURES
     ) -> None:
         # Instanciate parent classes
-        super().__init__()
+        super().__init__(
+            target=target,
+            dataset_name=dataset_name
+        )
 
         # Set other attributes
+        self.target: str = target
         self.encode_target: bool = encode_target
         self.scale_num_features: bool = scale_num_features
         self.encode_cat_features: bool = encode_cat_features
@@ -46,7 +60,7 @@ class DataTransformer:
     def transform(
         self,
         X: pd.DataFrame,
-        y: pd.Series = None
+        y: pd.DataFrame = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.transformer_pipeline
         X, y = self.transformer_pipeline(X=X, y=y, fit=False)
@@ -56,7 +70,7 @@ class DataTransformer:
     def fit_tranform(
         self,
         X: pd.DataFrame,
-        y: pd.Series = None
+        y: pd.DataFrame = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.transformer_pipeline
         X, y = self.transformer_pipeline(X=X, y=y, fit=True)
@@ -66,7 +80,7 @@ class DataTransformer:
     def transformer_pipeline(
         self,
         X: pd.DataFrame,
-        y: pd.Series = None,
+        y: pd.DataFrame = None,
         fit: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Find column attributes
@@ -108,23 +122,20 @@ class DataTransformer:
 
     def fit_label_encoder(
         self,
-        y: pd.Series
+        y: pd.DataFrame
     ) -> None:
         # Instanciate LabelEncoder
         self.label_encoder: LabelEncoder = LabelEncoder()
         
         # Fit self.label_encoder
-        self.label_encoder.fit(y=y)
+        self.label_encoder.fit(y=y[self.target].values)
 
     def _encode_target(
         self,
-        y: pd.Series
-    ) -> pd.Series:
+        y: pd.DataFrame
+    ) -> pd.DataFrame:
         # Apply self.label_encoder
-        y: pd.Series = pd.Series(
-            data=self.label_encoder.transform(y=y),
-            index=y.index
-        )
+        y[self.target] = self.label_encoder.transform(y=y[self.target].values)
 
         return y
 
@@ -175,8 +186,10 @@ class DataTransformer:
 
         return X
     
-    def load(self) -> None:
-        pass
-
     def save(self) -> None:
-        pass
+        # Run self.save_transformer
+        self.save_transformer(transformer_name='data_transformer')
+
+    def load(self) -> None:
+        # Run self.load_transformer
+        self.load_transformer(transformer_name='data_transformer')

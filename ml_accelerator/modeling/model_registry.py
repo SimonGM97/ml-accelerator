@@ -156,7 +156,7 @@ class ModelRegistry:
                 model_id=model_id,
                 light=light
             )
-        return None
+        return
     
     """
     Registry Methods
