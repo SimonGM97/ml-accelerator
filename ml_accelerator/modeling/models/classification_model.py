@@ -19,6 +19,7 @@ from sklearn.metrics import (
     confusion_matrix,
     roc_curve
 )
+from functools import partial
 
 from typing import List
 
@@ -49,6 +50,7 @@ class ClassificationModel(Model):
         'stage',
 
         # General Parameters
+        'task',
         'algorithm',
         'hyper_parameters',
         'fitted',
@@ -97,6 +99,7 @@ class ClassificationModel(Model):
         model_id: str = None,
         version: int = 1,
         stage: str = 'development',
+        task: str = Params.TASK,
         algorithm: str = None,
         hyper_parameters: dict = {},
         target: str = Params.TARGET,
@@ -113,6 +116,7 @@ class ClassificationModel(Model):
             model_id=model_id,
             version=version,
             stage=stage,
+            task=task,
             algorithm=algorithm,
             hyper_parameters=hyper_parameters,
             target=target,
@@ -166,13 +170,26 @@ class ClassificationModel(Model):
             })
 
         elif self.algorithm == 'lightgbm':
-            hyper_parameters.update(**{
-                "scale_pos_weight": Params.CLASS_WEIGHT[1] / Params.CLASS_WEIGHT[0],
-                "importance_type": 'split',
-                "random_state": 23111997,
-                "verbose": -1,
-                "n_jobs": -1
-            })
+            if self.task == 'binary_classification':
+                hyper_parameters.update(**{
+                    "objective": 'binary',
+                    "metric": 'binary_logloss',
+                    "scale_pos_weight": Params.CLASS_WEIGHT[1] / Params.CLASS_WEIGHT[0],
+                    "importance_type": 'split',
+                    "random_state": 23111997,
+                    "verbose": -1,
+                    "n_jobs": -1
+                })
+            elif self.task == 'multiclass_classification':
+                hyper_parameters.update(**{
+                    "objective": 'multiclass',
+                    # "num_class": n_classes,
+                    'metric': 'multi_logloss',
+                    "importance_type": 'split',
+                    "random_state": 23111997,
+                    "verbose": -1,
+                    "n_jobs": -1
+                })
 
         elif self.algorithm == 'xgboost':
             hyper_parameters.update(**{
@@ -327,6 +344,8 @@ class ClassificationModel(Model):
         # Define scorer
         if self.optimization_metric == 'f1_score':
             scorer = make_scorer(f1_score)
+        elif self.optimization_metric == 'f1_weighted':
+            scorer = 'f1_weighted'
         elif self.optimization_metric == 'precision':
             scorer = make_scorer(precision_score)
         elif self.optimization_metric == 'recall':
@@ -344,7 +363,7 @@ class ClassificationModel(Model):
             X=X_train.values,
             y=y_train.values.ravel(),
             cv=splits, 
-            scoring=scorer,
+            scoring=self.optimization_metric,
             n_jobs=-1
         )
         

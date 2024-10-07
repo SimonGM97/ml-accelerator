@@ -6,8 +6,8 @@
 PROJECT_PARAMS:
   PROJECT_NAME: ml-accelerator
   TARGET: species # target column
-  TASK: classification 
-  # regression, classification, forecasting
+  TASK: multiclass_classification 
+  # regression, binary_classification, multiclass_classification, forecasting
 
 # ENVIRONMENT PARAMETERS
 ENV_PARAMS:
@@ -224,13 +224,14 @@ HYPER_PARAMETER_TUNING_PARAMS:
 
   N_CANDIDATES: 5
 
-  OPTIMIZATION_METRIC: f1_score
-  # Classification: precision, recall, f1_score, roc_auc, accuracy (Accuracy not recommended)
+  OPTIMIZATION_METRIC: f1_weighted
+  # Binary classification: precision, recall, f1_score, roc_auc, accuracy (Accuracy not recommended)
+  # Multiclass classification: f1_weighted
   # Regression: mape
   VAL_SPLITS: 3
 
   MAX_EVALS: 100
-  LOSS_THRESHOLD: null
+  LOSS_THRESHOLD: 0.99
   TIMEOUT_MINS: 5
   MIN_PERFORMANCE: null
 

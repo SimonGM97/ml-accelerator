@@ -309,6 +309,9 @@ class ModelTuner:
         if 'models_path' not in parameters.keys():
             parameters['models_path'] = self.models_path
 
+        if 'task' not in parameters.keys():
+            parameters['task'] = self.task
+
         # Data Parameters
         if 'target' not in parameters.keys():
             parameters['target'] = self.target
@@ -324,7 +327,10 @@ class ModelTuner:
             parameters['importance_method'] = self.importance_method
 
         # Others
-        if 'cutoff' not in parameters.keys() and self.task == 'classification':
+        if (
+            'cutoff' not in parameters.keys() and 
+            self.task in ['binary_classification', 'multiclass_classification']
+        ):
             parameters['cutoff'] = 0.5
         if 'model_type' in parameters.keys():
             parameters.pop('model_type')
@@ -368,7 +374,6 @@ class ModelTuner:
 
         :return: (dict) Loss function with the validation performance of the ML classification model.
         """
-        debug = True
         # try:
         # Parameter configuration
         parameters = self.prepare_parameters(
@@ -378,7 +383,7 @@ class ModelTuner:
         )
 
         # Instanciate model
-        if self.task == 'classification':
+        if self.task in ['binary_classification', 'multiclass_classification']:
             model = ClassificationModel(**parameters)
         elif self.task == 'regression':
             model = RegressionModel(**parameters)
@@ -397,7 +402,13 @@ class ModelTuner:
         )
 
         # Log dev model
-        if model.val_score >= self.min_performance:
+        if (
+            self.min_performance is None 
+            or (
+                self.min_performance is not None
+                and model.val_score >= self.min_performance
+            )
+        ):
             self.update_models(new_candidate=model)
 
         # Return Loss
@@ -465,8 +476,7 @@ class ModelTuner:
                 # Fit model
                 model.fit(
                     X=X_train,
-                    y=y_train,
-                    debug=debug
+                    y=y_train
                 )
                 
                 # Evaluate model on test set & find model.test_score
@@ -543,7 +553,7 @@ class ModelTuner:
             algo=tpe.suggest,
             max_evals=max_evals,
             timeout=timeout_mins * 60,
-            loss_threshold=loss_threshold,
+            loss_threshold=-loss_threshold,
             trials=trials,
             verbose=True,
             show_progressbar=True,

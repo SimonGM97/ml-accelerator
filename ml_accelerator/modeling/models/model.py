@@ -51,6 +51,7 @@ class Model(ABC):
         model_id: str = None,
         version: int = 1,
         stage: str = 'development',
+        task: str = Params.TASK,
         algorithm: str = None,
         hyper_parameters: dict = {},
         target: str = Params.TARGET,
@@ -77,6 +78,7 @@ class Model(ABC):
 
         # Model Parameters
         self.model = None
+        self.task: str = task
         self.algorithm: str = algorithm
         self.hyper_parameters: dict = deepcopy(hyper_parameters)
         self.fitted: bool = False

@@ -84,7 +84,7 @@ class DataHelper:
         pd.DataFrame
     ]:
         # Divide into X_train, y_train, X_test, y_test
-        if self.task == 'classification':
+        if self.task in ['binary_classification', 'multiclass_classification']:
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, 
                 test_size=test_size, 
