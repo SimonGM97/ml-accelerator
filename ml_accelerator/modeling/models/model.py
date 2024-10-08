@@ -18,6 +18,11 @@ from pprint import pformat
 from copy import deepcopy
 from typing import List
 
+import warnings
+
+# Suppress only UserWarning
+warnings.filterwarnings("ignore", category=UserWarning)
+
 
 # Get logger
 LOGGER = get_logger(
@@ -53,7 +58,7 @@ class Model(ABC):
         stage: str = 'development',
         task: str = Params.TASK,
         algorithm: str = None,
-        hyper_parameters: dict = {},
+        hyper_parameters: dict = None,
         target: str = Params.TARGET,
         selected_features: List[str] = None,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
@@ -80,7 +85,7 @@ class Model(ABC):
         self.model = None
         self.task: str = task
         self.algorithm: str = algorithm
-        self.hyper_parameters: dict = deepcopy(hyper_parameters)
+        self.hyper_parameters: dict = hyper_parameters
         self.fitted: bool = False
 
         # Data Parameters
@@ -189,6 +194,14 @@ class Model(ABC):
     """
     Abstract methods
     """
+
+    @abstractmethod
+    def correct_hyper_parameters(
+        self,
+        hyper_parameters: dict,
+        debug: bool = False
+    ) -> dict:
+        pass
 
     @abstractmethod
     def build(
@@ -352,7 +365,7 @@ class Model(ABC):
             save_to_filesystem(
                 asset=self.model,
                 path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
-                partition_column=None,
+                partition_cols=None,
                 overwrite=True
             )
         
@@ -360,7 +373,7 @@ class Model(ABC):
         save_to_filesystem(
             asset=model_attrs,
             path=os.path.join(base_path, f"{self.model_id}_model_attrs.pickle"),
-            partition_column=None,
+            partition_cols=None,
             overwrite=True
         )
 
@@ -371,7 +384,7 @@ class Model(ABC):
                 save_to_filesystem(
                     asset=df,
                     path=os.path.join(base_path, f"{self.model_id}_{attr_name}.csv"),
-                    partition_column=None,
+                    partition_cols=None,
                     overwrite=True
                 )
 
@@ -382,7 +395,7 @@ class Model(ABC):
                 save_to_s3(
                     asset=df,
                     path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
-                    partition_column=self.partition_cols.get("attr_name"),
+                    partition_cols=self.partition_cols.get("attr_name"),
                     overwrite=True
                 )
 
@@ -398,7 +411,7 @@ class Model(ABC):
             save_to_s3(
                 asset=self.model,
                 path=f"{base_path}/{self.model_id}_model.pickle",
-                partition_column=None,
+                partition_cols=None,
                 overwrite=True
             )
 
@@ -406,7 +419,7 @@ class Model(ABC):
         save_to_s3(
             asset=model_attrs,
             path=f"{base_path}/{self.model_id}_model_attrs.pickle",
-            partition_column=None,
+            partition_cols=None,
             overwrite=True
         )
 
@@ -417,7 +430,7 @@ class Model(ABC):
                 save_to_s3(
                     asset=df,
                     path=f"{base_path}/{self.model_id}_{attr_name}.csv",
-                    partition_column=None,
+                    partition_cols=None,
                     overwrite=True
                 )
 
@@ -428,7 +441,7 @@ class Model(ABC):
                 save_to_s3(
                     asset=df,
                     path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
-                    partition_column=self.partition_cols.get("attr_name"),
+                    partition_cols=self.partition_cols.get("attr_name"),
                     overwrite=True
                 )
 
@@ -499,7 +512,7 @@ class Model(ABC):
             # Load attribute
             df: pd.DataFrame = load_from_filesystem(
                 path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
-                partition_column=self.partition_cols.get("attr_name"),
+                partition_cols=self.partition_cols.get("attr_name"),
                 filters=None
             )
 
@@ -552,7 +565,7 @@ class Model(ABC):
             # Load attribute
             df: pd.DataFrame = load_from_s3(
                 path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
-                partition_column=self.partition_cols.get("attr_name"),
+                partition_cols=self.partition_cols.get("attr_name"),
                 filters=None
             )
 
@@ -610,10 +623,16 @@ class Model(ABC):
             'Selected Features (len)': n_features
         }
 
+        # Test metrics
+        metric_attrs = {
+            metric_name: round(getattr(self, metric_name) * 100, 2) for metric_name in self.metric_names
+        }
+
         # Prepare output
         output = "Model:\n"
         output += f"Register Attributes:\n{pformat(reg_attrs)}\n\n"
         output += f"ML Attributes:\n{pformat(ml_attrs)}\n\n"
+        output += f"Test Metrics:\n{pformat(metric_attrs)}\n"
 
         return output
         

@@ -19,6 +19,11 @@ from typing import Dict, List, Tuple
 from copy import deepcopy
 from pprint import pprint, pformat
 
+import warnings
+
+# Suppress only UserWarning
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
 
 # Get logger
 LOGGER = get_logger(
@@ -450,7 +455,10 @@ class ModelTuner:
                     self.models = self.models[:self.n_candidates]
                 
                 if new_candidate.model_id in [m.model_id for m in self.models]:
-                    print(f'Model {new_candidate.model_id} ({new_candidate.stage}) was added to self.models.\n')
+                    LOGGER.info(
+                        'Model %s (%s) was added to self.models (Models: %s).',
+                        new_candidate.model_id,new_candidate.stage, len(self.models)
+                    )
         else:
             LOGGER.warning(
                 '%s is already in dev_models.\n'
@@ -528,9 +536,10 @@ class ModelTuner:
             trials = generate_trials_to_calculate(best_parameters_to_evaluate)
 
             if debug:
-                print(f'best_parameters_to_evaluate:')
-                pprint(best_parameters_to_evaluate)
-                print('\n\n')
+                LOGGER.debug(
+                    'best_parameters_to_evaluate:\n%s\n',
+                    pformat(best_parameters_to_evaluate)
+                )
         else:
             trials = None
 
@@ -585,11 +594,16 @@ class ModelTuner:
             [m.model_id for m in self.models if m.stage == 'development']
         )
 
+        LOGGER.info('New self.model_registry.registry_dict:\n%s\n', pformat(self.model_registry.registry_dict))
+
         # Update model stages
         self.model_registry.update_model_stages(
             update_prod_model=False,
             debug=debug
         )
+
+        # Show ModelRegistry
+        LOGGER.info('%s', self.model_registry)
 
     def load(self) -> None:
         # Load registry

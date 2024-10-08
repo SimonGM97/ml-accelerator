@@ -61,7 +61,8 @@ def save_to_filesystem(
     # Make sure directory exists
     if not os.path.exists(path):
         makedir = '/'.join(path.split('/')[:-1])
-        os.makedirs(makedir)
+        if not os.path.exists(makedir):
+            os.makedirs(makedir)
 
     # Extract format
     save_format = path.split('.')[-1]

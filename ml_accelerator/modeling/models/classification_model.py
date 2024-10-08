@@ -101,7 +101,7 @@ class ClassificationModel(Model):
         stage: str = 'development',
         task: str = Params.TASK,
         algorithm: str = None,
-        hyper_parameters: dict = {},
+        hyper_parameters: dict = None,
         target: str = Params.TARGET,
         selected_features: List[str] = None,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
@@ -129,10 +129,11 @@ class ClassificationModel(Model):
         )
 
         # Correct self.hyperparameters
-        self.hyper_parameters: dict = self.correct_hyper_parameters(
-            hyper_parameters=hyper_parameters,
-            debug=False
-        )
+        if self.hyper_parameters is not None:
+            self.hyper_parameters: dict = self.correct_hyper_parameters(
+                hyper_parameters=hyper_parameters,
+                debug=False
+            )
 
         # Classification parameters
         self.cutoff: float = cutoff
@@ -161,50 +162,81 @@ class ClassificationModel(Model):
 
         :return: (dict) hyper_parameters containing pre-defined hyperparameters.
         """
+        # Define default parameters
+        default_params: dict = {
+            "class_weight": 'balanced' if Params.CLASS_WEIGHT is None else Params.CLASS_WEIGHT,
+            "scale_pos_weight": None if Params.CLASS_WEIGHT is None else Params.CLASS_WEIGHT[1] / Params.CLASS_WEIGHT[0],
+            "importance_type": 'gain',
+            "verbose": -1,
+            "random_state": 23111997,
+            "n_jobs": -1
+        }
+
+        # Filter default parameters
+        def extract_available_params():
+            if self.algorithm == 'random_forest':
+                return list(RandomForestClassifier().get_params().keys())
+            elif self.algorithm == 'lightgbm':
+                return list(LGBMClassifier().get_params().keys())
+            elif self.algorithm == 'xgboost':
+                return list(XGBClassifier().get_params().keys())
+            
+            raise NotImplementedError(f'Algorithm "{self.algorithm}" has not yet been implemented.\n')
+
+        available_params: List[str] = extract_available_params()
+
+        default_params: dict = {
+            param_name: default_params[param_name] for param_name in default_params
+            if param_name in available_params
+        }
+
+        # Update default hyperparameters
+        hyper_parameters.update(**default_params)
+
         if self.algorithm == 'random_forest':
             hyper_parameters.update(**{
-                'class_weight': Params.CLASS_WEIGHT,
-                'oob_score': False,
-                'n_jobs': -1,
-                'random_state': 23111997
+                "verbose": 0,
+                'oob_score': False
             })
 
         elif self.algorithm == 'lightgbm':
             if self.task == 'binary_classification':
                 hyper_parameters.update(**{
                     "objective": 'binary',
-                    "metric": 'binary_logloss',
-                    "scale_pos_weight": Params.CLASS_WEIGHT[1] / Params.CLASS_WEIGHT[0],
-                    "importance_type": 'split',
-                    "random_state": 23111997,
-                    "verbose": -1,
-                    "n_jobs": -1
+                    "metric": 'binary_logloss' # auc
                 })
             elif self.task == 'multiclass_classification':
                 hyper_parameters.update(**{
                     "objective": 'multiclass',
+                    "metric": 'multi_logloss',
                     # "num_class": n_classes,
-                    'metric': 'multi_logloss',
-                    "importance_type": 'split',
-                    "random_state": 23111997,
-                    "verbose": -1,
-                    "n_jobs": -1
                 })
 
-        elif self.algorithm == 'xgboost':
             hyper_parameters.update(**{
-                "scale_pos_weight": Params.CLASS_WEIGHT[1] / Params.CLASS_WEIGHT[0],
-                "verbosity": 0,
+                "verbose": -1
+            })
+
+        elif self.algorithm == 'xgboost':
+            if self.task == 'binary_classification':
+                hyper_parameters.update(**{
+                    "objective": 'binary:logistic',
+                    "eval_metric": 'logloss' # auc
+                })
+            elif self.task == 'multiclass_classification':
+                hyper_parameters.update(**{
+                    "objective": 'multi:softmax', # multi:softprob
+                    "eval_metric": 'mlogloss',
+                    # "num_class": n_classes,
+                })
+            
+            hyper_parameters.update(**{
                 "use_rmm": True,
                 "device": 'cuda', # 'cpu', 'cuda' # cuda -> GPU
                 "nthread": -1,
-                "n_gpus": -1,
                 "max_delta_step": 0,
                 "gamma": 0,
                 "subsample": 1, # hp.uniform('xgboost.subsample', 0.6, 1)
-                "sampling_method": 'uniform',
-                "random_state": 23111997,
-                "n_jobs": -1
+                "sampling_method": 'uniform'
             })
 
         # Show hyper-parameters
@@ -341,21 +373,21 @@ class ClassificationModel(Model):
         :param `splits`: (int) Number of splits to perform in the cross validation.
         :param `debug`: (bool) Wether or not to show self.cv_scores, for debugging purposes.
         """
-        # Define scorer
-        if self.optimization_metric == 'f1_score':
-            scorer = make_scorer(f1_score)
-        elif self.optimization_metric == 'f1_weighted':
-            scorer = 'f1_weighted'
-        elif self.optimization_metric == 'precision':
-            scorer = make_scorer(precision_score)
-        elif self.optimization_metric == 'recall':
-            scorer = make_scorer(recall_score)
-        elif self.optimization_metric == 'roc_auc':
-            scorer = make_scorer(roc_auc_score)
-        elif self.optimization_metric == 'accuracy':
-            scorer = make_scorer(accuracy_score)
-        else:
-            raise Exception(f'Invalid "self.optimization_metric": {self.optimization_metric}.\n\n')
+        # # Define scorer
+        # if self.optimization_metric == 'f1_score':
+        #     scorer = make_scorer(f1_score)
+        # elif self.optimization_metric == 'f1_weighted':
+        #     scorer = 'f1_weighted'
+        # elif self.optimization_metric == 'precision':
+        #     scorer = make_scorer(precision_score)
+        # elif self.optimization_metric == 'recall':
+        #     scorer = make_scorer(recall_score)
+        # elif self.optimization_metric == 'roc_auc':
+        #     scorer = make_scorer(roc_auc_score)
+        # elif self.optimization_metric == 'accuracy':
+        #     scorer = make_scorer(accuracy_score)
+        # else:
+        #     raise Exception(f'Invalid "self.optimization_metric": {self.optimization_metric}.\n\n')
 
         # Evaluate Model using Cross Validation
         self.cv_scores = cross_val_score(
@@ -421,7 +453,7 @@ class ClassificationModel(Model):
         self.fpr, self.tpr, self.thresholds = roc_curve(y_test, y_score)
 
         # Define test score
-        if self.optimization_metric == 'f1_score':
+        if self.optimization_metric == 'f1':
             self.test_score = self.f1_score
         elif self.optimization_metric == 'precision':
             self.test_score = self.precision_score

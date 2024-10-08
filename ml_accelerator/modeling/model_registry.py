@@ -86,24 +86,26 @@ class ModelRegistry:
         model_id: str,
         light: bool = False
     ) -> Model:
-        try:
-            # Instanciate Model
-            if self.task == 'classification':
-                model = ClassificationModel(model_id=model_id)
-            elif self.task == 'regression':
-                model = RegressionModel(model_id=model_id)
+        # try:
+        # Instanciate Model
+        if self.task in ['binary_classification', 'multiclass_classification']:
+            model = ClassificationModel(model_id=model_id)
+        elif self.task == 'regression':
+            model = RegressionModel(model_id=model_id)
+        else:
+            raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
 
-            # Load Model
-            model.load(light=light)
+        # Load Model
+        model.load(light=light)
 
-            return model
-        except Exception as e:
-            LOGGER.error(
-                'Unable to load Model %s.\n'
-                'Exception: %s\n',
-                model_id, e
-            )
-            return
+        return model
+        # except Exception as e:
+        #     LOGGER.error(
+        #         'Unable to load Model %s.\n'
+        #         'Exception: %s\n',
+        #         model_id, e
+        #     )
+        #     return
 
     def load_dev_models(
         self,
@@ -175,26 +177,55 @@ class ModelRegistry:
             return
         
         # Update model stage
-        model.stage == new_stage
+        model.stage = new_stage
 
         # Update self.registry_dict
-        self.registry_dict[initial_stage].remove(model.model_id)
-        self.registry_dict[new_stage].append(model.model_id)
+        try:
+            self.registry_dict[initial_stage].remove(model.model_id)
+        except Exception as e:
+            LOGGER.warning(
+                'Unable to extract model_id: %s from self.registry["%s"]: %s\n'
+                'Exception: %s',
+                model.model_id, initial_stage, self.registry_dict[initial_stage], e
+            )
+        try:
+            if new_stage != 'delete':
+                self.registry_dict[new_stage].append(model.model_id)
+        except Exception as e:
+            LOGGER.warning(
+                'Unable to extract model_id: %s from self.registry["%s"]: %s\n'
+                'Exception: %s',
+                model.model_id, new_stage, self.registry_dict[new_stage], e
+            )
 
         # Update self.champion, self.staging_models & self.development_models
-        if initial_stage == 'development':
-            self.dev_models.remove(model)
-        elif initial_stage == 'staging':
-            self.staging_models.remove(model)
-        elif initial_stage == 'production':
-            self.prod_model = None
+        try:
+            if initial_stage == 'development':
+                self.dev_models.remove(model)
+            elif initial_stage == 'staging':
+                self.staging_models.remove(model)
+            elif initial_stage == 'production':
+                self.prod_model = None
+        except Exception as e:
+            LOGGER.warning(
+                'Unable to remove %s from %s models.\n'
+                'Exception: %s',
+                model.model_id, initial_stage, e
+            )
         
-        if new_stage == 'development':
-            self.dev_models.append(model)
-        elif new_stage == 'staging':
-            self.staging_models.append(model)
-        elif new_stage == 'production':
-            self.prod_model = model
+        try:
+            if new_stage == 'development':
+                self.dev_models.append(model)
+            elif new_stage == 'staging':
+                self.staging_models.append(model)
+            elif new_stage == 'production':
+                self.prod_model = model
+        except Exception as e:
+            LOGGER.warning(
+                'Unable to add %s to %s models.\n'
+                'Exception: %s',
+                model.model_id, new_stage, e
+            )
 
     def debug(self):
         if self.prod_model is not None:
@@ -214,9 +245,6 @@ class ModelRegistry:
             pformat(self.registry_dict), len(self.dev_models), len(self.staging_models), 
             prod_test_score, prod_optim_metric
         )
-        
-        if self.prod_model is not None:
-            pass
 
     def update_model_stages(
         self,
@@ -230,6 +258,8 @@ class ModelRegistry:
             - The top staging model will compete with the production model (also referred as "champion" model), 
               based on their test performance.
         """
+        debug = True
+
         # Load light Models
         self.champion: Model = self.load_prod_model(light=True)
         self.staging_models: List[Model] = self.load_staging_models(light=True)
@@ -285,7 +315,7 @@ class ModelRegistry:
         forced_model_id: str = self.load_forced_model()['forced_model_id']
 
         if debug:
-            LOGGER.debug('Foreced Model:\n%s\n', pformat(forced_model_id))
+            LOGGER.debug('Foreced Model ID: %s', pformat(forced_model_id))
 
         # Update prod mdoel with forced model
         if forced_model_id is not None:
@@ -431,9 +461,16 @@ class ModelRegistry:
             for file in files:
                 model_id = file.split('_')[0]
                 if model_id not in model_ids:
-                    delete_path = os.path.join(self.models_path, file)
+                    delete_path = os.path.join(*self.models_path, file)
                     LOGGER.info("Deleting %s.", delete_path)
-                    os.remove(delete_path)
+                    try:
+                        os.remove(delete_path)
+                    except Exception as e:
+                        LOGGER.warning(
+                            'Unable to remove %s.\n'
+                            'Exception: %s',
+                            delete_path, e
+                        )
 
     def clean_s3_models(self) -> None:
         # Load model ids
@@ -591,39 +628,63 @@ class ModelRegistry:
 
     def load_forced_model(self) -> dict:
         # Read forced_model
-        if self.data_storage_env == 'filesystem':
-            forced_model: dict = load_from_filesystem(
-                path=os.path.join(self.bucket, "utils", "model_registry", "forced_model.json"),
-                partition_cols=None,
-                filters=None
+        try:
+            if self.data_storage_env == 'filesystem':
+                forced_model: dict = load_from_filesystem(
+                    path=os.path.join(self.bucket, "utils", "model_registry", "forced_model.json"),
+                    partition_cols=None,
+                    filters=None
+                )
+            elif self.data_storage_env == 'S3':
+                forced_model: dict = load_from_s3(
+                    path=f"{self.bucket}/utils/model_registry/forced_model.json",
+                    partition_cols=None,
+                    filters=None
+                )
+            else:
+                raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+        except Exception as e:
+            LOGGER.warning(
+                "Unable to load forced_model.\n"
+                "Loading default forced_model instead.\n"
+                "Exception: %s", e
             )
-        elif self.data_storage_env == 'S3':
-            forced_model: dict = load_from_s3(
-                path=f"{self.bucket}/utils/model_registry/forced_model.json",
-                partition_cols=None,
-                filters=None
-            )
-        else:
-            raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+
+            # Load dummy forced_model
+            forced_model: dict = {"forced_model_id": None}
         
         return forced_model
 
     def load_registry_dict(self) -> None:
         # Read registry
-        if self.data_storage_env == 'filesystem':
-            self.registry_dict: Dict[str, List[str]] = load_from_filesystem(
-                path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
-                partition_cols=None,
-                filters=None
+        try:
+            if self.data_storage_env == 'filesystem':
+                self.registry_dict: Dict[str, List[str]] = load_from_filesystem(
+                    path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
+                    partition_cols=None,
+                    filters=None
+                )
+            elif self.data_storage_env == 'S3':
+                self.registry_dict: Dict[str, List[str]] = load_from_s3(
+                    path=f"{self.bucket}/utils/model_registry/model_registry.json",
+                    partition_cols=None,
+                    filters=None
+                )
+            else:
+                raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+        except Exception as e:
+            LOGGER.warning(
+                "Unable to load registry_dict.\n"
+                "Loading default registry_dict instead.\n"
+                "Exception: %s", e
             )
-        elif self.data_storage_env == 'S3':
-            self.registry_dict: Dict[str, List[str]] = load_from_s3(
-                path=f"{self.bucket}/utils/model_registry/model_registry.json",
-                partition_cols=None,
-                filters=None
-            )
-        else:
-            raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+
+            # Load dummy registry_dict
+            self.registry_dict: Dict[str, List[str]] = {
+                "production": [], 
+                "staging": [], 
+                "development": []
+            }
 
     def save_registry_dict(self) -> None:
         # Write self.registry
@@ -631,14 +692,14 @@ class ModelRegistry:
             save_to_filesystem(
                 asset=self.registry_dict,
                 path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
-                partition_column=None,
+                partition_cols=None,
                 overwrite=True
             )
         elif self.data_storage_env == 'S3':
             save_to_s3(
                 asset=self.registry_dict,
                 path=f"{self.bucket}/utils/model_registry/model_registry.json",
-                partition_column=None,
+                partition_cols=None,
                 overwrite=True
             )
         else:
@@ -662,38 +723,26 @@ class ModelRegistry:
     """
 
     def __repr__(self) -> str:
-        LOGGER.info('Model Registry:')
+        output: str = "Model Registry:"
 
         # Prod Model
-        champion = self.load_prod_model()
+        champion = self.load_prod_model(light=True)
         if champion is not None:
-            LOGGER.info(
-                'Champion Model: %s\n'
-                '    - Validation score: %s\n'
-                '    - Test score: %s\n',
-                champion.model_id, champion.val_score, champion.test_score
-            )
+            output += f"\nChampion Model ({champion.model_id}): Test score - {round(champion.test_score * 100, 2)} [{champion.optimization_metric}]\n\n"
         else:
             LOGGER.warning('loaded champion is None!.')
 
         # Staging Models
-        for model in self.load_staging_models():
+        for model in self.load_staging_models(light=True):
             if model is not None:
-                LOGGER.info(
-                    'Staging Model: %s\n'
-                    '    - Validation score: %s\n'
-                    '    - Test score: %s\n',
-                    model.model_id, model.val_score, model.test_score
-                )
+                output += f"Staging Model ({model.model_id}): Test score - {round(model.test_score * 100, 2)} [{model.optimization_metric}]\n"
+        output += "\n"
         
         # Dev Models
-        for model in self.load_dev_models():
+        for model in self.load_dev_models(light=True):
             if model is not None:
-                LOGGER.info(
-                    'Dev Model: %s\n'
-                    '    - Validation score: %s\n',
-                    model.model_id, model.val_score
-                )
-
-        return '\n\n'
+                output += f"Dev Model ({model.model_id}): Test score - {round(model.test_score * 100, 2)} [{model.optimization_metric}]\n"
+        output += "\n"
+        
+        return output
     

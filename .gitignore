@@ -202,9 +202,20 @@ cython_debug/
 
 # Example
 schemas/iris_schema.yaml
+schemas/wine_schema.yaml
+schemas/breast_cancer_schema.yaml
+schemas/diabetes_schema.yaml
 
 # Dummy buckets
 ml-accelerator-dev
 ml-accelerator-prod
 iris-classification-dev
 iris-classification-prod
+wine-classification-dev
+wine-classification-prod
+breast-cancer-classification-dev
+breast-cancer-classification-prod
+diabetes-regression-dev
+diabetes-regression-prod
+california-housing-regression-dev
+california-housing-regression-prod

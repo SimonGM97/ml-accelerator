@@ -5,8 +5,9 @@
 # PROJECT PARAMETERS
 PROJECT_PARAMS:
   PROJECT_NAME: ml-accelerator
-  TARGET: species # target column
-  TASK: multiclass_classification 
+  TARGET: diagnosis # target column
+  # species (iris), wine_class (wine), diagnosis (breast_cancer), disease_progression (diabetes), MedHouseVal (california_housing)
+  TASK: binary_classification 
   # regression, binary_classification, multiclass_classification, forecasting
 
 # ENVIRONMENT PARAMETERS
@@ -28,12 +29,13 @@ ENV_PARAMS:
 
 # EXTRACT TRANSFORM LOAD PARAMETERS
 ETL_PARAMS:
-  ETL_SOURCE: seaborn
-  # seaborn, filesystem, S3, postgresql
+  ETL_SOURCE: sklearn
+  # sklearn, filesystem, S3, postgresql
 
 # STORAGE PARAMETERS
 STORAGE_PARAMS:
-  DATASET_NAME: iris
+  DATASET_NAME: breast_cancer
+  # iris, wine, breast_cancer, diabetes, california_housing
 
   PATHS_PARAMS:
     TRAINING_PATH:
@@ -81,10 +83,10 @@ CLASSIFICATION_PARAMS:
   BALANCE_TRAIN: true
   BALANCE_METHOD: SMOTE
   # RandomOverSampler, RandomUnderSampler, SMOTE
-  CLASS_WEIGHT:
-    1: 1
-    0: 1
-    2: 1
+  CLASS_WEIGHT: null
+    # 1: 1
+    # 0: 1
+    # 2: 1
   CUTOFF: 0.5
 
 # REGRESSION PARAMETERS
@@ -126,15 +128,16 @@ HYPER_PARAMETER_TUNING_PARAMS:
           - sqrt
     - algorithm: lightgbm
       hyper_parameters:
-      - parameter_name: objective
-        space:
-          dist: choice
-          choices:
-          - regression 
-          - regression_l1 
-          - huber 
-          - quantile 
-          - mape
+      # # ONLY FOR REGRESSION
+      # - parameter_name: objective
+      #   space:
+      #     dist: choice
+      #     choices:
+      #     - regression 
+      #     - regression_l1 
+      #     - huber 
+      #     - quantile 
+      #     - mape
       - parameter_name: boosting_type
         space:
           dist: choice
@@ -173,13 +176,14 @@ HYPER_PARAMETER_TUNING_PARAMS:
           max: 1.0
     - algorithm: xgboost
       hyper_parameters:
-      - parameter_name: objective
-        space:
-          dist: choice
-          choices:
-          - reg:squarederror
-          - reg:absoluteerror
-          - reg:quantileerror
+      # # ONLY FOR REGRESSION
+      # - parameter_name: objective
+      #   space:
+      #     dist: choice
+      #     choices:
+      #     - reg:squarederror
+      #     - reg:absoluteerror
+      #     - reg:quantileerror
       - parameter_name: booster
         space:
           dist: choice
@@ -224,8 +228,8 @@ HYPER_PARAMETER_TUNING_PARAMS:
 
   N_CANDIDATES: 5
 
-  OPTIMIZATION_METRIC: f1_weighted
-  # Binary classification: precision, recall, f1_score, roc_auc, accuracy (Accuracy not recommended)
+  OPTIMIZATION_METRIC: f1
+  # Binary classification: precision, recall, f1, roc_auc, accuracy (Accuracy not recommended)
   # Multiclass classification: f1_weighted
   # Regression: mape
   VAL_SPLITS: 3
@@ -241,7 +245,7 @@ FEATURE_IMPORTANCE_PARAMS:
 
 # LOGGER PARAMETERS
 LOG_PARAMS:
-  LEVEL: INFO # INFO
+  LEVEL: DEBUG # DEBUG, INFO
   TXT_FMT: null # default
   JSON_FMT: null # default
   FILTER_LVLS: null

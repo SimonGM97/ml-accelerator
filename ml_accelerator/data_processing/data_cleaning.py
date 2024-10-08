@@ -251,19 +251,20 @@ class DataCleaner(DataHelper):
         df: pd.DataFrame
     ) -> pd.DataFrame:
         # Extract expected data dypes
-        map_types: dict = {
-            'string': str,
-            'object': object,
-            'float': float,
-            'float32': np.float32,
-            'float64': np.float64,
-            'int': int,
-            'int32': np.int32,
-            'int64': np.int64
-        }
+        # map_types: dict = {
+        #     'string': np.dtypes.StrDType,
+        #     'object': np.dtypes.ObjectDType,
+        #     'float64': np.dtypes.Float64DType,
+        #     'float32': np.dtypes.Float32DType,
+        #     'float16': np.dtypes.Float16DType,
+        #     'int': np.dtypes.IntDType,
+        #     'int16': np.dtypes.Int16DType,
+        #     'int32': np.dtypes.Int32DType,
+        #     'int64': np.dtypes.Int64DType
+        # }
 
         expected_dtypes: dict = {
-            field['name']: map_types[field['type']] for field in self.schema['fields']
+            field['name']: field['type'] for field in self.schema['fields']
             if field['name'] in df.columns
         }
 

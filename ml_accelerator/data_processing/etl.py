@@ -4,7 +4,13 @@ from ml_accelerator.utils.logging.logger_helper import get_logger
 
 import pandas as pd
 import numpy as np
-import seaborn as sns
+from sklearn.datasets import (
+    load_iris,
+    load_wine,
+    load_breast_cancer,
+    load_diabetes,
+    fetch_california_housing
+)
 import gc
 import os
 import requests
@@ -44,14 +50,52 @@ class ExtractTransformLoad(DataHelper):
         """
         Extract input datasets from various sources
         """
-        if self.source == 'seaborn':
-            df: pd.DataFrame = sns.load_dataset(name=self.dataset_name)
-            # df: pd.DataFrame = pd.read_csv(os.path.join(
-            #     Params.BUCKET, 'datasets', f'{Params.DATASET_NAME}_raw_data.csv'
-            # ))
-        else:
-            raise NotImplemented(f'Source {self.source} has not yet been implemented.\n')
+        if self.source == 'sklearn':
+            # Extract data
+            if self.dataset_name == 'iris':
+                data = load_iris() # Multiclass classification
+            elif self.dataset_name == 'wine':
+                data = load_wine()
+            elif self.dataset_name == 'breast_cancer':
+                data = load_breast_cancer() # Binary classification
+            elif self.dataset_name == 'diabetes':
+                data = load_diabetes() # Regression
+            elif self.dataset_name == 'california_housing':
+                data = fetch_california_housing() # Regression
+            else:
+                raise NotImplementedError(f'Dataset "{self.dataset_name}" has not yet been implemented.\n')
+            
+            # Extract X
+            X: pd.DataFrame = pd.DataFrame(
+                data=data['data'],
+                columns=data['feature_names']
+            )
+            
+            # Extract y
+            target_col = {
+                'iris': 'species',
+                'wine': 'wine_class',
+                'breast_cancer': 'diagnosis',
+                'diabetes': 'disease_progression',
+                'california_housing': 'average_price'
+            }.get(self.dataset_name)
 
+            y: pd.DataFrame = pd.DataFrame(
+                data=data['target'],
+                columns=[target_col]
+            )
+
+            # Map target names
+            if 'target_names' in data and len(data['target_names']) > 1:
+                target_names: List[str] = data['target_names']
+                mapping_dict = {i: target_names[i] for i in range(len(target_names))}
+                y[target_col] = y[target_col].map(mapping_dict)
+
+            # Concatenate datasets
+            df: pd.DataFrame = pd.concat([y, X], axis=1)
+        else:
+            raise NotImplementedError(f'Source {self.source} has not yet been implemented.\n')
+        
         return [df]
 
     def transform(

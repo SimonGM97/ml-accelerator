@@ -43,6 +43,12 @@ def main(
         source=Params.ETL_SOURCE,
         dataset_name=Params.DATASET_NAME
     )
+
+    # Load input datasets
+    X, y = ETL.run_pipeline(
+        persist_datasets=persist_datasets,
+        overwrite=overwrite
+    )
     
     # Instanciate DataCleaner
     DC: DataCleaner = DataCleaner(
@@ -65,12 +71,6 @@ def main(
         DC=DC,
         DT=DT,
         model=None
-    )
-
-    # Load input datasets
-    X, y = ETL.run_pipeline(
-        persist_datasets=persist_datasets,
-        overwrite=overwrite
     )
 
     # Run ML Pipeline

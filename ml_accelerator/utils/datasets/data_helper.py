@@ -166,20 +166,21 @@ class DataHelper:
 
         # Extract dtypes
         dtypes: pd.Series = df.dtypes
+        dtypes = dtypes.apply(lambda x: str(x))
 
         # Define schema
         schema: dict = {
             "name": self.dataset_name,
-            "path": '/'.join(*self.training_path),
+            "path": '/'.join(self.training_path),
             "fields": [
                 {
                     "name": col_name,
                     "type": dtypes[col_name],
                     "mandatory": True,
-                    "nullable": True,
-                    "min_value": df[col_name].min() if dtypes[col_name] != 'object' else None,
-                    "max_value": df[col_name].max() if dtypes[col_name] != 'object' else None,
-                    "allowed_values": df[col_name].unique().tolist() if dtypes[col_name] == 'object' else None,
+                    "nullable": True if df[col_name].isnull().sum() > 0 else False,
+                    "min_value": float(df[col_name].min()) if dtypes[col_name] not in ['string', 'object'] else None,
+                    "max_value": float(df[col_name].max()) if dtypes[col_name] not in ['string', 'object'] else None,
+                    "allowed_values": df[col_name].unique().tolist() if dtypes[col_name] in ['string', 'object'] else None,
                     "fillna_method": 'simple_imputer'
 
                 } for col_name in dtypes.index
