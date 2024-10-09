@@ -113,7 +113,7 @@ class DataHelper:
         gc.collect()
         
         # Balance Train Dataset
-        if self.task == 'classification' and balance_train:
+        if self.task in ['binary_classification', 'multiclass_classification'] and balance_train:
             if balance_method == 'RandomOverSampler':
                 # Utilize over-sampling methodology
                 RO = RandomOverSampler(random_state=0)

@@ -14,10 +14,9 @@ from ml_accelerator.utils.filesystem.filesystem_helper import (
 )
 from ml_accelerator.utils.logging.logger_helper import get_logger
 from tqdm import tqdm
-import shutil
 import os
-from pprint import pprint, pformat
-from typing import List, Dict, Tuple
+from pprint import pformat
+from typing import List, Dict
 
 
 # Get logger
@@ -190,7 +189,10 @@ class ModelRegistry:
             )
         try:
             if new_stage != 'delete':
-                self.registry_dict[new_stage].append(model.model_id)
+                if new_stage == 'production':
+                    self.registry_dict['production'] = [model.model_id]
+                else:
+                    self.registry_dict[new_stage].append(model.model_id)
         except Exception as e:
             LOGGER.warning(
                 'Unable to extract model_id: %s from self.registry["%s"]: %s\n'
@@ -198,7 +200,7 @@ class ModelRegistry:
                 model.model_id, new_stage, self.registry_dict[new_stage], e
             )
 
-        # Update self.champion, self.staging_models & self.development_models
+        # Update self.prod_model, self.staging_models & self.development_models
         try:
             if initial_stage == 'development':
                 self.dev_models.remove(model)
@@ -258,17 +260,15 @@ class ModelRegistry:
             - The top staging model will compete with the production model (also referred as "champion" model), 
               based on their test performance.
         """
-        debug = True
-
         # Load light Models
-        self.champion: Model = self.load_prod_model(light=True)
+        self.prod_model: Model = self.load_prod_model(light=True)
         self.staging_models: List[Model] = self.load_staging_models(light=True)
         self.dev_models: List[Model] = self.load_dev_models(light=True)
 
         # Assert that all dev_models & staging_models are not None
         assert not(any([m is None for m in self.dev_models + self.staging_models]))
 
-        # Downgrade all models to development (except for champion)
+        # Downgrade all models to development (except for prod_model)
         for model in self.staging_models + self.dev_models:
             self.update_model_stage(
                 model=model,
@@ -280,6 +280,7 @@ class ModelRegistry:
             models=self.dev_models,
             by='val_score'
         )
+        print(f'Len staging models: {len(self.staging_models)}')
 
         if debug:
             self.debug()
@@ -306,6 +307,12 @@ class ModelRegistry:
         self.staging_models: List[Model] = self.sort_models(
             models=self.staging_models,
             by='test_score'
+        )
+
+        # Assert that there are no more staging models than expected
+        assert (
+            len(self.staging_models) <= self.n_candidates, 
+            f"There are {len(self.staging_models)} staging models, but a maximum of {self.n_candidates} are allowed."
         )
 
         if debug:
@@ -460,8 +467,8 @@ class ModelRegistry:
         ):
             for file in files:
                 model_id = file.split('_')[0]
-                if model_id not in model_ids:
-                    delete_path = os.path.join(*self.models_path, file)
+                if model_id not in model_ids and not file.startswith('.'):
+                    delete_path = os.path.join(self.bucket, *self.models_path, model_id, file)
                     LOGGER.info("Deleting %s.", delete_path)
                     try:
                         os.remove(delete_path)
