@@ -431,7 +431,10 @@ class ModelTuner:
         self,
         new_candidate: Model
     ) -> None:
-        if new_candidate.model_id not in [m.model_id for m in self.models]:
+        if (
+            new_candidate.stage == 'development'
+            and new_candidate.model_id not in [m.model_id for m in self.models]
+        ):
             if (
                 len(self.models) < self.n_candidates
                 or new_candidate.val_score > self.models[-1].val_score

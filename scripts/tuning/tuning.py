@@ -98,7 +98,7 @@ def main(
 
 # conda deactivate
 # source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/tuning/tuning.py --max_evals 10 --loss_threshold 1 --timeout_mins 10
+# .ml_accel_venv/bin/python scripts/tuning/tuning.py --max_evals 1000 --loss_threshold 0.995 --timeout_mins 15
 if __name__ == "__main__":
     # Define parser
     parser = argparse.ArgumentParser(description='Model tuning script.')
