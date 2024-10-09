@@ -10,15 +10,7 @@ import argparse
 
 
 # Get logger
-LOGGER = get_logger(
-    name=__name__,
-    level=Params.LEVEL,
-    txt_fmt=Params.TXT_FMT,
-    json_fmt=Params.JSON_FMT,
-    filter_lvls=Params.FILTER_LVLS,
-    log_file=Params.LOG_FILE,
-    backup_count=Params.BACKUP_COUNT
-)
+LOGGER = get_logger(name=__name__)
 
 @timing
 def main(
@@ -38,11 +30,7 @@ def main(
     )
 
     # Instanciate ETL
-    ETL: ExtractTransformLoad = ExtractTransformLoad(
-        target=Params.TARGET,
-        source=Params.ETL_SOURCE,
-        dataset_name=Params.DATASET_NAME
-    )
+    ETL: ExtractTransformLoad = ExtractTransformLoad()
 
     # Load input datasets
     X, y = ETL.run_pipeline(
@@ -51,20 +39,10 @@ def main(
     )
     
     # Instanciate DataCleaner
-    DC: DataCleaner = DataCleaner(
-        target=Params.TARGET,
-        dataset_name=Params.DATASET_NAME,
-        z_threshold=Params.OUTLIER_Z_THRESHOLD
-    )
+    DC: DataCleaner = DataCleaner()
 
     # Instanciate DataTransformer
-    DT: DataTransformer = DataTransformer(
-        target=Params.TARGET,
-        dataset_name=Params.DATASET_NAME,
-        encode_target=Params.ENCODE_TARGET,
-        scale_num_features=Params.SCALE_NUM_FEATURES,
-        encode_cat_features=Params.ENCODE_CAT_FEATURES
-    )
+    DT: DataTransformer = DataTransformer()
 
     # Instanciate ML Pipeline
     MLP: MLPipeline = MLPipeline(

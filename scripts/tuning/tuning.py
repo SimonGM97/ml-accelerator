@@ -1,7 +1,6 @@
 from ml_accelerator.config.params import Params
 from ml_accelerator.utils.datasets.data_helper import DataHelper
 from ml_accelerator.modeling.model_tuning import ModelTuner
-from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
 
@@ -10,15 +9,7 @@ import argparse
 
 
 # Get logger
-LOGGER = get_logger(
-    name=__name__,
-    level=Params.LEVEL,
-    txt_fmt=Params.TXT_FMT,
-    json_fmt=Params.JSON_FMT,
-    filter_lvls=Params.FILTER_LVLS,
-    log_file=Params.LOG_FILE,
-    backup_count=Params.BACKUP_COUNT
-)
+LOGGER = get_logger(name=__name__)
 
 @timing
 def main(
@@ -39,17 +30,7 @@ def main(
     )
 
     # Instanciate DataHelper
-    DH: DataHelper = DataHelper(
-        dataset_name=Params.DATASET_NAME,
-        bucket=Params.BUCKET,
-        cwd=Params.CWD,
-        storage_env=Params.DATA_STORAGE_ENV,
-        training_path=Params.TRAINING_PATH,
-        inference_path=Params.INFERENCE_PATH,
-        transformers_path=Params.TRANSFORMERS_PATH,
-        data_extention=Params.DATA_EXTENTION,
-        partition_cols=Params.PARTITION_COLUMNS
-    )
+    DH: DataHelper = DataHelper()
 
     # Load persisted datasets
     X: pd.DataFrame = DH.load_dataset(df_name='X_trans', filters=None)
@@ -65,21 +46,7 @@ def main(
     )
 
     # Instanciate ModelTuner
-    MT: ModelTuner = ModelTuner(
-        algorithms=Params.ALGORITHMS,
-        search_space=Params.SEARCH_SPACE,
-        target=Params.TARGET,
-        task=Params.TASK,
-        optimization_metric=Params.OPTIMIZATION_METRIC,
-        importance_method=Params.IMPORTANCE_METHOD,
-        n_candidates=Params.N_CANDIDATES,
-        min_performance=Params.MIN_PERFORMANCE,
-        val_splits=Params.VAL_SPLITS,
-        model_storage_env=Params.MODEL_STORAGE_ENV,
-        data_storage_env=Params.DATA_STORAGE_ENV,
-        bucket=Params.BUCKET,
-        models_path=Params.MODELS_PATH
-    )
+    MT: ModelTuner = ModelTuner()
 
     # Tune models
     MT.tune_models(
@@ -98,7 +65,7 @@ def main(
 
 # conda deactivate
 # source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/tuning/tuning.py --max_evals 1000 --loss_threshold 0.995 --timeout_mins 15
+# .ml_accel_venv/bin/python scripts/tuning/tuning.py --max_evals 100 --loss_threshold 0.995 --timeout_mins 15
 if __name__ == "__main__":
     # Define parser
     parser = argparse.ArgumentParser(description='Model tuning script.')

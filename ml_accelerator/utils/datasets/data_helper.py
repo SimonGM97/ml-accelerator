@@ -10,16 +10,14 @@ from ml_accelerator.utils.aws.s3_helper import (
 )
 
 import pandas as pd
-import numpy as np
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import train_test_split
-import seaborn as sns
 import yaml
 import os
 import gc
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple
 
 
 # Get logger
@@ -303,23 +301,3 @@ class DataHelper:
         for attr_name, attr_value in attrs.items():
             if attr_name in self.pickled_attrs:
                 setattr(self, attr_name, attr_value)
-
-
-# conda deactivate
-# source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python ml_accelerator/data_processing/data_extractor.py
-if __name__ == "__main__":
-    # Instanciate DataHelper
-    DH: DataHelper = DataHelper(
-        bucket=Params.BUCKET,
-        cwd=Params.CWD,
-        storage_env=Params.DATA_STORAGE_ENV,
-        training_path=Params.TRAINING_PATH,
-        inference_path=Params.INFERENCE_PATH
-    )
-
-    # Load dataset
-    df: pd.DataFrame = sns.load_dataset(Params.DATASET_NAME)
-
-    # Persist dataset
-    DH.persist_dataset(df=df, df_name=f"{Params.DATASET_NAME}_raw_data")

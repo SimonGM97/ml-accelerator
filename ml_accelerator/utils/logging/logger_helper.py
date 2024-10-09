@@ -1,3 +1,4 @@
+from ml_accelerator.config.params import Params
 import logging
 from pythonjsonlogger import jsonlogger
 import colorlog
@@ -135,13 +136,13 @@ class LevelFilter(logging.Filter):
 
 
 def get_logger(
-    name: str = None, 
-    level: str = None,
-    txt_fmt: str = None,
-    json_fmt: str = None,
-    filter_lvls: List[str] = None,
-    log_file: str = None,
-    backup_count: int = None
+    name: str, 
+    level: str = Params.LEVEL,
+    txt_fmt: str = Params.TXT_FMT,
+    json_fmt: str = Params.JSON_FMT,
+    filter_lvls: List[str] = Params.FILTER_LVLS,
+    log_file: str = Params.LOG_FILE,
+    backup_count: int = Params.BACKUP_COUNT
 ) -> logging.Logger:
     # Define default name, level & formats
     if name is None:
@@ -262,7 +263,9 @@ def log_params(
     # Extract initial logger_msg
     logger_msg = {
         'data_processing.py': "\nDATA PROCESSING PARAMS:\n",
-        'tuning.py': "\nMODEL TUNING PARAMS:\n"
+        'tuning.py': "\nMODEL TUNING PARAMS:\n",
+        'training.py': "\nMODEL TRAINING PARAMS:\n",
+        'evaluation.py': "\nMODEL EVALUATION PARAMS:\n"
     }.get(file_name, None)
 
     if logger_msg is None:

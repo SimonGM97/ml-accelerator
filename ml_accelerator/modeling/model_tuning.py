@@ -485,14 +485,14 @@ class ModelTuner:
         for model in self.models:
             if model.stage == 'development':
                 # Fit model
-                model.fit(
-                    X=X_train,
-                    y=y_train
-                )
+                model.fit(X=X_train, y=y_train)
+
+                # Predict test
+                y_pred: np.ndarray = model.predict(X=X_test)
                 
                 # Evaluate model on test set & find model.test_score
                 model.evaluate_test(
-                    X_test=X_test,
+                    y_pred=y_pred,
                     y_test=y_test,
                     debug=debug
                 )

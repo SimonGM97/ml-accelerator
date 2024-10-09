@@ -43,6 +43,11 @@ class MLPipeline:
         # Modeling attributes
         self.model: ClassificationModel | RegressionModel = model
 
+        # Model attributes
+        if self.model is not None:
+            self.pipeline_id: str = self.model.model_id
+            self.task: str = self.model.task
+
     @timing
     def transform(
         self,
@@ -142,14 +147,13 @@ class MLPipeline:
     @timing
     def predict(
         self,
-        X: pd.DataFrame,
-        cutoff: float = None
+        X: pd.DataFrame
     ) -> np.ndarray:
         # Apply data transformation pipeline
         X, _ = self.transform(X=X, y=None)
 
         # Predict new y
-        y_pred = self.model.predict(X=X, cutoff=cutoff)
+        y_pred = self.model.predict(X=X)
 
         return y_pred
     
@@ -182,6 +186,18 @@ class MLPipeline:
 
         return y_pred
     
+    def evaluate(
+        self,
+        y_pred: np.ndarray,
+        y_test: pd.DataFrame,
+        cutoff: float = None
+    ) -> None:
+        self.model.evaluate_test(
+            y_pred=y_pred,
+            y_test=y_test,
+            cutoff=cutoff
+        )
+
     def save(self) -> None:
         # Save DataCleaner
         self.DC.save()
@@ -203,4 +219,11 @@ class MLPipeline:
         # Load Model
         if self.model is not None:
             self.model.load(light=False)
+
+
+if __name__ == "__main__":
+    from ml_accelerator.modeling.model_registry import ModelRegistry
+
+    # Instanciate ModelRegistry
+    MR: ModelRegistry = ModelRegistry()
 

@@ -272,7 +272,7 @@ class ClassificationModel(Model):
             self.model = XGBClassifier(**self.hyper_parameters)
 
         else:
-            raise Exception(f'Invalid algorithm: {self.algorithm}!')
+            raise NotImplementedError(f'Algorithm "{self.algorithm}" has not been implemented yet.\n')
         
         self.fitted = False
         
@@ -309,34 +309,6 @@ class ClassificationModel(Model):
 
     def predict(
         self,
-        X: pd.DataFrame,
-        cutoff: float = None
-    ) -> np.ndarray:
-        """
-        Method for realizing new category inferences, based on the cutoff and the predicted
-        probability.
-
-        :param `X`: (pd.DataFrame) New features to make inferences on.
-        :param `cutoff`: (float) Probability threshold at which to infer a class 1.
-            - Note: if None, cutoff is set to the self.cutoff value.
-
-        :return: (np.ndarray) New category inferences.
-        """
-        # Set up cutoff
-        if cutoff is None:
-            cutoff = self.cutoff
-
-        # Predict probabilities
-        y_score = self.predict_proba(X=X)
-
-        # Define class based on the self.cutoff
-        y_pred = np.where(y_score > cutoff, 1, 0)
-
-        # Return predictions
-        return y_pred
-    
-    def predict_proba(
-        self,
         X: pd.DataFrame
     ) -> np.ndarray:
         """
@@ -346,7 +318,7 @@ class ClassificationModel(Model):
 
         :return: (np.ndarray) New probabilistic inferences.
         """
-        y_score = self.model.predict_proba(X.values)[:, 1]
+        y_score: np.ndarray = self.model.predict_proba(X.values)[:, 1]
 
         if (
             self.algorithm == 'xgboost' 
@@ -356,7 +328,21 @@ class ClassificationModel(Model):
             # Transform logits into probabilities
             return expit(y_score)
         return y_score
+    
+    def interpret_score(
+        self,
+        y_score: np.ndarray,
+        cutoff: float = None
+    ) -> np.ndarray:
+        # Set up cutoff
+        if cutoff is None:
+            cutoff = self.cutoff
 
+        # Define class based on the self.cutoff
+        y_pred = np.where(y_score > cutoff, 1, 0)
+
+        return y_pred
+    
     def evaluate_val(
         self,
         X_train: pd.DataFrame,
@@ -404,8 +390,9 @@ class ClassificationModel(Model):
 
     def evaluate_test(
         self,
-        X_test: pd.DataFrame,
+        y_pred: np.ndarray,
         y_test: pd.DataFrame,
+        cutoff: float = None,
         debug: bool = False
     ) -> None:
         """
@@ -422,14 +409,21 @@ class ClassificationModel(Model):
         :param `eval_metric`: (str) Metric utilized to define the self.test_score attribute.
         :param `debug`: (bool) Wether or not to show self.test_score, for debugging purposes.
         """
+        # Set up cutoff
+        if cutoff is None:
+            cutoff = self.cutoff
+
+        # Define y_score
+        y_score: np.ndarray = y_pred.copy()
+
+        # Interpret probabilities
+        y_pred: np.ndarray = self.interpret_score(
+            y_score=y_score,
+            cutoff=cutoff
+        )
+
         # Prepare y_test
         y_test = y_test.values
-
-        # Predict test values
-        y_pred = self.predict(X=X_test)
-
-        # Predict probability
-        y_score = self.predict_proba(X=X_test)
 
         # Evaluate F1 Score
         self.f1_score = f1_score(y_test, y_pred)
@@ -464,7 +458,7 @@ class ClassificationModel(Model):
         elif self.optimization_metric == 'accuracy':
             self.test_score = self.accuracy_score
         else:
-            raise Exception(f'Invalid "self.optimization_metric": {self.optimization_metric}.\n\n')
+            raise NotImplementedError(f'Optimization metric "{self.optimization_metric}" has not yet been implemented.\n')
 
         if debug:
             LOGGER.debug('self.test_score (%s): %s', self.optimization_metric, self.test_score)

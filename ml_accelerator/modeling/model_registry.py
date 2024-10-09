@@ -1,7 +1,10 @@
 from ml_accelerator.config.params import Params
+from ml_accelerator.data_processing.data_cleaning import DataCleaner
+from ml_accelerator.data_processing.data_transforming import DataTransformer
 from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.modeling.models.classification_model import ClassificationModel
 from ml_accelerator.modeling.models.regression_model import RegressionModel
+from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.aws.s3_helper import (
     load_from_s3,
     save_to_s3,
@@ -17,6 +20,11 @@ from tqdm import tqdm
 import os
 from pprint import pformat
 from typing import List, Dict
+
+import warnings
+
+# Suppress only SyntaxWarning
+warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 
 # Get logger
@@ -85,36 +93,38 @@ class ModelRegistry:
         model_id: str,
         light: bool = False
     ) -> Model:
-        # try:
-        # Instanciate Model
-        if self.task in ['binary_classification', 'multiclass_classification']:
-            model = ClassificationModel(model_id=model_id)
-        elif self.task == 'regression':
-            model = RegressionModel(model_id=model_id)
-        else:
-            raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
+        try:
+            # Instanciate Model
+            if self.task in ['binary_classification', 'multiclass_classification']:
+                model = ClassificationModel(model_id=model_id)
+            elif self.task == 'regression':
+                model = RegressionModel(model_id=model_id)
+            else:
+                raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
 
-        # Load Model
-        model.load(light=light)
+            # Load Model
+            model.load(light=light)
 
-        return model
-        # except Exception as e:
-        #     LOGGER.error(
-        #         'Unable to load Model %s.\n'
-        #         'Exception: %s\n',
-        #         model_id, e
-        #     )
-        #     return
+            return model
+        except Exception as e:
+            LOGGER.error(
+                'Unable to load Model %s.\n'
+                'Exception: %s\n',
+                model_id, e
+            )
+            return
 
     def load_dev_models(
         self,
         light: bool = False
     ) -> List[Model]:
         # Load Staging Models
-        dev_models = []
+        dev_models: List[Model] = []
 
-        LOGGER.info('Loading dev models:')
-        for model_id in tqdm(self.registry_dict['development']):
+        if not light:
+            LOGGER.info('Loading dev models:')
+
+        for model_id in tqdm(self.registry_dict['development'], disable=light):
             dev_models.append(self.load_model(
                 model_id=model_id,
                 light=light
@@ -127,10 +137,12 @@ class ModelRegistry:
         light: bool = False
     ) -> List[Model]:
         # Load Staging Models
-        stage_models = []
+        stage_models: List[Model] = []
 
-        LOGGER.info('Loading staging models:')
-        for model_id in tqdm(self.registry_dict['staging']):
+        if not light:
+            LOGGER.info('Loading staging models:')
+
+        for model_id in tqdm(self.registry_dict['staging'], disable=light):
             stage_models.append(self.load_model(
                 model_id=model_id,
                 light=light
@@ -147,16 +159,89 @@ class ModelRegistry:
 
         :return: (Model) Production model.
         """
-        LOGGER.info('Loading prod model')
+        if not light:
+            LOGGER.info('Loading prod model')
+
         if len(self.registry_dict['production']) > 0:
-            # Find champion reg
+            # Find production model_id 
             model_id = self.registry_dict['production'][0]
 
-            # Load and return champion model
+            # Load and return production model
             return self.load_model(
                 model_id=model_id,
                 light=light
             )
+        return
+    
+    """
+    Pipeline Loading Methods
+    """
+
+    def load_pipeline(
+        self,
+        model_id: str
+    ) -> MLPipeline:
+        try:
+            # Instanciate Transformers
+            DC: DataCleaner = DataCleaner()
+            DT: DataTransformer = DataTransformer()
+
+            # Instanciate Estimator
+            if self.task in ['binary_classification', 'multiclass_classification']:
+                model = ClassificationModel(model_id=model_id)
+            elif self.task == 'regression':
+                model = RegressionModel(model_id=model_id)
+            else:
+                raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
+            
+            # Instanciate MLPipeline
+            MLP: MLPipeline = MLPipeline(DC=DC, DT=DT, model=model)
+
+            # Load MLPipeline
+            MLP.load()
+
+            return MLP
+        except Exception as e:
+            LOGGER.warning(
+                'Unable to load %s MLPipeline.\n'
+                'Exception: %s.',
+                model_id, e
+            )
+            return
+
+    def load_dev_pipes(self) -> List[MLPipeline]:
+        # Load Staging MLPipelines
+        dev_pipes: List[MLPipeline] = []
+
+        LOGGER.info('Loading dev pipelines:')
+        for model_id in tqdm(self.registry_dict['development']):
+            dev_pipes.append(self.load_pipeline(model_id=model_id))
+        
+        return [pipe for pipe in dev_pipes if pipe is not None]
+    
+    def load_staging_pipes(self) -> List[Model]:
+        # Load Staging MLPipelines
+        stage_pipes: List[MLPipeline] = []
+
+        LOGGER.info('Loading staging pipelines:')
+        for model_id in tqdm(self.registry_dict['staging']):
+            stage_pipes.append(self.load_pipeline(model_id=model_id))
+        
+        return [pipe for pipe in stage_pipes if pipe is not None]
+    
+    def load_prod_pipe(self) -> MLPipeline:
+        """
+        Method for the production pipeline.
+
+        :return: (MLPipeline) Production MLPipeline.
+        """
+        LOGGER.info('Loading prod pipeline')
+        if len(self.registry_dict['production']) > 0:
+            # Find production model_id
+            model_id = self.registry_dict['production'][0]
+
+            # Load and return production pipeline
+            return self.load_pipeline(model_id=model_id)
         return
     
     """
@@ -280,7 +365,6 @@ class ModelRegistry:
             models=self.dev_models,
             by='val_score'
         )
-        print(f'Len staging models: {len(self.staging_models)}')
 
         if debug:
             self.debug()
@@ -412,6 +496,13 @@ class ModelRegistry:
                 model=model,
                 new_stage='delete'
             )
+
+        # Sort self.registry_dict
+        self.registry_dict: Dict[str, List[str]] = {
+            "production": [self.prod_model.model_id], 
+            "staging": [m.model_id for m in self.staging_models], 
+            "development": [m.model_id for m in self.dev_models]
+        }
 
         if debug:
             self.debug()
