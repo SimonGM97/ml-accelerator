@@ -791,14 +791,14 @@ class ModelRegistry:
                 asset=self.registry_dict,
                 path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
                 partition_cols=None,
-                overwrite=True
+                write_mode=None
             )
         elif self.data_storage_env == 'S3':
             save_to_s3(
                 asset=self.registry_dict,
                 path=f"{self.bucket}/utils/model_registry/model_registry.json",
                 partition_cols=None,
-                overwrite=True
+                write_mode=None
             )
         else:
             raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')

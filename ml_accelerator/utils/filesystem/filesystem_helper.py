@@ -56,13 +56,17 @@ def save_to_filesystem(
     asset,
     path: str,
     partition_cols: List[str] = None,
-    overwrite: bool = True
+    write_mode: str = None
 ) -> None:
     # Make sure directory exists
     if not os.path.exists(path):
         makedir = '/'.join(path.split('/')[:-1])
         if not os.path.exists(makedir):
             os.makedirs(makedir)
+
+    # Validate write_mode
+    if write_mode is None:
+        write_mode = 'append'
 
     # Extract format
     save_format = path.split('.')[-1]
@@ -82,15 +86,17 @@ def save_to_filesystem(
         prefix = path.replace(".parquet", "")
 
         # Extract existing_data_behavior
-        if overwrite:
+        if write_mode == 'overwrite':
             # Delete all found files before writing a new one
             existing_data_behavior = 'delete_matching'
-        else:
+        elif write_mode == 'append':
             # (Append) Overwrite new partitions while leaving old ones
             existing_data_behavior = 'overwrite_or_ignore'
+        else:
+            raise NotImplementedError(f'Invalid "write_mode" parameter was received: {write_mode}')
 
         # Write PyArrow Table as a parquet file, partitioned by year_quarter
-        if overwrite:
+        if write_mode == 'overwrite':
             if partition_cols is None:
                 try:
                     os.remove(os.path.join(prefix, 'dataset-0.parquet'))

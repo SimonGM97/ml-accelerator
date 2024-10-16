@@ -366,7 +366,7 @@ class Model(ABC):
                 asset=self.model,
                 path=os.path.join(base_path, f"{self.model_id}_model.pickle"),
                 partition_cols=None,
-                overwrite=True
+                write_mode=None
             )
         
         # Save model_attrs
@@ -374,7 +374,7 @@ class Model(ABC):
             asset=model_attrs,
             path=os.path.join(base_path, f"{self.model_id}_model_attrs.pickle"),
             partition_cols=None,
-            overwrite=True
+            write_mode=None
         )
 
         # Save csv attrs
@@ -385,7 +385,7 @@ class Model(ABC):
                     asset=df,
                     path=os.path.join(base_path, f"{self.model_id}_{attr_name}.csv"),
                     partition_cols=None,
-                    overwrite=True
+                    write_mode='overwrite'
                 )
 
         # Save parquet attrs
@@ -396,7 +396,7 @@ class Model(ABC):
                     asset=df,
                     path=os.path.join(base_path, f"{self.model_id}_{attr_name}.parquet"),
                     partition_cols=self.partition_cols.get("attr_name"),
-                    overwrite=True
+                    write_mode='overwrite'
                 )
 
     def save_to_s3(self) -> None:
@@ -412,7 +412,7 @@ class Model(ABC):
                 asset=self.model,
                 path=f"{base_path}/{self.model_id}_model.pickle",
                 partition_cols=None,
-                overwrite=True
+                write_mode=None
             )
 
         # Save model_attrs
@@ -420,7 +420,7 @@ class Model(ABC):
             asset=model_attrs,
             path=f"{base_path}/{self.model_id}_model_attrs.pickle",
             partition_cols=None,
-            overwrite=True
+            write_mode=None
         )
 
         # Save csv attrs
@@ -431,7 +431,7 @@ class Model(ABC):
                     asset=df,
                     path=f"{base_path}/{self.model_id}_{attr_name}.csv",
                     partition_cols=None,
-                    overwrite=True
+                    write_mode='overwrite'
                 )
 
         # Save parquet attrs
@@ -442,7 +442,7 @@ class Model(ABC):
                     asset=df,
                     path=f"{base_path}/{self.model_id}_{attr_name}.parquet",
                     partition_cols=self.partition_cols.get("attr_name"),
-                    overwrite=True
+                    write_mode='overwrite'
                 )
 
     

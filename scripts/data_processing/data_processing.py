@@ -17,15 +17,16 @@ def main(
     fit_transformers: bool = False,
     save_transformers: bool = False,
     persist_datasets: bool = True,
-    overwrite: bool = True
+    write_mode: str = None
 ) -> None:
     # Log arguments
     log_params(
         logger=LOGGER,
         **{
+            'fit_transformers': fit_transformers,
+            'save_transformers': save_transformers,
             'persist_datasets': persist_datasets,
-            'overwrite': overwrite,
-            'fit_transformers': fit_transformers
+            'write_mode': write_mode
         }
     )
 
@@ -35,7 +36,7 @@ def main(
     # Load input datasets
     X, y = ETL.run_pipeline(
         persist_datasets=persist_datasets,
-        overwrite=overwrite
+        write_mode=write_mode
     )
     
     # Instanciate DataCleaner
@@ -56,13 +57,13 @@ def main(
         X, y = MLP.fit_transform(
             X=X, y=y,
             persist_datasets=persist_datasets,
-            overwrite=overwrite
+            write_mode=write_mode
         )
     else:
         X, y = MLP.transform(
             X=X, y=y,
             persist_datasets=persist_datasets,
-            overwrite=overwrite
+            write_mode=write_mode
         )
 
     # Save transformers
@@ -74,7 +75,7 @@ def main(
 
 # conda deactivate
 # source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/data_processing/data_processing.py --fit_transformers True --save_transformers True --persist_datasets True --overwrite True
+# .ml_accel_venv/bin/python scripts/data_processing/data_processing.py --fit_transformers True --save_transformers True --persist_datasets True --write_mode overwrite
 if __name__ == "__main__":
     # Define parser
     parser = argparse.ArgumentParser(description='Data processing script.')
@@ -83,20 +84,20 @@ if __name__ == "__main__":
     parser.add_argument('--fit_transformers', type=bool, default=False, choices=[True, False])
     parser.add_argument('--save_transformers', type=bool, default=False, choices=[True, False])
     parser.add_argument('--persist_datasets', type=bool, default=True, choices=[True, False])
-    parser.add_argument('--overwrite', type=bool, default=True, choices=[True, False])
+    parser.add_argument('--write_mode', type=str, default='append', choices=['append', 'overwrite'])
 
     # Extract arguments from parser
     args = parser.parse_args()
     fit_transformers: bool = args.fit_transformers
     save_transformers: bool = args.save_transformers
     persist_datasets: bool = args.persist_datasets
-    overwrite: bool = args.overwrite
+    write_mode: bool = args.write_mode
 
     # Run main
     main(
         fit_transformers=fit_transformers,
         save_transformers=save_transformers,
         persist_datasets=persist_datasets,
-        overwrite=overwrite
+        write_mode=write_mode
     )
 

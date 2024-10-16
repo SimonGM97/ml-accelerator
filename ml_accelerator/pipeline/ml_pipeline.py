@@ -54,7 +54,7 @@ class MLPipeline:
         X: pd.DataFrame,
         y: pd.DataFrame = None,
         persist_datasets: bool = False,
-        overwrite: bool = False
+        write_mode: str = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Clean X & y
         X, y = self.DC.transform(X=X, y=y)
@@ -65,14 +65,14 @@ class MLPipeline:
             self.DC.persist_dataset(
                 df=X, 
                 df_name='X_clean',
-                overwrite=overwrite
+                write_mode=write_mode
             )
 
             # Persist y_clean
             self.DC.persist_dataset(
                 df=y,
                 df_name='y_clean',
-                overwrite=overwrite
+                write_mode=write_mode
             )
         
         # Transform X & y
@@ -84,14 +84,14 @@ class MLPipeline:
             self.DC.persist_dataset(
                 df=X, 
                 df_name='X_trans',
-                overwrite=overwrite
+                write_mode=write_mode
             )
 
             # Persist y_trans
             self.DC.persist_dataset(
                 df=y,
                 df_name='y_trans',
-                overwrite=overwrite
+                write_mode=write_mode
             )
 
         return X, y
@@ -102,7 +102,7 @@ class MLPipeline:
         X: pd.DataFrame,
         y: pd.Series,
         persist_datasets: bool = False,
-        overwrite: bool = True
+        write_mode: str = None
     ) -> Tuple[pd.DataFrame, pd.Series]:
         # Run DC.fit_transform method
         X, y = self.DC.fit_transform(X=X, y=y)
@@ -113,14 +113,14 @@ class MLPipeline:
             self.DC.persist_dataset(
                 df=X, 
                 df_name='X_clean',
-                overwrite=overwrite
+                write_mode=write_mode
             )
 
             # Persist y_clean
             self.DC.persist_dataset(
                 df=y,
                 df_name='y_clean',
-                overwrite=overwrite
+                write_mode=write_mode
             )
         
         # Run DT.fit_transform method
@@ -132,14 +132,14 @@ class MLPipeline:
             self.DC.persist_dataset(
                 df=X, 
                 df_name='X_trans',
-                overwrite=overwrite
+                write_mode=write_mode
             )
 
             # Persist y_trans
             self.DC.persist_dataset(
                 df=y,
                 df_name='y_trans',
-                overwrite=overwrite
+                write_mode=write_mode
             )
 
         return X, y

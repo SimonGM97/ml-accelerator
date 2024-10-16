@@ -7,6 +7,16 @@ set -o allexport
 source .env
 set +o allexport
 
+# Extract variables
+CONFIG_FILE="config/config.yaml"
+VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
+ENV=$(yq eval '.ENV_PARAMS.ENV' ${CONFIG_FILE})
+
+# Show variables
+# echo "Image building variables:"
+# echo "  - VERSION: ${VERSION}"
+# echo "  - ENV: ${ENV}"
+
 # Clean containers
 if [ "$(docker ps -aq)" ]; then
     docker rm -f $(docker ps -aq)
@@ -17,28 +27,26 @@ if [ "$(docker images -q)" ]; then
     docker rmi -f $(docker images -q)
 fi
 
-# Make scripts executable
-chmod +x ./scripts/data_processing/data_processing.py
-
 # Build Docker images
 docker build \
-    -t base-image:${VERSION} \
-    -f docker/base/Dockerfile . \
+    -t ${ENV}-base-image:${VERSION} \
+    -f docker/Dockerfile.Base . \
     --build-arg API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
 
 docker build \
-    -t data-processing-image:${VERSION} \
-    -f docker/data_processing/Dockerfile . \
-    --build-arg VERSION=${VERSION}
+    -t ${ENV}-image:${VERSION} \
+    -f docker/Dockerfile . \
+    --build-arg VERSION=${VERSION} \
+    --build-arg ENV=${ENV}
 
 # login to docker
 echo ${DOCKERHUB_TOKEN} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
 
 # Tag docker images
-docker tag data-processing-image:${VERSION} ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:data-processing-image-${VERSION}
+docker tag ${ENV}-image:${VERSION} ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
 
 # Push images to repository
-docker push ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:data-processing-image-${VERSION}
+docker push ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
 
 # Pull images from repository
-docker pull ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:data-processing-image-${VERSION}
+docker pull ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}

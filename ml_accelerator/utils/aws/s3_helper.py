@@ -159,8 +159,12 @@ def save_to_s3(
     asset, 
     path: str,
     partition_cols: List[str] = None,
-    overwrite: bool = True
+    write_mode: str = None
 ) -> None:
+    # Validate write_mode
+    if write_mode is None:
+        write_mode = 'append'
+
     # Extract bucket, key & format
     bucket, key = path.split('/')[0], '/'.join(path.split('/')[1:])
     write_format = key.split('.')[-1]
@@ -191,15 +195,17 @@ def save_to_s3(
         prefix = key.replace(".parquet", "")
 
         # Extract existing_data_behavior
-        if overwrite:
+        if write_mode == 'overwrite':
             # Delete all found files before writing a new one
             existing_data_behavior = 'delete_matching'
-        else:
+        elif write_mode == 'append':
             # (Append) Overwrite new partitions while leaving old ones
             existing_data_behavior = 'overwrite_or_ignore'
+        else:
+            raise NotImplementedError(f'Invalid "write_mode" parameter was received: {write_mode}')
 
         # Write PyArrow Table as a parquet file, partitioned by year_quarter
-        if overwrite:
+        if write_mode == 'overwrite':
             if partition_cols is None:
                 delete_from_s3(path=f'{bucket}/{prefix}/dataset-0.parquet')
             else:

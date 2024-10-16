@@ -2,52 +2,34 @@
 # chmod +x ./scripts/bash/model_building_workflow.sh
 # ./scripts/bash/model_building_workflow.sh
 
-# Data Processing vars
-FIT_TRANSFORMERS=True
-SAVE_TRANSFORMERS=True
-PERSIST_DATASETS=True
-OVERWRITE=True
+# Extract variables
+CONFIG_FILE="config/config.yaml"
 
-# Model Tuning vars
-MAX_EVALS=100
-LOSS_THRESHOLD=0.995
-TIMEOUT_MINS=15
+VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
+ENV=$(yq eval '.ENV_PARAMS.ENV' ${CONFIG_FILE})
+BUCKET=$(yq eval '.ENV_PARAMS.BUCKET' ${CONFIG_FILE})
 
-# Model Training vars
-TRAIN_PROD_MODEL=True
-TRAIN_STAGING_MODELS=True
-TRAIN_DEV_MODELS=False
+FIT_TRANSFORMERS=$(yq eval '.MODEL_BUILDING_PARAMS.FIT_TRANSFORMERS' ${CONFIG_FILE})
+SAVE_TRANSFORMERS=$(yq eval '.MODEL_BUILDING_PARAMS.SAVE_TRANSFORMERS' ${CONFIG_FILE})
+PERSIST_DATASETS=$(yq eval '.MODEL_BUILDING_PARAMS.PERSIST_DATASETS' ${CONFIG_FILE})
+WRITE_MODE=$(yq eval '.MODEL_BUILDING_PARAMS.WRITE_MODE' ${CONFIG_FILE})
 
-# Pipeline Evaluation vars
-EVALUATE_PROD_PIPE=True
-EVALUATE_STAGING_PIPES=True
-EVALUATE_DEV_PIPES=True
-UPDATE_MODEL_STAGES=True
-UPDATE_PROD_MODEL=True
+MAX_EVALS=$(yq eval '.HYPER_PARAMETER_TUNING_PARAMS.MAX_EVALS' ${CONFIG_FILE})
+LOSS_THRESHOLD=$(yq eval '.HYPER_PARAMETER_TUNING_PARAMS.LOSS_THRESHOLD' ${CONFIG_FILE})
+TIMEOUT_MINS=$(yq eval '.HYPER_PARAMETER_TUNING_PARAMS.TIMEOUT_MINS' ${CONFIG_FILE})
 
-# Run data processing script
-.ml_accel_venv/bin/python scripts/data_processing/data_processing.py \
-    --fit_transformers ${FIT_TRANSFORMERS} \
-    --save_transformers ${SAVE_TRANSFORMERS} \
-    --persist_datasets ${PERSIST_DATASETS} \
-    --overwrite ${OVERWRITE}
-
-# Run model tuning script
-.ml_accel_venv/bin/python scripts/tuning/tuning.py \
-    --max_evals ${MAX_EVALS} \
-    --loss_threshold ${LOSS_THRESHOLD} \
-    --timeout_mins ${TIMEOUT_MINS}
-
-# Run model training script
-.ml_accel_venv/bin/python scripts/training/training.py \
-    --train_prod_model ${TRAIN_PROD_MODEL} \
-    --train_staging_models ${TRAIN_STAGING_MODELS} \
-    --train_dev_models ${TRAIN_DEV_MODELS}
-
-# Run pipeline evaluation script
-.ml_accel_venv/bin/python scripts/evaluation/evaluation.py \
-    --evaluate_prod_pipe ${EVALUATE_PROD_PIPE} \
-    --evaluate_staging_pipes ${EVALUATE_STAGING_PIPES} \
-    --evaluate_dev_pipes ${EVALUATE_DEV_PIPES}  \
-    --update_model_stages ${UPDATE_MODEL_STAGES}  \
-    --update_prod_model ${UPDATE_PROD_MODEL}
+# Run docker-compose
+VERSION=${VERSION} \
+    ENV=${ENV} \
+    BUCKET=${BUCKET} \
+    FIT_TRANSFORMERS=${FIT_TRANSFORMERS} \
+    SAVE_TRANSFORMERS=${SAVE_TRANSFORMERS} \
+    PERSIST_DATASETS=${PERSIST_DATASETS} \
+    WRITE_MODE=${WRITE_MODE} \
+    MAX_EVALS=${MAX_EVALS} \
+    LOSS_THRESHOLD=${LOSS_THRESHOLD} \
+    TIMEOUT_MINS=${TIMEOUT_MINS} \
+    docker-compose \
+    -f docker/docker-compose.yaml \
+    --env-file .env \
+    up

@@ -1,7 +1,7 @@
 import pandas as pd
 import yaml
 from pathlib import Path
-from git.repo.base import Repo
+# from git.repo.base import Repo
 import multiprocessing
 import subprocess
 import os
@@ -12,20 +12,20 @@ pd.options.display.max_rows = 500
 pd.set_option("display.max_columns", None)
 
 
-def find_base_repo_root(project_name: str) -> Path:
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    if project_name in base_path:
-        base_path = base_path[:base_path.find(project_name)]
+# def find_base_repo_root(project_name: str) -> Path:
+#     base_path = os.path.dirname(os.path.abspath(__file__))
+#     if project_name in base_path:
+#         base_path = base_path[:base_path.find(project_name)]
     
-    try:
-        base_path = Path(Repo(base_path, search_parent_directories=True).working_tree_dir or base_path)
-    except Exception as e:
-        # print(f"Unable to load base_path.\n"
-        #       f"Exception: {e}\n\n")
-        # except InvalidGitRepositoryError:
-        base_path = Path(base_path)
+#     try:
+#         base_path = Path(Repo(base_path, search_parent_directories=True).working_tree_dir or base_path)
+#     except Exception as e:
+#         # print(f"Unable to load base_path.\n"
+#         #       f"Exception: {e}\n\n")
+#         # except InvalidGitRepositoryError:
+#         base_path = Path(base_path)
 
-    return base_path / project_name
+#     return base_path / project_name
 
 
 class Params:
@@ -108,7 +108,16 @@ class Params:
     IMPORTANCE_METHOD: str
 
     """
-    OTHERS
+    WORKFLOW PARAMETERS
+    """
+    # MODEL BUILDING
+    FIT_TRANSFORMERS: bool
+    SAVE_TRANSFORMERS: bool
+    PERSIST_DATASETS: bool
+    WRITE_MODE: str
+
+    """
+    OTHER PARAMETERS
     """
     # LOG PARAMETERS
     LEVEL: str
@@ -155,7 +164,7 @@ class Params:
         cls.DATA_STORAGE_ENV: str = ENV_PARAMS.get("DATA_STORAGE_ENV")
         cls.MODEL_STORAGE_ENV: str = ENV_PARAMS.get("MODEL_STORAGE_ENV")
         cls.COMPUTE_ENV: str = ENV_PARAMS.get("COMPUTE_ENV")
-        cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
+        # cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
 
         """
         DATA PARAMETERS
@@ -240,7 +249,19 @@ class Params:
         cls.IMPORTANCE_METHOD: str = FEATURE_IMPORTANCE_PARAMS.get("IMPORTANCE_METHOD")
 
         """
-        OTHERS
+        WORKFLOW PARAMETERS
+        """
+        # MODEL BUILDING
+        MODEL_BUILDING_PARAMS: dict = config.get("MODEL_BUILDING_PARAMS")
+
+        # Data Processing
+        cls.FIT_TRANSFORMERS: bool = MODEL_BUILDING_PARAMS.get("FIT_TRANSFORMERS")
+        cls.SAVE_TRANSFORMERS: bool = MODEL_BUILDING_PARAMS.get("SAVE_TRANSFORMERS")
+        cls.PERSIST_DATASETS: bool = MODEL_BUILDING_PARAMS.get("PERSIST_DATASETS")
+        cls.WRITE_MODE: str = MODEL_BUILDING_PARAMS.get("WRITE_MODE")
+
+        """
+        OTHER PARAMETERS
         """
         # LOG PARAMETERS
         LOG_PARAMS: dict = config.get("LOG_PARAMS")

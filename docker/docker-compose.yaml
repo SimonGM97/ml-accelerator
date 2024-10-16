@@ -10,8 +10,7 @@ services:
 
   # Data Processing Service
   data-processing:
-    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:data-processing-image-${VERSION}
-    # data-processing:${VERSION} | ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:data-processing-image-${VERSION}
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
     container_name: data_processing_container_${VERSION}
 
     command: # Overwrite the CMD commands specified in the Dockerfile
@@ -23,8 +22,8 @@ services:
       - ${SAVE_TRANSFORMERS}
       - --persist_datasets
       - ${PERSIST_DATASETS}
-      - --overwrite
-      - ${OVERWRITE}
+      - --write_mode
+      - ${WRITE_MODE}
 
     environment:
       - API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
@@ -43,27 +42,30 @@ services:
     #       cpus: "0.5"
     #       memory: "512M"
 
-  # # Tuning Service
-  # tuning:
-  #   build:
-  #     context: .
-  #     dockerfile: ./tuning/Dockerfile
-    
-  #   image: ${USERNAME}/${REPOSITORY_NAME}/tuning:${VERSION} # latest
-  #   container_name: tuning_container_${VERSION}
+  # Tuning Service
+  tuning:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION} # latest
+    container_name: tuning_container_${VERSION}
 
-  #   command: --max_evals ${MAX_EVALS}
+    command: # Overwrite the CMD commands specified in the Dockerfile
+      - python
+      - tuning.py
+      - --max_evals 
+      - ${MAX_EVALS} 
+      - --loss_threshold 
+      - ${LOSS_THRESHOLD}
+      - --timeout_mins 
+      - ${TIMEOUT_MINS}
 
-  #   # network_mode: my_network
-  #   # ports:
-  #   #   - "5050:5050"
-  #   volumes:
-  #     - ${HOST_PATH}:/app
+    # network_mode: my_network
+    # ports:
+    #   - "5050:5050"
+    volumes:
+      - ../${BUCKET}:/app/${BUCKET}
 
-  #   depends_on:
-  #     - base-image
-  #     - data_processing:
-  #         condition: service_completed_successfully
+    depends_on:
+      data-processing:
+        condition: service_completed_successfully
 
   # # Training Service
   # training:

@@ -43,7 +43,6 @@ class DataHelper:
         task: str = Params.TASK,
         dataset_name: str = Params.DATASET_NAME,
         bucket: str = Params.BUCKET,
-        cwd: str = Params.CWD,
         storage_env: str = Params.DATA_STORAGE_ENV,
         training_path: List[str] = Params.TRAINING_PATH,
         inference_path: List[str] = Params.INFERENCE_PATH,
@@ -59,7 +58,6 @@ class DataHelper:
 
         self.dataset_name: str = dataset_name
         self.bucket: str = bucket
-        self.cwd: str = cwd
         self.storage_env: str = storage_env
 
         self.training_path: List[str] = training_path
@@ -190,7 +188,7 @@ class DataHelper:
                 asset=schema,
                 path=path,
                 partition_cols=None,
-                overwrite=True
+                write_mode=None
             )
         elif self.storage_env == 'S3':
             # Save to S3
@@ -198,7 +196,7 @@ class DataHelper:
                 asset=schema,
                 path=path,
                 partition_cols=None,
-                overwrite=True
+                write_mode=None
             )
         else:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
@@ -269,7 +267,7 @@ class DataHelper:
         self,
         df: pd.DataFrame,
         df_name: str,
-        overwrite: bool = True,
+        write_mode: str = None,
         mock: bool = False
     ) -> None:
         # Define path
@@ -281,7 +279,7 @@ class DataHelper:
                 asset=df,
                 path=path,
                 partition_cols=self.partition_cols,
-                overwrite=overwrite
+                write_mode=write_mode
             )
         elif self.storage_env == 'S3':
             # Persist to S3
@@ -289,7 +287,7 @@ class DataHelper:
                 asset=df,
                 path=path,
                 partition_cols=self.partition_cols,
-                overwrite=overwrite
+                write_mode=write_mode
             )
         else:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
@@ -338,7 +336,7 @@ class DataHelper:
                 asset=attrs,
                 path=os.path.join(base_path, f"{transformer_name}_attrs.pickle"),
                 partition_cols=None,
-                overwrite=True
+                write_mode=None
             )
 
         elif self.storage_env == 'S3':
@@ -350,7 +348,7 @@ class DataHelper:
                 asset=attrs,
                 path=f"{base_path}/{transformer_name}_attrs.pickle",
                 partition_cols=None,
-                overwrite=True
+                write_mode=None
             )
 
     def load_transformer(

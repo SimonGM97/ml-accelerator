@@ -122,7 +122,7 @@ class ExtractTransformLoad(DataHelper):
         X: pd.DataFrame,
         y: pd.DataFrame,
         persist: bool = False,
-        overwrite: bool = True,
+        write_mode: str = None,
         mock_datasets: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
@@ -133,7 +133,7 @@ class ExtractTransformLoad(DataHelper):
             self.persist_dataset(
                 df=X, 
                 df_name='X_raw',
-                overwrite=overwrite,
+                write_mode=write_mode,
                 mock=mock_datasets
             )
 
@@ -141,7 +141,7 @@ class ExtractTransformLoad(DataHelper):
             self.persist_dataset(
                 df=y, 
                 df_name='y_raw',
-                overwrite=overwrite,
+                write_mode=write_mode,
                 mock=mock_datasets
             )
 
@@ -150,7 +150,7 @@ class ExtractTransformLoad(DataHelper):
     def run_pipeline(
         self,
         persist_datasets: bool = False,
-        overwrite: bool = True,
+        write_mode: str = None,
         mock_datasets: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run extract method
@@ -163,7 +163,7 @@ class ExtractTransformLoad(DataHelper):
         X, y = self.load(
             X=X, y=y,
             persist=persist_datasets,
-            overwrite=overwrite,
+            write_mode=write_mode,
             mock_datasets=mock_datasets
         )
 
