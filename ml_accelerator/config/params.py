@@ -35,13 +35,13 @@ class Params:
     GENERAL PARAMETERS
     """
     # PROJECT PARAMETERS
+    VERSION: str
     PROJECT_NAME: str
     TARGET: str
     TASK: str
 
     # ENVIRONMENT PARAMETERS
     ENV: str
-    VERSION: str
     REGION: str
     BUCKET: str
     CWD: Path
@@ -61,6 +61,7 @@ class Params:
     INFERENCE_PATH: List[str]
     TRANSFORMERS_PATH: List[str]
     MODELS_PATH: List[str]
+    MOCK_PATH: List[str]
     DATA_EXTENTION: str
     PARTITION_COLUMNS: str
 
@@ -139,6 +140,7 @@ class Params:
         # PROJECT PARAMETERS
         PROJECT_PARAMS: dict = config.get("PROJECT_PARAMS")
 
+        cls.VERSION: str = PROJECT_PARAMS.get("VERSION")
         cls.PROJECT_NAME: str = PROJECT_PARAMS.get("PROJECT_NAME")
         cls.TARGET: str = PROJECT_PARAMS.get("TARGET")
         cls.TASK: str = PROJECT_PARAMS.get("TASK")
@@ -147,7 +149,6 @@ class Params:
         ENV_PARAMS: dict = config.get("ENV_PARAMS")
 
         cls.ENV: str = ENV_PARAMS.get("ENV")
-        cls.VERSION: str = ENV_PARAMS.get("VERSION")
         cls.REGION: str = ENV_PARAMS.get("REGION")
         cls.BUCKET: str = ENV_PARAMS.get("BUCKET")
         cls.DATA_STORAGE_ENV: str = ENV_PARAMS.get("DATA_STORAGE_ENV")
@@ -171,6 +172,7 @@ class Params:
         cls.TRAINING_PATH: List[str] = PATHS_PARAMS.get("TRAINING_PATH")
         cls.INFERENCE_PATH: List[str] = PATHS_PARAMS.get("INFERENCE_PATH")
         cls.TRANSFORMERS_PATH: List[str] = PATHS_PARAMS.get("TRANSFORMERS_PATH")
+        cls.MOCK_PATH: List[str] = PATHS_PARAMS.get("MOCK_PATH")
         cls.MODELS_PATH: List[str] = PATHS_PARAMS.get("MODELS_PATH")
         cls.DATA_EXTENTION: str = STORAGE_PARAMS.get("DATA_EXTENTION")
         cls.PARTITION_COLUMNS: str = STORAGE_PARAMS.get("PARTITION_COLUMNS")

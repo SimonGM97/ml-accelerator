@@ -1,9 +1,8 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.utils.datasets.data_helper import DataHelper
+from ml_accelerator.utils.data_helper.data_helper import DataHelper
 from ml_accelerator.utils.logging.logger_helper import get_logger
 
 import pandas as pd
-import numpy as np
 from sklearn.datasets import (
     load_iris,
     load_wine,
@@ -123,7 +122,8 @@ class ExtractTransformLoad(DataHelper):
         X: pd.DataFrame,
         y: pd.DataFrame,
         persist: bool = False,
-        overwrite: bool = True
+        overwrite: bool = True,
+        mock_datasets: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Load datasets into training directory
@@ -133,14 +133,16 @@ class ExtractTransformLoad(DataHelper):
             self.persist_dataset(
                 df=X, 
                 df_name='X_raw',
-                overwrite=overwrite
+                overwrite=overwrite,
+                mock=mock_datasets
             )
 
             # Persist y
             self.persist_dataset(
                 df=y, 
                 df_name='y_raw',
-                overwrite=overwrite
+                overwrite=overwrite,
+                mock=mock_datasets
             )
 
         return X, y
@@ -148,7 +150,8 @@ class ExtractTransformLoad(DataHelper):
     def run_pipeline(
         self,
         persist_datasets: bool = False,
-        overwrite: bool = True
+        overwrite: bool = True,
+        mock_datasets: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run extract method
         datasets: List[str] = self.extract()
@@ -160,7 +163,8 @@ class ExtractTransformLoad(DataHelper):
         X, y = self.load(
             X=X, y=y,
             persist=persist_datasets,
-            overwrite=overwrite
+            overwrite=overwrite,
+            mock_datasets=mock_datasets
         )
 
         return X, y

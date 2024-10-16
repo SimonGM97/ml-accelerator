@@ -1,5 +1,5 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.utils.datasets.data_helper import DataHelper
+from ml_accelerator.utils.data_helper.data_helper import DataHelper
 from ml_accelerator.utils.logging.logger_helper import get_logger
 
 import pandas as pd

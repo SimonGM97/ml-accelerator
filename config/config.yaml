@@ -4,6 +4,7 @@
 
 # PROJECT PARAMETERS
 PROJECT_PARAMS:
+  VERSION: 1.0.0
   PROJECT_NAME: ml-accelerator
   TARGET: diagnosis # target column
   # species (iris), wine_class (wine), diagnosis (breast_cancer), disease_progression (diabetes), MedHouseVal (california_housing)
@@ -13,7 +14,6 @@ PROJECT_PARAMS:
 # ENVIRONMENT PARAMETERS
 ENV_PARAMS:
   ENV: dev
-  VERSION: 1.0.0
   REGION: sa-east-1
   BUCKET: iris-classification-dev
   DATA_STORAGE_ENV: filesystem
@@ -48,6 +48,8 @@ STORAGE_PARAMS:
       - transformers
     MODELS_PATH:
       - models
+    MOCK_PATH:
+      - mock
   
   DATA_EXTENTION: csv
   # csv, parquet

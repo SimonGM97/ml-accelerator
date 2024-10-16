@@ -48,6 +48,7 @@ class DataHelper:
         training_path: List[str] = Params.TRAINING_PATH,
         inference_path: List[str] = Params.INFERENCE_PATH,
         transformers_path: List[str] = Params.TRANSFORMERS_PATH,
+        mock_path: List[str] = Params.MOCK_PATH,
         data_extention: str = Params.DATA_EXTENTION,
         partition_cols: str = Params.PARTITION_COLUMNS
     ) -> None:
@@ -63,6 +64,7 @@ class DataHelper:
         self.training_path: List[str] = training_path
         self.inference_path: List[str] = inference_path
         self.transformers_path: List[str] = transformers_path
+        self.mock_path: List[str] = mock_path
 
         self.data_extention: str = data_extention
         self.partition_cols: str = partition_cols
@@ -191,17 +193,42 @@ class DataHelper:
 
         return schema
 
+    def find_path(
+        self,
+        df_name: str,
+        mock: bool = False
+    ) -> str:
+        # Define path
+        if self.storage_env == 'filesystem':
+            if mock:
+                path = os.path.join(self.bucket, *self.mock_path, f"{df_name}.{self.data_extention}")
+            else:
+                path = os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}")
+        elif self.storage_env == 'S3':
+            if mock:
+                path = f"{self.bucket}/{'/'.join(self.mock_path)}/{df_name}.{self.data_extention}"
+            else:
+                path = f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}"
+        else:
+            raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
+        
+        return path
+
     def persist_dataset(
         self,
         df: pd.DataFrame,
         df_name: str,
-        overwrite: bool = True
+        overwrite: bool = True,
+        mock: bool = False
     ) -> None:
+        # Define path
+        path: str = self.find_path(df_name, mock)
+
         if self.storage_env == 'filesystem':
             # Persist to filesystem
             save_to_filesystem(
                 asset=df,
-                path=os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}"),
+                path=path,
                 partition_cols=self.partition_cols,
                 overwrite=overwrite
             )
@@ -209,7 +236,7 @@ class DataHelper:
             # Persist to S3
             save_to_s3(
                 asset=df,
-                path=f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}",
+                path=path,
                 partition_cols=self.partition_cols,
                 overwrite=overwrite
             )
@@ -219,19 +246,23 @@ class DataHelper:
     def load_dataset(
         self,
         df_name: str,
-        filters: List[Tuple[str, str, List[str]]] = None
+        filters: List[Tuple[str, str, List[str]]] = None,
+        mock: bool = False
     ) -> pd.DataFrame:
+        # Define path
+        path: str = self.find_path(df_name, mock)
+
         if self.storage_env == 'filesystem':
             # Load from filesystem
             df: pd.DataFrame = load_from_filesystem(
-                path=os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}"),
+                path=path,
                 partition_cols=self.partition_cols,
                 filters=filters
             )
         elif self.storage_env == 'S3':
             # Load from S3
             df: pd.DataFrame = load_from_s3(
-                path=f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}",
+                path=path,
                 partition_cols=self.partition_cols,
                 filters=filters
             )

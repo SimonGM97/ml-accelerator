@@ -1,33 +1,76 @@
-version: '4'
+# COMMANDS:
+# docker-compose -f docker/docker-compose.yaml --env-file .env up: start all the services defined in your compose.yaml file
+# docker-compose -f docker/docker-compose.yaml --env-file .env down: stop and remove the running services
+# docker-compose -f docker/docker-compose.yaml --env-file .env logs: monitor the output of your running containers and debug issues, viewing logs
+# docker-compose -f docker/docker-compose.yaml --env-file .env ps: lists all the services along with their current status
+
+version: "3.8"
 
 services:
-  data_processing:
-    image: ${USERNAME}/${REPOSITORY_NAME}:data_processing_${VERSION}
+
+  # Data Processing Service
+  data-processing:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:data-processing-image-${VERSION}
+    # data-processing:${VERSION} | ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:data-processing-image-${VERSION}
     container_name: data_processing_container_${VERSION}
-    volumes:
-      - ${HOST_PATH}:/app
 
-  model_tuning:
-    image: ${USERNAME}/${REPOSITORY_NAME}:model_tuning_${VERSION}
-    container_name: model_tuning_container_${VERSION}
-    network_mode: my_network
-    ports:
-      - "5050:5050"
-    volumes:
-      - ${HOST_PATH}:/app
-    command: --max_evals ${MAX_EVALS}
-    depends_on:
-      data_processing:
-        condition: service_completed_successfully
+    command: # Overwrite the CMD commands specified in the Dockerfile
+      - python
+      - data_processing.py
+      - --fit_transformers ${FIT_TRANSFORMERS} 
+      - --save_transformers ${SAVE_TRANSFORMERS} 
+      - --persist_datasets ${PERSIST_DATASETS} 
+      - --overwrite ${OVERWRITE}
 
-  model_updating:
-    image: ${USERNAME}/${REPOSITORY_NAME}:model_updating_${VERSION}
-    container_name: model_updating_container_${VERSION}
+    environment:
+      - API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
+
     volumes:
-      - ${HOST_PATH}:/app
-    depends_on:
-      model_tuning:
-        condition: service_completed_successfully
+      - ../${BUCKET}:/app/${BUCKET}
+      # - ${HOST_PATH}:/app # Mount the project directory
+
+    # deploy:
+    #   replicas: 3
+    #   update_config:
+    #     parallelism: 2
+    #     delay: 10s
+    #   resources:
+    #     limits:
+    #       cpus: "0.5"
+    #       memory: "512M"
+
+  # # Tuning Service
+  # tuning:
+  #   build:
+  #     context: .
+  #     dockerfile: ./tuning/Dockerfile
+    
+  #   image: ${USERNAME}/${REPOSITORY_NAME}/tuning:${VERSION} # latest
+  #   container_name: tuning_container_${VERSION}
+
+  #   command: --max_evals ${MAX_EVALS}
+
+  #   # network_mode: my_network
+  #   # ports:
+  #   #   - "5050:5050"
+  #   volumes:
+  #     - ${HOST_PATH}:/app
+
+  #   depends_on:
+  #     - base-image
+  #     - data_processing:
+  #         condition: service_completed_successfully
+
+  # # Training Service
+  # training:
+  #   build:
+  #     context: .
+  #     dockerfile: ./training/Dockerfile
+
+volumes:
+  datasets:
+    labels:
+      environment: "development"
 
 # networks:
 #   my_network:

@@ -1,27 +1,41 @@
-# Use a python base image
+# Use a python 3.10-slim base image
 FROM python:3.10.8-slim
 
-# Switch to /tmp dir
+# Define build arguments
+ARG API_KEY_PLACEHOLDER
+
+# Set environment variables from the build argument
+ENV API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
+
+# Set the working directory to /app
 WORKDIR /tmp
 
 # Upgrade pip
 RUN pip install --upgrade pip
 
-# Copy & install requirements
+# Install git (required by GitPython)
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
 COPY requirements.txt .
-RUN pip install -r requirements.txt
 
-# Install dask[dataframe]
-RUN pip install "dask[dataframe]"
+# Updates the package lists for the APT (Advanced Package Tool) package management system.
+# RUN apt-get update
 
-# Copy specified files to install PyTradeX
+# Install requirements
+# RUN pip install -r requirements.txt
+
+# Copy specified files to install ml_accelerator
 COPY ml_accelerator ml_accelerator
 COPY README.md .
 COPY LICENSE .
 COPY setup.py .
 
-# Install PyTradeX library
+# Install ml_accelerator library
 RUN pip install --no-cache-dir .
+
+# Install dask[dataframe]
+RUN pip install "dask[dataframe]"
 
 # Switch back to /app dir
 WORKDIR /app

@@ -1,5 +1,5 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.utils.datasets.data_helper import DataHelper
+from ml_accelerator.utils.data_helper.data_helper import DataHelper
 from ml_accelerator.data_processing.data_cleaning import DataCleaner
 from ml_accelerator.data_processing.data_transforming import DataTransformer
 from ml_accelerator.modeling.models.model import Model

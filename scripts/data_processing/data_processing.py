@@ -54,15 +54,13 @@ def main(
     # Run ML Pipeline
     if fit_transformers:
         X, y = MLP.fit_transform(
-            X=X,
-            y=y,
+            X=X, y=y,
             persist_datasets=persist_datasets,
             overwrite=overwrite
         )
     else:
         X, y = MLP.transform(
-            X=X,
-            y=y,
+            X=X, y=y,
             persist_datasets=persist_datasets,
             overwrite=overwrite
         )
@@ -70,6 +68,9 @@ def main(
     # Save transformers
     if save_transformers:
         MLP.save()
+    
+    # import os
+    # X.to_csv(os.path.join('iris-classification-dev', 'arreloco.csv'))
 
     return X, y
 
