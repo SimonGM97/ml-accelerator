@@ -15,13 +15,16 @@ PROJECT_PARAMS:
 ENV_PARAMS:
   ENV: dev
   REGION: sa-east-1
-  BUCKET: iris-classification-dev
+  BUCKET: breast-cancer-bucket-dev
+  # project-name-bucket-env
   DATA_STORAGE_ENV: filesystem
   # filesystem, S3
   MODEL_STORAGE_ENV: filesystem
   # filesystem, S3, mlflow
   COMPUTE_ENV: local
   # local, sagemaker
+  DOCKER_REPOSITORY: dockerhub
+  # dockerhub, ecr
 
 # # # # #
 # DATA PROCESSING PARAMETERS

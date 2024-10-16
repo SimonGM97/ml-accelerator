@@ -44,10 +44,12 @@ class Params:
     ENV: str
     REGION: str
     BUCKET: str
-    CWD: Path
+    # CWD: Path
+
     DATA_STORAGE_ENV: str
     MODEL_STORAGE_ENV: str
     COMPUTE_ENV: str
+    DOCKER_REPOSITORY: str
 
     """
     DATA PROCESSING PARAMETERS
@@ -63,6 +65,7 @@ class Params:
     MODELS_PATH: List[str]
     SCHEMAS_PATH: List[str]
     MOCK_PATH: List[str]
+    
     DATA_EXTENTION: str
     PARTITION_COLUMNS: str
 
@@ -161,10 +164,12 @@ class Params:
         cls.ENV: str = ENV_PARAMS.get("ENV")
         cls.REGION: str = ENV_PARAMS.get("REGION")
         cls.BUCKET: str = ENV_PARAMS.get("BUCKET")
+        # cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
+
         cls.DATA_STORAGE_ENV: str = ENV_PARAMS.get("DATA_STORAGE_ENV")
         cls.MODEL_STORAGE_ENV: str = ENV_PARAMS.get("MODEL_STORAGE_ENV")
         cls.COMPUTE_ENV: str = ENV_PARAMS.get("COMPUTE_ENV")
-        # cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
+        cls.DOCKER_REPOSITORY: str = ENV_PARAMS.get("DOCKER_REPOSITORY")
 
         """
         DATA PARAMETERS

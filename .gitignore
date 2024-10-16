@@ -207,6 +207,8 @@ schemas/breast_cancer_schema.yaml
 schemas/diabetes_schema.yaml
 
 # Dummy buckets
+*bucket-dev
+*bucket-prod
 ml-accelerator-dev
 ml-accelerator-prod
 iris-classification-dev
