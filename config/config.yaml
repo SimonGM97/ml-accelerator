@@ -48,6 +48,8 @@ STORAGE_PARAMS:
       - transformers
     MODELS_PATH:
       - models
+    SCHEMAS_PATH:
+      - schemas
     MOCK_PATH:
       - mock
   

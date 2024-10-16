@@ -1,5 +1,5 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.utils.data_helper.data_helper import DataHelper
+from ml_accelerator.utils.datasets.data_helper import DataHelper
 from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.modeling.model_registry import ModelRegistry
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params

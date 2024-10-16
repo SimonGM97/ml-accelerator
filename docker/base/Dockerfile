@@ -16,6 +16,9 @@ RUN pip install --upgrade pip
 # Install git (required by GitPython)
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
+# Install libgomp (GNU OpenMP library) required by LightGBM
+RUN apt-get update && apt-get install -y libgomp1 && rm -rf /var/lib/apt/lists/*
+
 # Copy requirements
 COPY requirements.txt .
 
@@ -23,7 +26,10 @@ COPY requirements.txt .
 # RUN apt-get update
 
 # Install requirements
-# RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt
+
+# Install dask[dataframe]
+RUN pip install "dask[dataframe]"
 
 # Copy specified files to install ml_accelerator
 COPY ml_accelerator ml_accelerator
@@ -33,9 +39,6 @@ COPY setup.py .
 
 # Install ml_accelerator library
 RUN pip install --no-cache-dir .
-
-# Install dask[dataframe]
-RUN pip install "dask[dataframe]"
 
 # Switch back to /app dir
 WORKDIR /app

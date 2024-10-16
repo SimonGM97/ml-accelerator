@@ -17,10 +17,14 @@ services:
     command: # Overwrite the CMD commands specified in the Dockerfile
       - python
       - data_processing.py
-      - --fit_transformers ${FIT_TRANSFORMERS} 
-      - --save_transformers ${SAVE_TRANSFORMERS} 
-      - --persist_datasets ${PERSIST_DATASETS} 
-      - --overwrite ${OVERWRITE}
+      - --fit_transformers
+      - ${FIT_TRANSFORMERS}
+      - --save_transformers
+      - ${SAVE_TRANSFORMERS}
+      - --persist_datasets
+      - ${PERSIST_DATASETS}
+      - --overwrite
+      - ${OVERWRITE}
 
     environment:
       - API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}

@@ -61,6 +61,7 @@ class Params:
     INFERENCE_PATH: List[str]
     TRANSFORMERS_PATH: List[str]
     MODELS_PATH: List[str]
+    SCHEMAS_PATH: List[str]
     MOCK_PATH: List[str]
     DATA_EXTENTION: str
     PARTITION_COLUMNS: str
@@ -172,8 +173,9 @@ class Params:
         cls.TRAINING_PATH: List[str] = PATHS_PARAMS.get("TRAINING_PATH")
         cls.INFERENCE_PATH: List[str] = PATHS_PARAMS.get("INFERENCE_PATH")
         cls.TRANSFORMERS_PATH: List[str] = PATHS_PARAMS.get("TRANSFORMERS_PATH")
-        cls.MOCK_PATH: List[str] = PATHS_PARAMS.get("MOCK_PATH")
         cls.MODELS_PATH: List[str] = PATHS_PARAMS.get("MODELS_PATH")
+        cls.SCHEMAS_PATH: List[str] = PATHS_PARAMS.get("SCHEMAS_PATH")
+        cls.MOCK_PATH: List[str] = PATHS_PARAMS.get("MOCK_PATH")
         cls.DATA_EXTENTION: str = STORAGE_PARAMS.get("DATA_EXTENTION")
         cls.PARTITION_COLUMNS: str = STORAGE_PARAMS.get("PARTITION_COLUMNS")
 

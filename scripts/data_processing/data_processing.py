@@ -68,9 +68,6 @@ def main(
     # Save transformers
     if save_transformers:
         MLP.save()
-    
-    # import os
-    # X.to_csv(os.path.join('iris-classification-dev', 'arreloco.csv'))
 
     return X, y
 
