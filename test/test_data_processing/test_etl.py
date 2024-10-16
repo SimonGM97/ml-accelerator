@@ -22,7 +22,7 @@ class TestETL(TestCase):
         # Load & persist new data
         X, y = ETL.run_pipeline(
             persist_datasets=True,
-            overwrite=True,
+            write_mode='overwrite',
             mock_datasets=True
         )
 

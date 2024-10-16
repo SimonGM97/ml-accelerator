@@ -13,7 +13,7 @@ services:
     image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
     container_name: data_processing_container_${VERSION}
 
-    command: # Overwrite the CMD commands specified in the Dockerfile
+    command:
       - python
       - data_processing.py
       - --fit_transformers
@@ -30,54 +30,116 @@ services:
 
     volumes:
       - ../${BUCKET}:/app/${BUCKET}
-      # - ${HOST_PATH}:/app # Mount the project directory
-
-    # deploy:
-    #   replicas: 3
-    #   update_config:
-    #     parallelism: 2
-    #     delay: 10s
-    #   resources:
-    #     limits:
-    #       cpus: "0.5"
-    #       memory: "512M"
+      - ../config:/app/config
 
   # Tuning Service
   tuning:
-    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION} # latest
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
     container_name: tuning_container_${VERSION}
 
-    command: # Overwrite the CMD commands specified in the Dockerfile
+    command:
       - python
       - tuning.py
-      - --max_evals 
-      - ${MAX_EVALS} 
-      - --loss_threshold 
-      - ${LOSS_THRESHOLD}
-      - --timeout_mins 
-      - ${TIMEOUT_MINS}
 
-    # network_mode: my_network
-    # ports:
-    #   - "5050:5050"
     volumes:
       - ../${BUCKET}:/app/${BUCKET}
+      - ../config:/app/config
 
     depends_on:
       data-processing:
         condition: service_completed_successfully
 
-  # # Training Service
-  # training:
+  # Training Service
+  training:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
+    container_name: training_container_${VERSION}
+
+    command:
+      - python
+      - training.py
+      - --train_prod_model 
+      - ${TRAIN_PROD_MODEL} 
+      - --train_staging_models 
+      - ${TRAIN_STAGING_MODELS} 
+      - --train_dev_models 
+      - ${TRAIN_DEV_MODELS}
+
+    volumes:
+      - ../${BUCKET}:/app/${BUCKET}
+      - ../config:/app/config
+
+    depends_on:
+      tuning:
+        condition: service_completed_successfully
+
+  # Evaluating Service
+  evaluating:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
+    container_name: evaluating_container_${VERSION}
+
+    command:
+      - python
+      - evaluating.py
+      - --evaluate_prod_pipe 
+      - ${EVALUATE_PROD_PIPE} 
+      - --evaluate_staging_pipes 
+      - ${EVALUATE_STAGING_PIPES}
+      - --evaluate_dev_pipes 
+      - ${EVALUATE_DEV_PIPES}
+      - --update_model_stages 
+      - ${UPDATE_MODEL_STAGES}
+      - --update_prod_model 
+      - ${UPDATE_PROD_MODEL}
+
+    volumes:
+      - ../${BUCKET}:/app/${BUCKET}
+      - ../config:/app/config
+
+    depends_on:
+      training:
+        condition: service_completed_successfully
+
+  # # Dummy service
+  # dummy-service:
   #   build:
   #     context: .
-  #     dockerfile: ./training/Dockerfile
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - ARG_KEY=${ARG_VALUE}
+
+  #   image: ${USERNAME}/${REPO_NAME}:${ENV}-image-${VERSION} # latest
+  #   container_name: container_name_${VERSION}
+
+  #   command: # Overwrite the CMD commands specified in the Dockerfile
+  #     - python
+  #     - app.py
+
+  #   environment:
+  #     - ENV_KEY=${ENV_VALUE}
+
+  #   ports:
+  #     - "8000:8000"
+
+  #   volumes:
+  #     # - ${HOST_PATH}:/app # Mount the project directory
+  #     - ../${BUCKET}:/app/${BUCKET}
+  #     - ../config:/app/config
+
+  #   deploy:
+  #     replicas: 3
+  #     update_config:
+  #       parallelism: 2
+  #       delay: 10s
+  #     resources:
+  #       limits:
+  #         cpus: "0.5"
+  #         memory: "512M"
+
+  #   depends_on:
+  #     dependence-service:
+  #       condition: service_completed_successfully
 
 volumes:
   datasets:
     labels:
       environment: "development"
-
-# networks:
-#   my_network:
-#     # configuration for your network...

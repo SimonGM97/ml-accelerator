@@ -5,30 +5,13 @@ from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
 
 import pandas as pd
-import argparse
 
 
 # Get logger
 LOGGER = get_logger(name=__name__)
 
 @timing
-def main(
-    max_evals: int = Params.MAX_EVALS,
-    loss_threshold: float = Params.LOSS_THRESHOLD,
-    timeout_mins: float = Params.TIMEOUT_MINS,
-    debug: bool = False
-) -> None:
-    # Log arguments
-    log_params(
-        logger=LOGGER,
-        **{
-            'max_evals': max_evals,
-            'loss_threshold': loss_threshold,
-            'timeout_mins': timeout_mins,
-            'debug': debug
-        }
-    )
-
+def main() -> None:
     # Instanciate DataHelper
     DH: DataHelper = DataHelper()
 
@@ -42,7 +25,7 @@ def main(
         test_size=Params.TEST_SIZE, 
         balance_train=Params.BALANCE_TRAIN,
         balance_method=Params.BALANCE_METHOD,
-        debug=debug
+        debug=False
     )
 
     # Instanciate ModelTuner
@@ -56,35 +39,17 @@ def main(
         y_test=y_test,
         selected_features=X_train.columns.tolist(),
         use_warm_start=True,
-        max_evals=max_evals,
-        loss_threshold=loss_threshold,
-        timeout_mins=timeout_mins,
-        debug=debug
+        max_evals=Params.MAX_EVALS,
+        loss_threshold=Params.LOSS_THRESHOLD,
+        timeout_mins=Params.TIMEOUT_MINS,
+        debug=False
     )
 
 
 # conda deactivate
 # source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/tuning/tuning.py --max_evals 100 --loss_threshold 0.995 --timeout_mins 15
+# .ml_accel_venv/bin/python scripts/tuning/tuning.py
 if __name__ == "__main__":
-    # Define parser
-    parser = argparse.ArgumentParser(description='Model tuning script.')
-
-    # Add arguments
-    parser.add_argument('--max_evals', type=int, default=Params.MAX_EVALS)
-    parser.add_argument('--loss_threshold', type=float, default=Params.LOSS_THRESHOLD)
-    parser.add_argument('--timeout_mins', type=float, default=Params.TIMEOUT_MINS)
-
-    # Extract arguments from parser
-    args = parser.parse_args()
-    max_evals: int = args.max_evals
-    loss_threshold: float = args.loss_threshold
-    timeout_mins: float = args.timeout_mins
-
     # Run main
-    main(
-        max_evals=max_evals,
-        loss_threshold=loss_threshold,
-        timeout_mins=timeout_mins
-    )
+    main()
 

@@ -136,19 +136,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Model evaluating script.')
 
     # Add arguments
-    parser.add_argument('--evaluate_prod_pipe', type=bool, default=True)
-    parser.add_argument('--evaluate_staging_pipes', type=bool, default=True)
-    parser.add_argument('--evaluate_dev_pipes', type=bool, default=False)
-    parser.add_argument('--update_model_stages', type=bool, default=False)
-    parser.add_argument('--update_prod_model', type=bool, default=False)
+    parser.add_argument('--evaluate_prod_pipe', type=str, default='True', choices=['True', 'False'])
+    parser.add_argument('--evaluate_staging_pipes', type=str, default='True', choices=['True', 'False'])
+    parser.add_argument('--evaluate_dev_pipes', type=str, default='True', choices=['True', 'False'])
+    parser.add_argument('--update_model_stages', type=str, default='True', choices=['True', 'False'])
+    parser.add_argument('--update_prod_model', type=str, default='False', choices=['True', 'False'])
 
     # Extract arguments from parser
     args = parser.parse_args()
-    evaluate_prod_pipe: bool = args.evaluate_prod_pipe
-    evaluate_staging_pipes: bool = args.evaluate_staging_pipes
-    evaluate_dev_pipes: bool = args.evaluate_dev_pipes
-    update_model_stages: bool = args.update_model_stages
-    update_prod_model: bool = args.update_prod_model
+    evaluate_prod_pipe: bool = eval(args.evaluate_prod_pipe)
+    evaluate_staging_pipes: bool = eval(args.evaluate_staging_pipes)
+    evaluate_dev_pipes: bool = eval(args.evaluate_dev_pipes)
+    update_model_stages: bool = eval(args.update_model_stages)
+    update_prod_model: bool = eval(args.update_prod_model)
 
     # Run main
     main(

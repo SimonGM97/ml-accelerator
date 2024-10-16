@@ -119,6 +119,10 @@ class Params:
     PERSIST_DATASETS: bool
     WRITE_MODE: str
 
+    TRAIN_PROD_MODEL: bool
+    TRAIN_STAGING_MODELS: bool
+    TRAIN_DEV_MODELS: bool
+
     """
     OTHER PARAMETERS
     """
@@ -264,6 +268,11 @@ class Params:
         cls.SAVE_TRANSFORMERS: bool = MODEL_BUILDING_PARAMS.get("SAVE_TRANSFORMERS")
         cls.PERSIST_DATASETS: bool = MODEL_BUILDING_PARAMS.get("PERSIST_DATASETS")
         cls.WRITE_MODE: str = MODEL_BUILDING_PARAMS.get("WRITE_MODE")
+
+        # Training
+        cls.TRAIN_PROD_MODEL: bool = MODEL_BUILDING_PARAMS.get("TRAIN_PROD_MODEL")
+        cls.TRAIN_STAGING_MODELS: bool = MODEL_BUILDING_PARAMS.get("TRAIN_STAGING_MODELS")
+        cls.TRAIN_DEV_MODELS: bool = MODEL_BUILDING_PARAMS.get("TRAIN_DEV_MODELS")
 
         """
         OTHER PARAMETERS

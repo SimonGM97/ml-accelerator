@@ -1,14 +1,15 @@
 #!/bin/bash
-# chmod +x ./scripts/bash/image_building.sh
-# ./scripts/bash/image_building.sh
+# chmod +x ./scripts/bash/03_image_building.sh
+# ./scripts/bash/03_image_building.sh
 
-# Source the .env file to load environment variables
+# Set environment variables
 set -o allexport
 source .env
 set +o allexport
 
 # Extract variables
 CONFIG_FILE="config/config.yaml"
+
 VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
 ENV=$(yq eval '.ENV_PARAMS.ENV' ${CONFIG_FILE})
 

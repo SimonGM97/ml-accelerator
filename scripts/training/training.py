@@ -97,15 +97,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Model training script.')
 
     # Add arguments
-    parser.add_argument('--train_prod_model', type=bool, default=True)
-    parser.add_argument('--train_staging_models', type=bool, default=True)
-    parser.add_argument('--train_dev_models', type=bool, default=False)
+    parser.add_argument('--train_prod_model', type=str, default='True', choices=['True', 'False'])
+    parser.add_argument('--train_staging_models', type=str, default='True', choices=['True', 'False'])
+    parser.add_argument('--train_dev_models', type=str, default='False', choices=['True', 'False'])
 
     # Extract arguments from parser
     args = parser.parse_args()
-    train_prod_model: int = args.train_prod_model
-    train_staging_models: int = args.train_staging_models
-    train_dev_models: int = args.train_dev_models
+    train_prod_model: bool = eval(args.train_prod_model)
+    train_staging_models: bool = eval(args.train_staging_models)
+    train_dev_models: bool = eval(args.train_dev_models)
 
     # Run main
     main(

@@ -262,10 +262,13 @@ def log_params(
 
     # Extract initial logger_msg
     logger_msg = {
-        'data_processing.py': "\nDATA PROCESSING PARAMS:\n",
-        'tuning.py': "\nMODEL TUNING PARAMS:\n",
-        'training.py': "\nMODEL TRAINING PARAMS:\n",
-        'evaluation.py': "\nMODEL EVALUATION PARAMS:\n"
+        "data_processing.py": "\nDATA PROCESSING PARAMS:\n",
+        "tuning.py": "\nMODEL TUNING PARAMS:\n",
+        "training.py": "\nMODEL TRAINING PARAMS:\n",
+        "evaluating.py": "\nMODEL EVALUATING PARAMS:\n",
+        "inference.py": "\nINFERENCE PARAMS:\n",
+        "deployment.py": "\nDEPLOYMENT PARAMS:\n",
+        "drift.py": "\nDRIFT PARAMS:\n"
     }.get(file_name, None)
 
     if logger_msg is None:

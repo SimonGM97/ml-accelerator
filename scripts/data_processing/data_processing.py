@@ -81,17 +81,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Data processing script.')
 
     # Add arguments
-    parser.add_argument('--fit_transformers', type=bool, default=False, choices=[True, False])
-    parser.add_argument('--save_transformers', type=bool, default=False, choices=[True, False])
-    parser.add_argument('--persist_datasets', type=bool, default=True, choices=[True, False])
+    parser.add_argument('--fit_transformers', type=str, default='False', choices=['True', 'False'])
+    parser.add_argument('--save_transformers', type=str, default='False', choices=['True', 'False'])
+    parser.add_argument('--persist_datasets', type=str, default='True', choices=['True', 'False'])
     parser.add_argument('--write_mode', type=str, default='append', choices=['append', 'overwrite'])
 
     # Extract arguments from parser
     args = parser.parse_args()
-    fit_transformers: bool = args.fit_transformers
-    save_transformers: bool = args.save_transformers
-    persist_datasets: bool = args.persist_datasets
-    write_mode: bool = args.write_mode
+    fit_transformers: bool = eval(args.fit_transformers)
+    save_transformers: bool = eval(args.save_transformers)
+    persist_datasets: bool = eval(args.persist_datasets)
+    write_mode: str = args.write_mode
 
     # Run main
     main(
