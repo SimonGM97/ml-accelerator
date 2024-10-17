@@ -150,7 +150,11 @@ class MLPipeline:
         X: pd.DataFrame
     ) -> np.ndarray:
         # Apply data transformation pipeline
-        X, _ = self.transform(X=X, y=None)
+        X, _ = self.transform(
+            X=X, y=None, 
+            persist_datasets=False, 
+            write_mode=None
+        )
 
         # Predict new y
         y_pred = self.model.predict(X=X)
@@ -161,10 +165,23 @@ class MLPipeline:
     def fit(
         self,
         X_train: pd.DataFrame,
-        y_train: pd.Series
+        y_train: pd.DataFrame,
+        fit_transformers: bool = True
     ) -> None:
-        # Run fit_transform method
-        X_train, y_train = self.fit_transform(X=X_train, y=y_train)
+        if fit_transformers:
+            # Run fit_transform method
+            X_train, y_train = self.fit_transform(
+                X=X_train, y=y_train,
+                persist_datasets=False,
+                write_mode=None
+            )
+        else:
+            # Run transform method
+            X_train, y_train = self.transform(
+                X=X_train, y=y_train,
+                persist_datasets=False,
+                write_mode=None
+            )
 
         # Fit the model
         if self.model is not None:
@@ -175,14 +192,18 @@ class MLPipeline:
         self,
         X_train: pd.DataFrame,
         X_test: pd.DataFrame,
-        y_train: pd.Series,
-        cutoff: float = None
+        y_train: pd.DataFrame,
+        fit_transformers: bool = True
     ) -> np.ndarray:
         # Fit pipeline with X_train & y_train
-        self.fit(X_train=X_train, y_train=y_train)
+        self.fit(
+            X_train=X_train, 
+            y_train=y_train,
+            fit_transformers=fit_transformers
+        )
 
         # Predict with y_test
-        y_pred: np.ndarray = self.predict(X_test=X_test, cutoff=cutoff)
+        y_pred: np.ndarray = self.predict(X=X_test)
 
         return y_pred
     
@@ -219,11 +240,4 @@ class MLPipeline:
         # Load Model
         if self.model is not None:
             self.model.load(light=False)
-
-
-if __name__ == "__main__":
-    from ml_accelerator.modeling.model_registry import ModelRegistry
-
-    # Instanciate ModelRegistry
-    MR: ModelRegistry = ModelRegistry()
 

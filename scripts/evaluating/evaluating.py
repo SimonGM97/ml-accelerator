@@ -1,8 +1,6 @@
+#!/usr/bin/env python3
 from ml_accelerator.config.params import Params
 from ml_accelerator.utils.datasets.data_helper import DataHelper
-from ml_accelerator.data_processing.data_cleaning import DataCleaner
-from ml_accelerator.data_processing.data_transforming import DataTransformer
-from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.modeling.model_registry import ModelRegistry
 from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params

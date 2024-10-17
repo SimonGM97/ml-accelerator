@@ -821,25 +821,31 @@ class ModelRegistry:
     """
 
     def __repr__(self) -> str:
+        def extract_score(model: Model, score_name: str) -> float:
+            return round(getattr(model, score_name) * 100, 2)
+        
         output: str = "Model Registry:"
 
         # Prod Model
         champion = self.load_prod_model(light=True)
         if champion is not None:
-            output += f"\nChampion Model ({champion.model_id}): Test score - {round(champion.test_score * 100, 2)} [{champion.optimization_metric}]\n\n"
+            output += f"\nChampion Model ({champion.model_id})"
+            output += f" - Test score: {extract_score(champion, 'test_score')} | Val score: {extract_score(champion, 'val_score')} [{champion.optimization_metric}]\n\n"
         else:
             LOGGER.warning('loaded champion is None!.')
 
         # Staging Models
         for model in self.load_staging_models(light=True):
             if model is not None:
-                output += f"Staging Model ({model.model_id}): Test score - {round(model.test_score * 100, 2)} [{model.optimization_metric}]\n"
+                output += f"Staging Model ({model.model_id})"
+                output += f" - Test score: {extract_score(model, 'test_score')} | Val score: {extract_score(model, 'val_score')} [{model.optimization_metric}]\n"
         output += "\n"
         
         # Dev Models
         for model in self.load_dev_models(light=True):
             if model is not None:
-                output += f"Dev Model ({model.model_id}): Test score - {round(model.test_score * 100, 2)} [{model.optimization_metric}]\n"
+                output += f"Dev Model ({model.model_id})"
+                output += f" - Test score: {extract_score(model, 'test_score')} | Val score: {extract_score(model, 'val_score')} [{model.optimization_metric}]\n"
         output += "\n"
         
         return output

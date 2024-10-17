@@ -1,6 +1,6 @@
 #!/bin/bash
-# chmod +x ./scripts/bash/03_image_building.sh
-# ./scripts/bash/03_image_building.sh
+# chmod +x ./scripts/bash/image_building.sh
+# ./scripts/bash/image_building.sh
 
 # Set environment variables
 set -o allexport

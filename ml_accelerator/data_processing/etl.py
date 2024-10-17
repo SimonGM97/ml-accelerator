@@ -45,7 +45,10 @@ class ExtractTransformLoad(DataHelper):
         self.source: str = source
         self.target: str = target 
 
-    def extract(self) -> List[pd.DataFrame]:
+    def extract(
+        self,
+        pred_id = None
+    ) -> List[pd.DataFrame]:
         """
         Extract input datasets from various sources
         """
@@ -95,6 +98,10 @@ class ExtractTransformLoad(DataHelper):
         else:
             raise NotImplementedError(f'Source {self.source} has not yet been implemented.\n')
         
+        # Extract pred_id
+        if pred_id is not None:
+            df: pd.DataFrame = df.loc[pred_id:pred_id]
+
         return [df]
 
     def transform(
@@ -149,12 +156,13 @@ class ExtractTransformLoad(DataHelper):
 
     def run_pipeline(
         self,
+        pred_id = None,
         persist_datasets: bool = False,
         write_mode: str = None,
         mock_datasets: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run extract method
-        datasets: List[str] = self.extract()
+        datasets: List[str] = self.extract(pred_id=pred_id)
 
         # Run transform method
         X, y = self.transform(datasets=datasets)

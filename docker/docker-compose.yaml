@@ -4,14 +4,14 @@
 # docker-compose -f docker/docker-compose.yaml --env-file .env logs: monitor the output of your running containers and debug issues, viewing logs
 # docker-compose -f docker/docker-compose.yaml --env-file .env ps: lists all the services along with their current status
 
-version: "3.8"
+# version: "3.8"
 
 services:
 
   # Data Processing Service
   data-processing:
     image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
-    container_name: data_processing_container_${VERSION}
+    container_name: ${ENV}_data_processing_container_${VERSION}
 
     command:
       - python
@@ -35,7 +35,7 @@ services:
   # Tuning Service
   tuning:
     image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
-    container_name: tuning_container_${VERSION}
+    container_name: ${ENV}_tuning_container_${VERSION}
 
     command:
       - python
@@ -52,17 +52,17 @@ services:
   # Training Service
   training:
     image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
-    container_name: training_container_${VERSION}
+    container_name: ${ENV}_training_container_${VERSION}
 
     command:
       - python
       - training.py
-      - --train_prod_model 
-      - ${TRAIN_PROD_MODEL} 
-      - --train_staging_models 
-      - ${TRAIN_STAGING_MODELS} 
-      - --train_dev_models 
-      - ${TRAIN_DEV_MODELS}
+      - --train_prod_pipe
+      - ${TRAIN_PROD_PIPE} 
+      - --train_staging_pipes 
+      - ${TRAIN_STAGING_PIPES} 
+      - --train_dev_pipes
+      - ${TRAIN_DEV_PIPES}
 
     volumes:
       - ../${BUCKET}:/app/${BUCKET}
@@ -75,13 +75,13 @@ services:
   # Evaluating Service
   evaluating:
     image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
-    container_name: evaluating_container_${VERSION}
+    container_name: ${ENV}_evaluating_container_${VERSION}
 
     command:
       - python
       - evaluating.py
       - --evaluate_prod_pipe 
-      - ${EVALUATE_PROD_PIPE} 
+      - ${EVALUATE_PROD_PIPE}
       - --evaluate_staging_pipes 
       - ${EVALUATE_STAGING_PIPES}
       - --evaluate_dev_pipes 
@@ -99,6 +99,26 @@ services:
       training:
         condition: service_completed_successfully
 
+  # Inference Service
+  inference:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
+    container_name: ${ENV}_inference_container_${VERSION}
+
+    command:
+      - python
+      - inference.py
+
+    ports:
+      - "${INFERENCE_PORT}:${INFERENCE_PORT}"
+
+    volumes:
+      - ../${BUCKET}:/app/${BUCKET}
+      - ../config:/app/config
+    
+    depends_on:
+      evaluating:
+        condition: service_completed_successfully
+
   # # Dummy service
   # dummy-service:
   #   build:
@@ -108,7 +128,7 @@ services:
   #       - ARG_KEY=${ARG_VALUE}
 
   #   image: ${USERNAME}/${REPO_NAME}:${ENV}-image-${VERSION} # latest
-  #   container_name: container_name_${VERSION}
+  #   container_name: ${ENV}_container_name_${VERSION}
 
   #   command: # Overwrite the CMD commands specified in the Dockerfile
   #     - python

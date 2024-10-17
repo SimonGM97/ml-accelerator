@@ -202,6 +202,33 @@ class DataHelper:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
     
     def infer_schema(self) -> dict:
+        def extract_min_value(col_name: str):
+            if dtypes[col_name] in ['string', 'object']:
+                return None
+            else:
+                return float(df[col_name].min())
+            
+        def extract_max_value(col_name: str):
+            if dtypes[col_name] in ['string', 'object']:
+                return None
+            else:
+                return float(df[col_name].max()) 
+
+        def extract_allowed_values(col_name: str) -> list:
+            # Extract seen values
+            if dtypes[col_name] in ['string', 'object']:
+                seen_values: list = df[col_name].unique().tolist()
+            else:
+                seen_values: list = None
+            
+            # Add allowed classification values
+            if 'classification' in self.task and col_name == self.target:
+                seen_values.extend(list(range(len(seen_values))))
+
+            return seen_values
+        
+        LOGGER.info('Infering new schema for %s', self.dataset_name)
+
         # Load df
         df: pd.DataFrame = pd.concat([
             self.load_dataset(df_name="y_raw", filters=None),
@@ -222,15 +249,14 @@ class DataHelper:
                     "type": dtypes[col_name],
                     "mandatory": True,
                     "nullable": True if df[col_name].isnull().sum() > 0 else False,
-                    "min_value": float(df[col_name].min()) if dtypes[col_name] not in ['string', 'object'] else None,
-                    "max_value": float(df[col_name].max()) if dtypes[col_name] not in ['string', 'object'] else None,
-                    "allowed_values": df[col_name].unique().tolist() if dtypes[col_name] in ['string', 'object'] else None,
+                    "min_value": extract_min_value(col_name=col_name),
+                    "max_value": extract_max_value(col_name=col_name),
+                    "allowed_values": extract_allowed_values(col_name=col_name),
                     "fillna_method": 'simple_imputer'
-
                 } for col_name in dtypes.index
             ]
         }
-        
+
         # Save schema
         self.save_schema(schema=schema)
 

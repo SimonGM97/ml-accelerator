@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from ml_accelerator.config.params import Params
 from ml_accelerator.utils.datasets.data_helper import DataHelper
 from ml_accelerator.modeling.model_tuning import ModelTuner

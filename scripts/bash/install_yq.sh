@@ -1,6 +1,6 @@
 #!/bin/bash
-# chmod +x ./scripts/bash/01_install_yq.sh
-# ./scripts/bash/01_install_yq.sh
+# chmod +x ./scripts/bash/install_yq.sh
+# ./scripts/bash/install_yq.sh
 
 # Check if yq is installed
 if ! command -v yq &> /dev/null

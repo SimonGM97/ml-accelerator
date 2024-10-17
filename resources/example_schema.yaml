@@ -1,0 +1,13 @@
+name: raw_data
+path:
+  - datasets
+  - raw_data
+fields:
+  - name: column_name
+    type: str
+    mandatory: True
+    nullable: True
+    min_value: null
+    max_value: null
+    allowed_values: null
+    fillna_method: ffill # simple_imputer | interpolate | ffill

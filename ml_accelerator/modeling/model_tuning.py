@@ -362,7 +362,7 @@ class ModelTuner:
         self,
         parameters: dict,
         X_train: pd.DataFrame,
-        y_train: pd.Series,
+        y_train: pd.DataFrame,
         selected_features: List[str],
         debug: bool = False
     ) -> dict:
@@ -474,7 +474,7 @@ class ModelTuner:
         X_train: pd.DataFrame,
         X_test: pd.DataFrame,
         y_train: pd.DataFrame,
-        y_test: pd.Series,
+        y_test: pd.DataFrame,
         debug: bool = False
     ) -> None:
         """
@@ -509,8 +509,8 @@ class ModelTuner:
         self,
         X_train: pd.DataFrame,
         X_test: pd.DataFrame,
-        y_train: pd.Series,
-        y_test: pd.Series,
+        y_train: pd.DataFrame,
+        y_test: pd.DataFrame,
         selected_features: List[str],
         use_warm_start: bool = True,
         max_evals: int = Params.MAX_EVALS,

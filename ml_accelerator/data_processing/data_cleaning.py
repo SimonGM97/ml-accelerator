@@ -93,7 +93,7 @@ class DataCleaner(DataHelper):
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Merge datasets
         df = self.merge_datasets(X=X, y=y)
-
+        
         # Delete X & y
         del X
         if y is not None:
@@ -102,7 +102,7 @@ class DataCleaner(DataHelper):
 
         # Drop dummy columns
         df = self.drop_dummy_columns(df=df)
-
+        
         # Find column attributes
         self.find_column_attrs(df=df)
 
@@ -111,7 +111,7 @@ class DataCleaner(DataHelper):
 
         # Set data types
         df = self.set_data_types(df=df)
-
+        
         # Remove unexpected values
         df = self.remove_unexpected_values(df=df)
         
@@ -127,14 +127,14 @@ class DataCleaner(DataHelper):
 
         # Cap max values
         df = self.cap_max_values(df=df)
-
+        
         # Fit SimpleImputers
         if fit:
             self.fit_imputers(df=df)
 
         # Fill null values
         df = self.fill_nulls(df=df)
-
+        
         # Divide X & y
         X, y = self.divide_datasets(df=df)
 
