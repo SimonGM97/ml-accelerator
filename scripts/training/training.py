@@ -17,7 +17,7 @@ LOGGER = get_logger(name=__name__)
 
 
 @timing
-def main(
+def training_pipeline(
     train_prod_pipe: bool = True,
     train_staging_pipes: bool = True,
     train_dev_pipes: bool = False,
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     train_dev_pipes: bool = eval(args.train_dev_pipes)
 
     # Run main
-    main(
+    training_pipeline(
         train_prod_pipe=train_prod_pipe,
         train_staging_pipes=train_staging_pipes,
         train_dev_pipes=train_dev_pipes,

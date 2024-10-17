@@ -44,11 +44,6 @@ class DataHelper:
         dataset_name: str = Params.DATASET_NAME,
         bucket: str = Params.BUCKET,
         storage_env: str = Params.DATA_STORAGE_ENV,
-        training_path: List[str] = Params.TRAINING_PATH,
-        inference_path: List[str] = Params.INFERENCE_PATH,
-        transformers_path: List[str] = Params.TRANSFORMERS_PATH,
-        schemas_path: List[str] = Params.SCHEMAS_PATH,
-        mock_path: List[str] = Params.MOCK_PATH,
         data_extention: str = Params.DATA_EXTENTION,
         partition_cols: str = Params.PARTITION_COLUMNS
     ) -> None:
@@ -60,11 +55,11 @@ class DataHelper:
         self.bucket: str = bucket
         self.storage_env: str = storage_env
 
-        self.training_path: List[str] = training_path
-        self.inference_path: List[str] = inference_path
-        self.transformers_path: List[str] = transformers_path
-        self.schemas_path: List[str] = schemas_path
-        self.mock_path: List[str] = mock_path
+        self.training_path: str = os.environ.get('TRAINING_PATH')
+        self.inference_path: str = os.environ.get('INFERENCE_PATH')
+        self.transformers_path: str = os.environ.get('TRANSFORMERS_PATH')
+        self.schemas_path: str = os.environ.get('SCHEMAS_PATH')
+        self.mock_path: str = os.environ.get('MOCK_PATH')
 
         self.data_extention: str = data_extention
         self.partition_cols: str = partition_cols
@@ -242,7 +237,7 @@ class DataHelper:
         # Define schema
         schema: dict = {
             "name": self.dataset_name,
-            "path": '/'.join(self.training_path),
+            "path": self.training_path,
             "fields": [
                 {
                     "name": col_name,
@@ -262,6 +257,12 @@ class DataHelper:
 
         return schema
 
+    def load_inference_df(
+        self,
+        pipeline_id: str = None
+    ) -> pd.DataFrame:
+        pass
+
     def find_path(
         self,
         df_name: str,
@@ -270,20 +271,20 @@ class DataHelper:
         # Define path
         if self.storage_env == 'filesystem':
             if 'schema' in df_name:
-                path = os.path.join(self.bucket, *self.schemas_path, f"{df_name}.yaml")
+                path = os.path.join(self.bucket, *self.schemas_path.split('/'), f"{df_name}.yaml")
             else:
                 if mock:
-                    path = os.path.join(self.bucket, *self.mock_path, f"{df_name}.{self.data_extention}")
+                    path = os.path.join(self.bucket, *self.mock_path.split('/'), f"{df_name}.{self.data_extention}")
                 else:
-                    path = os.path.join(self.bucket, *self.training_path, f"{df_name}.{self.data_extention}")
+                    path = os.path.join(self.bucket, *self.training_path.split('/'), f"{df_name}.{self.data_extention}")
         elif self.storage_env == 'S3':
             if 'schema' in df_name:
-                path = f"{self.bucket}/{'/'.join(self.schemas_path)}/{df_name}.yaml"
+                path = f"{self.bucket}/{self.schemas_path}/{df_name}.yaml"
             else:
                 if mock:
-                    path = f"{self.bucket}/{'/'.join(self.mock_path)}/{df_name}.{self.data_extention}"
+                    path = f"{self.bucket}/{self.mock_path}/{df_name}.{self.data_extention}"
                 else:
-                    path = f"{self.bucket}/{'/'.join(self.training_path)}/{df_name}.{self.data_extention}"
+                    path = f"{self.bucket}/{self.training_path}/{df_name}.{self.data_extention}"
         else:
             raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
         
@@ -323,7 +324,7 @@ class DataHelper:
         df_name: str,
         filters: List[Tuple[str, str, List[str]]] = None,
         mock: bool = False
-    ) -> pd.DataFrame:
+    ) -> pd.DataFrame:        
         # Define path
         path: str = self.find_path(df_name, mock)
 
@@ -355,7 +356,7 @@ class DataHelper:
 
         if self.storage_env == 'filesystem':
             # Define base_path
-            base_path = os.path.join(self.bucket, *self.transformers_path, transformer_name)
+            base_path = os.path.join(self.bucket, *self.transformers_path.split('/'), transformer_name)
 
             # Save attrs to filesystem
             save_to_filesystem(
@@ -367,7 +368,7 @@ class DataHelper:
 
         elif self.storage_env == 'S3':
             # Define base_path
-            base_path = f"{self.bucket}/{'/'.join(self.transformers_path)}/{transformer_name}"
+            base_path = f"{self.bucket}/{self.transformers_path}/{transformer_name}"
 
             # Save attrs to S3
             save_to_s3(
@@ -383,7 +384,7 @@ class DataHelper:
     ) -> None:
         if self.storage_env == 'filesystem':
             # Define base_path
-            base_path = os.path.join(self.bucket, *self.transformers_path, transformer_name)
+            base_path = os.path.join(self.bucket, *self.transformers_path.split('/'), transformer_name)
 
             # Load from filesystem
             attrs: dict = load_from_filesystem(
@@ -394,7 +395,7 @@ class DataHelper:
         
         elif self.storage_env == 'S3':
             # Define base_path
-            base_path = f"{self.bucket}/{'/'.join(self.transformers_path)}/{transformer_name}"
+            base_path = f"{self.bucket}/{self.transformers_path}/{transformer_name}"
 
             # Load from S3
             attrs: dict = load_from_s3(

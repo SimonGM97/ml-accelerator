@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 from ml_accelerator.config.params import Params
 from ml_accelerator.data_processing.etl import ExtractTransformLoad
-from ml_accelerator.data_processing.data_cleaning import DataCleaner
-from ml_accelerator.data_processing.data_transforming import DataTransformer
+from ml_accelerator.data_processing.transformers.data_cleaner import DataCleaner
+from ml_accelerator.data_processing.transformers.data_standardizer import DataTransformer
 from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
 
+import pandas as pd
+from typing import Tuple
 import argparse
 
 
@@ -14,12 +16,12 @@ import argparse
 LOGGER = get_logger(name=__name__)
 
 @timing
-def main(
+def data_pipeline(
     fit_transformers: bool = False,
     save_transformers: bool = False,
     persist_datasets: bool = True,
     write_mode: str = None
-) -> None:
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # Log arguments
     log_params(
         logger=LOGGER,
@@ -95,7 +97,7 @@ if __name__ == "__main__":
     write_mode: str = args.write_mode
 
     # Run main
-    main(
+    data_pipeline(
         fit_transformers=fit_transformers,
         save_transformers=save_transformers,
         persist_datasets=persist_datasets,

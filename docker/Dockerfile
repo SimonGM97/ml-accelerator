@@ -8,12 +8,7 @@ FROM ${ENV}-base-image:${VERSION} AS base
 
 # Copy required files & directories into the container at /app
 COPY .aws /root/.aws
-COPY scripts/data_processing/data_processing.py .
-COPY scripts/tuning/tuning.py .
-COPY scripts/training/training.py .
-COPY scripts/evaluating/evaluating.py .
-COPY scripts/inference/inference.py .
-COPY scripts/drift/drift.py .
+COPY scripts scripts
 COPY app.py .
 
 # Run the app.py script when the container launches

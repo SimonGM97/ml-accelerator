@@ -14,10 +14,10 @@ import pandas as pd
 import numpy as np
 from functools import partial
 import time
-from tqdm import tqdm
-from typing import Dict, List, Tuple
+import os
+from typing import Dict, List
 from copy import deepcopy
-from pprint import pprint, pformat
+from pprint import pformat
 
 import warnings
 
@@ -57,8 +57,7 @@ class ModelTuner:
         val_splits: int = Params.VAL_SPLITS,
         model_storage_env: str = Params.MODEL_STORAGE_ENV,
         data_storage_env: str = Params.DATA_STORAGE_ENV,
-        bucket: str = Params.BUCKET,
-        models_path: List[str] = Params.MODELS_PATH
+        bucket: str = Params.BUCKET
     ) -> None:
         # Define attributes
         self.algorithms: List[str] = algorithms
@@ -77,7 +76,7 @@ class ModelTuner:
         self.model_storage_env: str = model_storage_env
         self.data_storage_env: str = data_storage_env
         self.bucket: str = bucket
-        self.models_path: List[str] = models_path
+        self.models_path: str = os.environ.get('MODELS_PATH')
 
         # Define search space parameters
         self.int_parameters: List[str] = None

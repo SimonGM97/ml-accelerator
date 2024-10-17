@@ -2,7 +2,7 @@
 from ml_accelerator.config.params import Params
 from ml_accelerator.utils.datasets.data_helper import DataHelper
 from ml_accelerator.modeling.model_tuning import ModelTuner
-from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
+from ml_accelerator.utils.logging.logger_helper import get_logger
 from ml_accelerator.utils.timing.timing_helper import timing
 
 import pandas as pd
@@ -12,7 +12,7 @@ import pandas as pd
 LOGGER = get_logger(name=__name__)
 
 @timing
-def main() -> None:
+def tuning_pipeline() -> None:
     # Instanciate DataHelper
     DH: DataHelper = DataHelper()
 
@@ -52,5 +52,5 @@ def main() -> None:
 # .ml_accel_venv/bin/python scripts/tuning/tuning.py
 if __name__ == "__main__":
     # Run main
-    main()
+    tuning_pipeline()
 

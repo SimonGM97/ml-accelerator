@@ -39,22 +39,6 @@ ETL_PARAMS:
 STORAGE_PARAMS:
   DATASET_NAME: breast_cancer
   # iris, wine, breast_cancer, diabetes, california_housing
-
-  PATHS_PARAMS:
-    TRAINING_PATH:
-      - datasets
-      - training
-    INFERENCE_PATH:
-      - datasets
-      - inference
-    TRANSFORMERS_PATH:
-      - transformers
-    MODELS_PATH:
-      - models
-    SCHEMAS_PATH:
-      - schemas
-    MOCK_PATH:
-      - mock
   
   DATA_EXTENTION: csv
   # csv, parquet

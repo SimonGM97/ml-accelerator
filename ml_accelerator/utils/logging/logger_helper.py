@@ -267,7 +267,6 @@ def log_params(
         "training.py": "\nMODEL TRAINING PARAMS:\n",
         "evaluating.py": "\nMODEL EVALUATING PARAMS:\n",
         "inference.py": "\nINFERENCE PARAMS:\n",
-        "deployment.py": "\nDEPLOYMENT PARAMS:\n",
         "drift.py": "\nDRIFT PARAMS:\n"
     }.get(file_name, None)
 

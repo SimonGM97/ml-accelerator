@@ -64,8 +64,7 @@ class Model(ABC):
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
         importance_method: str = Params.IMPORTANCE_METHOD,
         storage_env: str = Params.MODEL_STORAGE_ENV,
-        bucket: str = Params.BUCKET,
-        models_path: List[str] = Params.MODELS_PATH
+        bucket: str = Params.BUCKET
     ) -> None:
         # Register Parameters
         if model_id is not None:
@@ -79,7 +78,7 @@ class Model(ABC):
         # Storage Parameters
         self.storage_env: str = storage_env
         self.bucket: str = bucket
-        self.models_path: List[str] = models_path
+        self.models_path: str = os.environ.get('MODELS_PATH')
 
         # Model Parameters
         self.model = None
@@ -471,7 +470,7 @@ class Model(ABC):
         light: bool = False
     ) -> None:
         # Define base_path
-        base_path = os.path.join(self.bucket, *self.models_path, self.model_id)
+        base_path = os.path.join(self.bucket, *self.models_path.split('/'), self.model_id)
 
         # Load self.model
         if not light:
@@ -524,7 +523,7 @@ class Model(ABC):
         light: bool = False
     ) -> None:
         # Define base_path
-        base_path = f"{self.bucket}/{'/'.join(self.models_path)}/{self.model_id}"
+        base_path = f"{self.bucket}/{self.models_path}/{self.model_id}"
 
         # Load self.model
         if not light:

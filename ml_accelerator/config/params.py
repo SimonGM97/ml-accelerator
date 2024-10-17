@@ -58,14 +58,7 @@ class Params:
     ETL_SOURCE: str
 
     # STORAGE PARAMETERS
-    DATASET_NAME: str
-    TRAINING_PATH: List[str]
-    INFERENCE_PATH: List[str]
-    TRANSFORMERS_PATH: List[str]
-    MODELS_PATH: List[str]
-    SCHEMAS_PATH: List[str]
-    MOCK_PATH: List[str]
-    
+    DATASET_NAME: str    
     DATA_EXTENTION: str
     PARTITION_COLUMNS: str
 
@@ -193,16 +186,8 @@ class Params:
 
         # STORAGE PARAMETERS
         STORAGE_PARAMS: dict = config.get("STORAGE_PARAMS")
-        PATHS_PARAMS: dict = STORAGE_PARAMS.get("PATHS_PARAMS")
 
         cls.DATASET_NAME: str = STORAGE_PARAMS.get("DATASET_NAME")
-        cls.TRAINING_PATH: List[str] = PATHS_PARAMS.get("TRAINING_PATH")
-        cls.INFERENCE_PATH: List[str] = PATHS_PARAMS.get("INFERENCE_PATH")
-        cls.TRANSFORMERS_PATH: List[str] = PATHS_PARAMS.get("TRANSFORMERS_PATH")
-        cls.MODELS_PATH: List[str] = PATHS_PARAMS.get("MODELS_PATH")
-        cls.SCHEMAS_PATH: List[str] = PATHS_PARAMS.get("SCHEMAS_PATH")
-        cls.MOCK_PATH: List[str] = PATHS_PARAMS.get("MOCK_PATH")
-
         cls.DATA_EXTENTION: str = STORAGE_PARAMS.get("DATA_EXTENTION")
         cls.PARTITION_COLUMNS: str = STORAGE_PARAMS.get("PARTITION_COLUMNS")
 

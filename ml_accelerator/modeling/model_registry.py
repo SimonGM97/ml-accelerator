@@ -1,6 +1,6 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.data_processing.data_cleaning import DataCleaner
-from ml_accelerator.data_processing.data_transforming import DataTransformer
+from ml_accelerator.data_processing.transformers.data_cleaner import DataCleaner
+from ml_accelerator.data_processing.transformers.data_standardizer import DataTransformer
 from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.modeling.models.classification_model import ClassificationModel
 from ml_accelerator.modeling.models.regression_model import RegressionModel
@@ -50,8 +50,7 @@ class ModelRegistry:
         task: str = Params.TASK,
         data_storage_env: str = Params.DATA_STORAGE_ENV,
         model_storage_env: str = Params.MODEL_STORAGE_ENV,
-        bucket: str = Params.BUCKET,
-        models_path: List[str] = Params.MODELS_PATH
+        bucket: str = Params.BUCKET
     ) -> None:
         """
         Initialize the ModelRegistry
@@ -68,7 +67,7 @@ class ModelRegistry:
         self.data_storage_env: str = data_storage_env
         self.model_storage_env: str = model_storage_env
         self.bucket: str = bucket
-        self.models_path: List[str] = models_path
+        self.models_path: str = os.environ.get('MODELS_PATH')
 
         # Define default models
         self.prod_model: Model = None
@@ -554,12 +553,12 @@ class ModelRegistry:
         )
 
         for root, directories, files in os.walk(
-            os.path.join(self.bucket, *self.models_path)
+            os.path.join(self.bucket, *self.models_path.split('/'))
         ):
             for file in files:
                 model_id = file.split('_')[0]
                 if model_id not in model_ids and not file.startswith('.'):
-                    delete_path = os.path.join(self.bucket, *self.models_path, model_id, file)
+                    delete_path = os.path.join(self.bucket, *self.models_path.split('/'), model_id, file)
                     LOGGER.info("Deleting %s.", delete_path)
                     try:
                         os.remove(delete_path)
@@ -580,7 +579,7 @@ class ModelRegistry:
 
         for key in find_keys(
             bucket=self.bucket, 
-            subdir='/'.join(self.models_path)
+            subdir=self.models_path
         ):
             if not any([model_id in key for model_id in model_ids]):
                 LOGGER.info("Deleting %s/%s.", self.bucket, key)

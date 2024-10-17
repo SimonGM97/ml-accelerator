@@ -15,6 +15,8 @@ services:
 
     command:
       - python
+      - scripts
+      - data_processing
       - data_processing.py
       - --fit_transformers
       - ${FIT_TRANSFORMERS}
@@ -39,6 +41,8 @@ services:
 
     command:
       - python
+      - scripts
+      - tuning
       - tuning.py
 
     volumes:
@@ -56,6 +60,8 @@ services:
 
     command:
       - python
+      - scripts
+      - training
       - training.py
       - --train_prod_pipe
       - ${TRAIN_PROD_PIPE} 
@@ -79,6 +85,8 @@ services:
 
     command:
       - python
+      - scripts
+      - evaluating
       - evaluating.py
       - --evaluate_prod_pipe 
       - ${EVALUATE_PROD_PIPE}
@@ -106,6 +114,8 @@ services:
 
     command:
       - python
+      - scripts
+      - inference
       - inference.py
 
     ports:
@@ -118,6 +128,10 @@ services:
     depends_on:
       evaluating:
         condition: service_completed_successfully
+
+  # Drift Service
+
+  # Streamlit Web App Service
 
   # # Dummy service
   # dummy-service:

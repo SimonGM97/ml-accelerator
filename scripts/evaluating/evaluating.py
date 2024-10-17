@@ -18,7 +18,7 @@ LOGGER = get_logger(name=__name__)
 
 
 @timing
-def main(
+def evaluating_pipeline(
     evaluate_prod_pipe: bool = True,
     evaluate_staging_pipes: bool = True,
     evaluate_dev_pipes: bool = False,
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     update_prod_model: bool = eval(args.update_prod_model)
 
     # Run main
-    main(
+    evaluating_pipeline(
         evaluate_prod_pipe=evaluate_prod_pipe,
         evaluate_staging_pipes=evaluate_staging_pipes,
         evaluate_dev_pipes=evaluate_dev_pipes,

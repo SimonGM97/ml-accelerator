@@ -6,9 +6,9 @@ from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
 
-from flask import Flask, request, json, jsonify
-import pandas as pd
 import numpy as np
+from datetime import datetime
+import argparse
 
 
 # Get logger
@@ -16,8 +16,18 @@ LOGGER = get_logger(name=__name__)
 
 
 @timing
-def new_inference(X: pd.DataFrame) -> dict:
-    LOGGER.info('Received X:\n%s', X)
+def inference_pipeline(pred_id = None) -> dict:
+    # Log arguments
+    log_params(
+        logger=LOGGER,
+        **{'pred_id': pred_id}
+    )
+    
+    # Instanciate ExtractTransformLoad
+    ETL: ExtractTransformLoad = ExtractTransformLoad()
+
+    # Extract new X
+    X, _ = ETL.run_pipeline(pred_id=pred_id)
 
     # Instanciate ModelRegistry
     MR: ModelRegistry = ModelRegistry()
@@ -34,50 +44,33 @@ def new_inference(X: pd.DataFrame) -> dict:
 
     # Prepare new inference
     inference: dict = {
-        'prediction': y_pred.tolist()
+        'pipeline_id': pipeline.pipeline_id,
+        'pred_id': pred_id,
+        'prediction': y_pred.tolist(),
+        'features': X.columns.tolist(),
+        'X': X.values.tolist(),
+        'date': str(datetime.today()),
+        'year': str(datetime.today().year),
+        'month': ('0' + str(datetime.today().month))[-2:],
+        'day': ('0' + str(datetime.today().day))[-2:]
     }
 
     return inference
 
 
-# Instanciate Flask application
-app = Flask(__name__)
-
-# Define default method
-@app.route("/")
-def hello():
-    return jsonify(message="Welcome to the ML Accelerator!")
-
-# Define predict method
-@app.route("/predict", methods=["GET"])
-def predict():
-    # Extract url args
-    pred_id = eval(request.args.get("pred_id"))
-    LOGGER.info('pred_id: %s (%s)', pred_id, type(pred_id))
-
-    # Instanciate ExtractTransformLoad
-    ETL: ExtractTransformLoad = ExtractTransformLoad()
-
-    # Extract new X
-    X, _ = ETL.run_pipeline(pred_id=pred_id)
-
-    # Predict y
-    inference: dict = new_inference(X=X)
-
-    # Append useful data to inference
-    inference['pred_id'] = pred_id
-    inference['features'] = X.columns.tolist()
-    inference['X'] = X.values.tolist()
-
-    return jsonify(inference)
-
 # conda deactivate
 # source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/inference/inference.py
+# .ml_accel_venv/bin/python scripts/inference/inference.py --pred_id 0
 if __name__ == "__main__":
-    # Run application
-    app.run(
-        host=Params.INFERENCE_HOST, 
-        port=Params.INFERENCE_PORT, 
-        debug=True
-    )
+    # Define parser
+    parser = argparse.ArgumentParser(description='Inference script.')
+
+    # Add arguments
+    parser.add_argument('--pred_id', default=None)
+
+    # Extract arguments from parser
+    args = parser.parse_args()
+    pred_id = args.pred_id
+
+    # Run inference pipeline
+    inference_pipeline(pred_id=pred_id)
