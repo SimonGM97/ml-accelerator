@@ -261,7 +261,36 @@ class DataHelper:
         self,
         pipeline_id: str = None
     ) -> pd.DataFrame:
-        pass
+        # Define empty inference_df
+        columns = ['pipeline_id', 'pred_id', 'prediction', 'year', 'month', 'day']
+        inference_df: pd.DataFrame = pd.DataFrame(columns=columns)
+
+        if self.storage_env == 'filesystem':
+            # Define search dir
+            search_dir = os.path.join(self.bucket, *self.inference_path.split('/'))
+
+            for root, directories, files in os.walk(search_dir):
+                for file in files:
+                    if file != '.DS_Store':
+                        # Load inference
+                        inference_path = os.path.join(*root.split('/'), *'/'.join(directories), file)
+                        inference: dict = load_from_filesystem(path=inference_path)
+
+                        # Filter keys
+                        inference: dict = {k: v for k, v in inference.items() if k in columns}
+
+                        # Append to inference_df
+                        inference_df: pd.DataFrame = pd.concat([
+                            inference_df, pd.DataFrame(inference, index=list(range(len(inference['prediction']))))
+                        ], axis=0)
+        else:
+            raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
+        
+        # Filter inference_df
+        if pipeline_id is not None:
+            inference_df = inference_df.loc[inference_df['pipeline_id'] == pipeline_id]
+        
+        return inference_df
 
     def find_path(
         self,
@@ -286,7 +315,7 @@ class DataHelper:
                 else:
                     path = f"{self.bucket}/{self.training_path}/{df_name}.{self.data_extention}"
         else:
-            raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
+            raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
         
         return path
 
@@ -317,7 +346,7 @@ class DataHelper:
                 write_mode=write_mode
             )
         else:
-            raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
+            raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
 
     def load_dataset(
         self,
@@ -343,7 +372,7 @@ class DataHelper:
                 filters=filters
             )
         else:
-            raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
+            raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
         
         return df
 
@@ -378,6 +407,9 @@ class DataHelper:
                 write_mode=None
             )
 
+        else:
+            raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
+
     def load_transformer(
         self,
         transformer_name: str
@@ -403,6 +435,9 @@ class DataHelper:
                 partition_cols=None,
                 filters=None
             )
+
+        else:
+            raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
 
         # Assign pickled attrs
         for attr_name, attr_value in attrs.items():

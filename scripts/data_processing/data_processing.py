@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from ml_accelerator.config.params import Params
 from ml_accelerator.data_processing.etl import ExtractTransformLoad
 from ml_accelerator.data_processing.transformers.data_cleaner import DataCleaner
 from ml_accelerator.data_processing.transformers.data_standardizer import DataTransformer

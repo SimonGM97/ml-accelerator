@@ -5,6 +5,7 @@ from scripts.tuning.tuning import tuning_pipeline
 from scripts.training.training import training_pipeline
 from scripts.evaluating.evaluating import evaluating_pipeline
 from scripts.inference.inference import inference_pipeline
+from scripts.drift.drift import drift_pipeline
 
 from flask import Flask, request, json, jsonify
 import pandas as pd
@@ -103,6 +104,17 @@ def predict() -> json:
     inference: dict = inference_pipeline(pred_id=pred_id)
 
     return jsonify(inference)
+
+# Define drift method
+@app.route("/drift", methods=["GET"])
+def drift() -> json:
+    # Extract url args
+    param1 = eval(request.args.get("param1", "None"))
+
+    # Run drift pipeline
+    drift_pipeline(param1=param1)
+
+    return jsonify({})
 
 
 # conda deactivate

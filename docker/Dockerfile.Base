@@ -14,7 +14,7 @@ WORKDIR /tmp
 RUN pip install --upgrade pip
 
 # Install git (required by GitPython)
-# RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Install libgomp (GNU OpenMP library) required by LightGBM
 RUN apt-get update && apt-get install -y libgomp1 && rm -rf /var/lib/apt/lists/*

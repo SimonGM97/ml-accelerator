@@ -1,0 +1,186 @@
+services:
+
+  # Data Processing Service
+  data-processing:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
+    container_name: ${ENV}_data_processing_container_${VERSION}
+
+    command:
+      - python
+      - scripts/data_processing/data_processing.py
+      - --fit_transformers
+      - ${FIT_TRANSFORMERS}
+      - --save_transformers
+      - ${SAVE_TRANSFORMERS}
+      - --persist_datasets
+      - ${PERSIST_DATASETS}
+      - --write_mode
+      - ${WRITE_MODE}
+
+    environment:
+      - API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
+
+      - DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}
+      - DOCKERHUB_REPOSITORY=${DOCKERHUB_REPOSITORY}
+      - DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN}
+
+      - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
+      - TRAINING_PATH=${TRAINING_PATH}
+      - INFERENCE_PATH=${INFERENCE_PATH}
+      - TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
+      - MODELS_PATH=${MODELS_PATH}
+      - SCHEMAS_PATH=${SCHEMAS_PATH}
+      - MOCK_PATH=${MOCK_PATH}
+
+    volumes:
+      - ./../../${BUCKET}:/app/${BUCKET}
+      - ./../../config:/app/config
+
+  # Tuning Service
+  tuning:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
+    container_name: ${ENV}_tuning_container_${VERSION}
+
+    command:
+      - python
+      - scripts/tuning/tuning.py
+
+    environment:
+      - API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
+
+      - DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}
+      - DOCKERHUB_REPOSITORY=${DOCKERHUB_REPOSITORY}
+      - DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN}
+
+      - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
+      - TRAINING_PATH=${TRAINING_PATH}
+      - INFERENCE_PATH=${INFERENCE_PATH}
+      - TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
+      - MODELS_PATH=${MODELS_PATH}
+      - SCHEMAS_PATH=${SCHEMAS_PATH}
+      - MOCK_PATH=${MOCK_PATH}
+
+    volumes:
+      - ./../../${BUCKET}:/app/${BUCKET}
+      - ./../../config:/app/config
+
+    depends_on:
+      data-processing:
+        condition: service_completed_successfully
+
+  # Training Service
+  training:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
+    container_name: ${ENV}_training_container_${VERSION}
+
+    command:
+      - python
+      - scripts/training/training.py
+      - --train_prod_pipe
+      - ${TRAIN_PROD_PIPE} 
+      - --train_staging_pipes 
+      - ${TRAIN_STAGING_PIPES} 
+      - --train_dev_pipes
+      - ${TRAIN_DEV_PIPES}
+
+    environment:
+      - API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
+
+      - DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}
+      - DOCKERHUB_REPOSITORY=${DOCKERHUB_REPOSITORY}
+      - DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN}
+
+      - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
+      - TRAINING_PATH=${TRAINING_PATH}
+      - INFERENCE_PATH=${INFERENCE_PATH}
+      - TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
+      - MODELS_PATH=${MODELS_PATH}
+      - SCHEMAS_PATH=${SCHEMAS_PATH}
+      - MOCK_PATH=${MOCK_PATH}
+
+    volumes:
+      - ./../../${BUCKET}:/app/${BUCKET}
+      - ./../../config:/app/config
+
+    depends_on:
+      tuning:
+        condition: service_completed_successfully
+
+  # Evaluating Service
+  evaluating:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
+    container_name: ${ENV}_evaluating_container_${VERSION}
+
+    command:
+      - python
+      - scripts/evaluating/evaluating.py
+      - --evaluate_prod_pipe 
+      - ${EVALUATE_PROD_PIPE}
+      - --evaluate_staging_pipes 
+      - ${EVALUATE_STAGING_PIPES}
+      - --evaluate_dev_pipes 
+      - ${EVALUATE_DEV_PIPES}
+      - --update_model_stages 
+      - ${UPDATE_MODEL_STAGES}
+      - --update_prod_model 
+      - ${UPDATE_PROD_MODEL}
+
+    environment:
+      - API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
+
+      - DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}
+      - DOCKERHUB_REPOSITORY=${DOCKERHUB_REPOSITORY}
+      - DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN}
+
+      - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
+      - TRAINING_PATH=${TRAINING_PATH}
+      - INFERENCE_PATH=${INFERENCE_PATH}
+      - TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
+      - MODELS_PATH=${MODELS_PATH}
+      - SCHEMAS_PATH=${SCHEMAS_PATH}
+      - MOCK_PATH=${MOCK_PATH}
+
+    volumes:
+      - ./../../${BUCKET}:/app/${BUCKET}
+      - ./../../config:/app/config
+
+    depends_on:
+      training:
+        condition: service_completed_successfully
+
+  # Drift Service
+  drift:
+    image: ${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${ENV}-image-${VERSION}
+    container_name: ${ENV}_drift_container_${VERSION}
+
+    command:
+      - python
+      - scripts/drift/drift.py
+
+    environment:
+      - API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
+
+      - DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}
+      - DOCKERHUB_REPOSITORY=${DOCKERHUB_REPOSITORY}
+      - DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN}
+
+      - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
+      - TRAINING_PATH=${TRAINING_PATH}
+      - INFERENCE_PATH=${INFERENCE_PATH}
+      - TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
+      - MODELS_PATH=${MODELS_PATH}
+      - SCHEMAS_PATH=${SCHEMAS_PATH}
+      - MOCK_PATH=${MOCK_PATH}
+
+    volumes:
+      - ./../../${BUCKET}:/app/${BUCKET}
+      - ./../../config:/app/config
+
+    depends_on:
+      evaluating:
+        condition: service_completed_successfully
+
+volumes:
+  datasets:
+    labels:
+      environment: "development"

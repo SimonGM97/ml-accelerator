@@ -18,14 +18,14 @@ LOGGER = get_logger(name=__name__)
 
 @timing
 def drift_pipeline(
-    param_name: str = None,
+    param1: str = None,
     debug: bool = False
 ) -> None:
     # Log arguments
     log_params(
         logger=LOGGER,
         **{
-            'param_name': param_name,
+            'param1': param1,
             'debug': debug
         }
     )
@@ -49,20 +49,20 @@ def drift_pipeline(
 
 # conda deactivate
 # source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/drift/drift.py --param_name param_value
+# .ml_accel_venv/bin/python scripts/drift/drift.py --param1 None
 if __name__ == "__main__":
     # Define parser
-    parser = argparse.ArgumentParser(description='Model drift script.')
+    # parser = argparse.ArgumentParser(description='Model drift script.')
 
     # Add arguments
-    parser.add_argument('--param_name', type=str, default=None, choices=['param_value', None])
+    # parser.add_argument('--param1', type=str, default=None, choices=['param_value', 'None'])
 
     # Extract arguments from parser
-    args = parser.parse_args()
-    param_name: str = eval(args.param_name)
+    # args = parser.parse_args()
+    # param1: str = eval(args.param1)
 
     # Run main
     drift_pipeline(
-        param_name=param_name,
+        # param1=param1,
         debug=False
     )

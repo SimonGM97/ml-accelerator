@@ -1,6 +1,6 @@
 #!/bin/bash
-# chmod +x ./scripts/bash/main.sh
-# ./scripts/bash/main.sh
+# chmod +x ./scripts/bash/workflows/main.sh
+# ./scripts/bash/workflows/main.sh
 
 # Install yq (if necessary)
 chmod +x ./scripts/bash/install_yq.sh
@@ -19,7 +19,7 @@ chmod +x ./scripts/bash/image_building.sh
 ./scripts/bash/image_building.sh
 
 # Ruun model building workflow
-chmod +x ./scripts/bash/model_building_workflow.sh
-./scripts/bash/model_building_workflow.sh
+chmod +x ./scripts/bash/model_building.sh
+./scripts/bash/model_building.sh
 
 # docker container run -it dev-base-image:v1.0.0

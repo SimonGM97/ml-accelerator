@@ -94,8 +94,7 @@ class ModelTuner:
             task=self.task,
             data_storage_env=self.data_storage_env,
             model_storage_env=self.model_storage_env,
-            bucket=self.bucket,
-            models_path=self.models_path
+            bucket=self.bucket
         )
         self.models: List[Model] = None
 
@@ -310,8 +309,6 @@ class ModelTuner:
             parameters['storage_env'] = self.model_storage_env
         if 'bucket' not in parameters.keys():
             parameters['bucket'] = self.bucket
-        if 'models_path' not in parameters.keys():
-            parameters['models_path'] = self.models_path
 
         if 'task' not in parameters.keys():
             parameters['task'] = self.task

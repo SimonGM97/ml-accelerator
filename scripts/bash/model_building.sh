@@ -1,6 +1,6 @@
 #!/bin/bash
-# chmod +x ./scripts/bash/model_building_workflow.sh
-# ./scripts/bash/model_building_workflow.sh
+# chmod +x ./scripts/bash/model_building.sh
+# ./scripts/bash/model_building.sh
 
 # Unset environment variables
 unset VERSION ENV BUCKET \
@@ -76,28 +76,28 @@ VERSION=${VERSION} \
     UPDATE_PROD_MODEL=${UPDATE_PROD_MODEL} \
     INFERENCE_PORT=${INFERENCE_PORT} \
     docker-compose \
-    -f docker/docker-compose.yaml \
+    -f docker/model_building/docker-compose-model-building.yaml \
     --env-file .env \
     up
 
 # Remove running services
-# VERSION=${VERSION} \
-#     ENV=${ENV} \
-#     BUCKET=${BUCKET} \
-#     FIT_TRANSFORMERS=${FIT_TRANSFORMERS} \
-#     SAVE_TRANSFORMERS=${SAVE_TRANSFORMERS} \
-#     PERSIST_DATASETS=${PERSIST_DATASETS} \
-#     WRITE_MODE=${WRITE_MODE} \
-#     TRAIN_PROD_PIPE=${TRAIN_PROD_PIPE} \
-#     TRAIN_STAGING_PIPES=${TRAIN_STAGING_PIPES} \
-#     TRAIN_DEV_PIPES=${TRAIN_DEV_PIPES} \
-#     EVALUATE_PROD_PIPE=${EVALUATE_PROD_PIPE} \
-#     EVALUATE_STAGING_PIPES=${EVALUATE_STAGING_PIPES} \
-#     EVALUATE_DEV_PIPES=${EVALUATE_DEV_PIPES} \
-#     UPDATE_MODEL_STAGES=${UPDATE_MODEL_STAGES} \
-#     UPDATE_PROD_MODEL=${UPDATE_PROD_MODEL} \
-#     INFERENCE_PORT=${INFERENCE_PORT} \
-#     docker-compose \
-#     -f docker/docker-compose.yaml \
-#     --env-file .env \
-#     down
+VERSION=${VERSION} \
+    ENV=${ENV} \
+    BUCKET=${BUCKET} \
+    FIT_TRANSFORMERS=${FIT_TRANSFORMERS} \
+    SAVE_TRANSFORMERS=${SAVE_TRANSFORMERS} \
+    PERSIST_DATASETS=${PERSIST_DATASETS} \
+    WRITE_MODE=${WRITE_MODE} \
+    TRAIN_PROD_PIPE=${TRAIN_PROD_PIPE} \
+    TRAIN_STAGING_PIPES=${TRAIN_STAGING_PIPES} \
+    TRAIN_DEV_PIPES=${TRAIN_DEV_PIPES} \
+    EVALUATE_PROD_PIPE=${EVALUATE_PROD_PIPE} \
+    EVALUATE_STAGING_PIPES=${EVALUATE_STAGING_PIPES} \
+    EVALUATE_DEV_PIPES=${EVALUATE_DEV_PIPES} \
+    UPDATE_MODEL_STAGES=${UPDATE_MODEL_STAGES} \
+    UPDATE_PROD_MODEL=${UPDATE_PROD_MODEL} \
+    INFERENCE_PORT=${INFERENCE_PORT} \
+    docker-compose \
+    -f docker/model_building/docker-compose-model-building.yaml \
+    --env-file .env \
+    down
