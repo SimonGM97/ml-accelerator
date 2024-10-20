@@ -1,26 +1,17 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.utils.datasets.data_helper import DataHelper
+from ml_accelerator.data_processing.transformers.transformer import Transformer
 from ml_accelerator.utils.logging.logger_helper import get_logger
 
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
-
 from typing import List, Tuple
 
 
 # Get logger
-LOGGER = get_logger(
-    name=__name__,
-    level=Params.LEVEL,
-    txt_fmt=Params.TXT_FMT,
-    json_fmt=Params.JSON_FMT,
-    filter_lvls=Params.FILTER_LVLS,
-    log_file=Params.LOG_FILE,
-    backup_count=Params.BACKUP_COUNT
-)
+LOGGER = get_logger(name=__name__)
 
 
-class DataTransformer(DataHelper):
+class DataStandardizer(Transformer):
 
     # Pickled attrs
     pickled_attrs = [
@@ -31,17 +22,14 @@ class DataTransformer(DataHelper):
 
     def __init__(
         self,
+        transformer_id: str = None,
         target: str = Params.TARGET,
-        dataset_name: str = Params.DATASET_NAME,
         encode_target: bool = Params.ENCODE_TARGET,
         scale_num_features: bool = Params.SCALE_NUM_FEATURES,
         encode_cat_features: bool = Params.ENCODE_CAT_FEATURES
     ) -> None:
         # Instanciate parent classes
-        super().__init__(
-            target=target,
-            dataset_name=dataset_name
-        )
+        super().__init__(transformer_id=transformer_id)
 
         # Set other attributes
         self.target: str = target
@@ -57,6 +45,10 @@ class DataTransformer(DataHelper):
         self.num_scaler: StandardScaler = None
         self.cat_ohe: OneHotEncoder = None
 
+    """
+    Required methods (from Transformer abstract methods)
+    """
+
     def transform(
         self,
         X: pd.DataFrame,
@@ -67,7 +59,7 @@ class DataTransformer(DataHelper):
         
         return X, y
 
-    def fit_tranform(
+    def fit_transform(
         self,
         X: pd.DataFrame,
         y: pd.DataFrame = None
@@ -76,6 +68,13 @@ class DataTransformer(DataHelper):
         X, y = self.transformer_pipeline(X=X, y=y, fit=True)
 
         return X, y
+
+    def diagnose(self) -> None:
+        return None
+    
+    """
+    Non-required methods
+    """
 
     def transformer_pipeline(
         self,
@@ -185,11 +184,4 @@ class DataTransformer(DataHelper):
         X = pd.concat([X[self.num_cols], X_cat], axis=1)
 
         return X
-    
-    def save(self) -> None:
-        # Run self.save_transformer
-        self.save_transformer(transformer_name='data_transformer')
 
-    def load(self) -> None:
-        # Run self.load_transformer
-        self.load_transformer(transformer_name='data_transformer')

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from ml_accelerator.data_processing.etl import ExtractTransformLoad
 from ml_accelerator.data_processing.transformers.data_cleaner import DataCleaner
-from ml_accelerator.data_processing.transformers.data_standardizer import DataTransformer
+from ml_accelerator.data_processing.transformers.data_standardizer import DataStandardizer
 from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
@@ -42,16 +42,15 @@ def data_pipeline(
     )
     
     # Instanciate DataCleaner
-    DC: DataCleaner = DataCleaner()
+    DC: DataCleaner = DataCleaner(transformer_id='base')
 
-    # Instanciate DataTransformer
-    DT: DataTransformer = DataTransformer()
+    # Instanciate DataStandardizer
+    DS: DataStandardizer = DataStandardizer(transformer_id='base')
 
     # Instanciate ML Pipeline
     MLP: MLPipeline = MLPipeline(
-        DC=DC,
-        DT=DT,
-        model=None
+        transformers=[DC, DS],
+        estimator=None
     )
 
     # Run ML Pipeline

@@ -1,14 +1,10 @@
-from ml_accelerator.config.params import Params
-from ml_accelerator.data_processing.transformers.data_cleaner import DataCleaner
-from ml_accelerator.data_processing.transformers.data_standardizer import DataTransformer
-from ml_accelerator.modeling.models.classification_model import ClassificationModel
-from ml_accelerator.modeling.models.regression_model import RegressionModel
+from ml_accelerator.data_processing.transformers.transformer import Transformer
+from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.utils.logging.logger_helper import get_logger
 from ml_accelerator.utils.timing.timing_helper import timing
 
 import pandas as pd
 import numpy as np
-
 from typing import List, Tuple
 import warnings
 
@@ -17,36 +13,24 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 # Get logger
-LOGGER = get_logger(
-    name=__name__,
-    level=Params.LEVEL,
-    txt_fmt=Params.TXT_FMT,
-    json_fmt=Params.JSON_FMT,
-    filter_lvls=Params.FILTER_LVLS,
-    log_file=Params.LOG_FILE,
-    backup_count=Params.BACKUP_COUNT
-)
+LOGGER = get_logger(name=__name__)
 
 
 class MLPipeline:
 
     def __init__(
         self,
-        DC: DataCleaner,
-        DT: DataTransformer,
-        model: ClassificationModel | RegressionModel = None
+        transformers: List[Transformer],
+        estimator: Model = None
     ) -> None:
-        # Data Processing attributes
-        self.DC: DataCleaner = DC
-        self.DT: DataTransformer = DT
-
-        # Modeling attributes
-        self.model: ClassificationModel | RegressionModel = model
+        # Define attributes
+        self.transformers: List[Transformer] = transformers
+        self.estimator: Model = estimator
 
         # Model attributes
-        if self.model is not None:
-            self.pipeline_id: str = self.model.model_id
-            self.task: str = self.model.task
+        if self.estimator is not None:
+            self.pipeline_id: str = self.estimator.model_id
+            self.task: str = self.estimator.task
 
     @timing
     def transform(
@@ -56,43 +40,28 @@ class MLPipeline:
         persist_datasets: bool = False,
         write_mode: str = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        # Clean X & y
-        X, y = self.DC.transform(X=X, y=y)
+        # Run transforer steps
+        for transformer in self.transformers:
+            # Run transform method
+            X, y = transformer.transform(X=X, y=y)
 
-        # Persist datasets
-        if persist_datasets:
-            # Persist X_clean
-            self.DC.persist_dataset(
-                df=X, 
-                df_name='X_clean',
-                write_mode=write_mode
-            )
+            # Persist datasets
+            if persist_datasets:
+                # Persist X
+                transformer.persist_dataset(
+                    df=X,
+                    df_name=f'X_{transformer.__class__.__name__}',
+                    write_mode=write_mode,
+                    mock=False
+                )
 
-            # Persist y_clean
-            self.DC.persist_dataset(
-                df=y,
-                df_name='y_clean',
-                write_mode=write_mode
-            )
-        
-        # Transform X & y
-        X, y = self.DT.transform(X=X, y=y)
-
-        # Persist datasets
-        if persist_datasets:
-            # Persist X_trans
-            self.DC.persist_dataset(
-                df=X, 
-                df_name='X_trans',
-                write_mode=write_mode
-            )
-
-            # Persist y_trans
-            self.DC.persist_dataset(
-                df=y,
-                df_name='y_trans',
-                write_mode=write_mode
-            )
+                # Persist y
+                transformer.persist_dataset(
+                    df=y,
+                    df_name=f'y_{transformer.__class__.__name__}',
+                    write_mode=write_mode,
+                    mock=False
+                )
 
         return X, y
 
@@ -104,43 +73,35 @@ class MLPipeline:
         persist_datasets: bool = False,
         write_mode: str = None
     ) -> Tuple[pd.DataFrame, pd.Series]:
-        # Run DC.fit_transform method
-        X, y = self.DC.fit_transform(X=X, y=y)
+        # Run transforer steps
+        for idx in range(len(self.transformers)):
+            # Extract transformer
+            transformer: Transformer = self.transformers[idx]
 
-        # Persist datasets
-        if persist_datasets:
-            # Persist X_clean
-            self.DC.persist_dataset(
-                df=X, 
-                df_name='X_clean',
-                write_mode=write_mode
-            )
+            # Run fit_transform method
+            X, y = transformer.fit_transform(X=X, y=y)
 
-            # Persist y_clean
-            self.DC.persist_dataset(
-                df=y,
-                df_name='y_clean',
-                write_mode=write_mode
-            )
-        
-        # Run DT.fit_transform method
-        X, y = self.DT.fit_tranform(X=X, y=y)
+            # Re-set transformer
+            self.transformers[idx] = transformer
 
-        # Persist datasets
-        if persist_datasets:
-            # Persist X_trans
-            self.DC.persist_dataset(
-                df=X, 
-                df_name='X_trans',
-                write_mode=write_mode
-            )
+            # Persist datasets
+            if persist_datasets:
+                # Persist X
+                transformer.persist_dataset(
+                    df=X,
+                    df_name=f'X_{transformer.__class__.__name__}',
+                    write_mode=write_mode,
+                    mock=False
+                )
 
-            # Persist y_trans
-            self.DC.persist_dataset(
-                df=y,
-                df_name='y_trans',
-                write_mode=write_mode
-            )
+                # Persist y
+                transformer.persist_dataset(
+                    df=y,
+                    df_name=f'y_{transformer.__class__.__name__}',
+                    write_mode=write_mode,
+                    mock=False
+                )
+
 
         return X, y
 
@@ -157,7 +118,7 @@ class MLPipeline:
         )
 
         # Predict new y
-        y_pred = self.model.predict(X=X)
+        y_pred = self.estimator.predict(X=X)
 
         return y_pred
     
@@ -184,9 +145,9 @@ class MLPipeline:
             )
 
         # Fit the model
-        if self.model is not None:
-            self.model.fit(X=X_train, y=y_train)
-
+        if self.estimator is not None:
+            self.estimator.fit(X=X_train, y=y_train)
+    
     @timing
     def fit_predict(
         self,
@@ -213,31 +174,59 @@ class MLPipeline:
         y_test: pd.DataFrame,
         cutoff: float = None
     ) -> None:
-        self.model.evaluate_test(
+        self.estimator.evaluate_test(
             y_pred=y_pred,
             y_test=y_test,
             cutoff=cutoff
         )
 
-    def save(self) -> None:
-        # Save DataCleaner
-        self.DC.save()
+    def extract_transformer(
+        self,
+        transformer_name: str
+    ) -> Transformer:
+        # Search for requested transformer
+        for transformer in self.transformers:
+            if transformer.__class__.__name__ == transformer_name:
+                return transformer
+        
+        raise Exception(f'Transformer "{transformer_name}" was not find in {self.pipeline_id} MLPipeline.')
 
-        # Save DataTransformer
-        self.DT.save()
+    def save(self) -> None:
+        # Save transformers
+        for transformer in self.transformers:
+            # Save transformer
+            transformer.save()
 
         # Save Model
-        if self.model is not None:
-            self.model.save()
+        if self.estimator is not None:
+            self.estimator.save()
 
     def load(self) -> None:
-        # Load DataCleaner
-        self.DC.load()
+        # Load transformers
+        for idx in range(len(self.transformers)):
+            # Extract transformer
+            transformer: Transformer = self.transformers[idx]
 
-        # Load Datatransformer
-        self.DT.load()
+            # Load transformer
+            try:
+                transformer.load()
+            except Exception as e:
+                LOGGER.warning(
+                    'Unable to load %s %s.\n'
+                    'A standard %s will be loaded.\n'
+                    'Exception: %s', 
+                    transformer.transformer_id, transformer.class_name, 
+                    transformer.class_name, e
+                )
+
+                transformer.transformer_id = 'base'
+                transformer.load()
+                transformer.transformer_id = self.pipeline_id
+
+            # Re-set transformer
+            self.transformers[idx] = transformer
         
         # Load Model
-        if self.model is not None:
-            self.model.load(light=False)
+        if self.estimator is not None:
+            self.estimator.load(light=False)
 

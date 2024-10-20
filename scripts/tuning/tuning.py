@@ -17,8 +17,8 @@ def tuning_pipeline() -> None:
     DH: DataHelper = DataHelper()
 
     # Load persisted datasets
-    X: pd.DataFrame = DH.load_dataset(df_name='X_trans', filters=None)
-    y: pd.Series = DH.load_dataset(df_name='y_trans', filters=None)
+    X: pd.DataFrame = DH.load_dataset(df_name=f'X_{Params.TRANSFORMERS_STEPS[-1]}', filters=None)
+    y: pd.Series = DH.load_dataset(df_name=f'y_{Params.TRANSFORMERS_STEPS[-1]}', filters=None)
 
     # Divide into X_train, X_test, y_train & y_test
     X_train, X_test, y_train, y_test = DH.divide_datasets(

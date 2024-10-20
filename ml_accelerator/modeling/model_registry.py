@@ -1,6 +1,6 @@
 from ml_accelerator.config.params import Params
 from ml_accelerator.data_processing.transformers.data_cleaner import DataCleaner
-from ml_accelerator.data_processing.transformers.data_standardizer import DataTransformer
+from ml_accelerator.data_processing.transformers.data_standardizer import DataStandardizer
 from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.modeling.models.classification_model import ClassificationModel
 from ml_accelerator.modeling.models.regression_model import RegressionModel
@@ -28,15 +28,7 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 
 # Get logger
-LOGGER = get_logger(
-    name=__name__,
-    level=Params.LEVEL,
-    txt_fmt=Params.TXT_FMT,
-    json_fmt=Params.JSON_FMT,
-    filter_lvls=Params.FILTER_LVLS,
-    log_file=Params.LOG_FILE,
-    backup_count=Params.BACKUP_COUNT
-)
+LOGGER = get_logger(name=__name__)
 
 
 class ModelRegistry:
@@ -68,6 +60,7 @@ class ModelRegistry:
         self.model_storage_env: str = model_storage_env
         self.bucket: str = bucket
         self.models_path: str = os.environ.get('MODELS_PATH')
+        self.transformers_path: str = os.environ.get('TRANSFORMERS_PATH')
 
         # Define default models
         self.prod_model: Model = None
@@ -178,23 +171,26 @@ class ModelRegistry:
 
     def load_pipeline(
         self,
-        model_id: str
+        pipeline_id: str
     ) -> MLPipeline:
         try:
             # Instanciate Transformers
-            DC: DataCleaner = DataCleaner()
-            DT: DataTransformer = DataTransformer()
+            DC: DataCleaner = DataCleaner(transformer_id=pipeline_id)
+            DS: DataStandardizer = DataStandardizer(transformer_id=pipeline_id)
 
             # Instanciate Estimator
             if self.task in ['binary_classification', 'multiclass_classification']:
-                model = ClassificationModel(model_id=model_id)
+                model = ClassificationModel(model_id=pipeline_id)
             elif self.task == 'regression':
-                model = RegressionModel(model_id=model_id)
+                model = RegressionModel(model_id=pipeline_id)
             else:
                 raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
             
             # Instanciate MLPipeline
-            MLP: MLPipeline = MLPipeline(DC=DC, DT=DT, model=model)
+            MLP: MLPipeline = MLPipeline(
+                transformers=[DC, DS],
+                estimator=model
+            )
 
             # Load MLPipeline
             MLP.load()
@@ -204,7 +200,7 @@ class ModelRegistry:
             LOGGER.warning(
                 'Unable to load %s MLPipeline.\n'
                 'Exception: %s.',
-                model_id, e
+                pipeline_id, e
             )
             return
 
@@ -214,7 +210,7 @@ class ModelRegistry:
 
         LOGGER.info('Loading dev pipelines:')
         for model_id in tqdm(self.registry_dict['development']):
-            dev_pipes.append(self.load_pipeline(model_id=model_id))
+            dev_pipes.append(self.load_pipeline(pipeline_id=model_id))
         
         return [pipe for pipe in dev_pipes if pipe is not None]
     
@@ -224,7 +220,7 @@ class ModelRegistry:
 
         LOGGER.info('Loading staging pipelines:')
         for model_id in tqdm(self.registry_dict['staging']):
-            stage_pipes.append(self.load_pipeline(model_id=model_id))
+            stage_pipes.append(self.load_pipeline(pipeline_id=model_id))
         
         return [pipe for pipe in stage_pipes if pipe is not None]
     
@@ -240,7 +236,7 @@ class ModelRegistry:
             model_id = self.registry_dict['production'][0]
 
             # Load and return production pipeline
-            return self.load_pipeline(model_id=model_id)
+            return self.load_pipeline(pipeline_id=model_id)
         return
     
     """
@@ -545,6 +541,36 @@ class ModelRegistry:
         """
         Method that will remove any "inactive" model from the file system.
         """
+        def delete_file(root: str, directories: list, file) -> None:
+            # Construct path to delete
+            delete_path = os.path.join(*root.split('/'), *'/'.join(directories), file)
+            LOGGER.info("Deleting %s.", delete_path)
+
+            # Delete path
+            try:
+                os.remove(delete_path)
+            except Exception as e:
+                LOGGER.warning(
+                    'Unable to remove %s.\n'
+                    'Exception: %s',
+                    delete_path, e
+                )
+
+        def remove_dir(root: str, directory: str) -> None:
+            # Construct dir to delete
+            delete_dir: str = os.path.join(root, directory)
+            LOGGER.info("Deleting %s.", delete_dir)
+
+            # Delete dir
+            try:
+                os.removedirs(delete_dir)
+            except Exception as e:
+                LOGGER.warning(
+                    'Unable to delete %s.\n'
+                    'Exception: %s',
+                    delete_dir, e
+                )
+
         # Load model ids
         model_ids: List[str] = (
             self.registry_dict["production"] +
@@ -552,22 +578,35 @@ class ModelRegistry:
             self.registry_dict["development"]
         )
 
+        # Delete Models
         for root, directories, files in os.walk(
             os.path.join(self.bucket, *self.models_path.split('/'))
-        ):
+        ):  
+            # Remove files
             for file in files:
                 model_id = file.split('_')[0]
                 if model_id not in model_ids and not file.startswith('.'):
-                    delete_path = os.path.join(self.bucket, *self.models_path.split('/'), model_id, file)
-                    LOGGER.info("Deleting %s.", delete_path)
-                    try:
-                        os.remove(delete_path)
-                    except Exception as e:
-                        LOGGER.warning(
-                            'Unable to remove %s.\n'
-                            'Exception: %s',
-                            delete_path, e
-                        )
+                    delete_file(root, directories, file)
+
+            # Remove dirs
+            for directory in directories:
+                if directory not in model_ids:
+                    remove_dir(root, directory)
+        
+        # Delete Trasnformers
+        for root, directories, files in os.walk(
+            os.path.join(self.bucket, *self.transformers_path.split('/'))
+        ):
+            # Remove files
+            for file in files:
+                transformer_id = file.split('_')[0]
+                if transformer_id not in model_ids + ['base'] and not file.startswith('.'):
+                    delete_file(root, directories, file)
+            
+            # Remove dirs
+            for directory in directories:
+                if directory not in model_ids  + ['base', 'DataCleaner', 'DataStandardizer']:
+                    remove_dir(root, directory)
 
     def clean_s3_models(self) -> None:
         # Load model ids
@@ -725,55 +764,63 @@ class ModelRegistry:
 
     def load_forced_model(self) -> dict:
         # Read forced_model
-        try:
-            if self.data_storage_env == 'filesystem':
-                forced_model: dict = load_from_filesystem(
-                    path=os.path.join(self.bucket, "utils", "model_registry", "forced_model.json"),
-                    partition_cols=None,
-                    filters=None
-                )
-            elif self.data_storage_env == 'S3':
-                forced_model: dict = load_from_s3(
-                    path=f"{self.bucket}/utils/model_registry/forced_model.json",
-                    partition_cols=None,
-                    filters=None
-                )
-            else:
-                raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
-        except Exception as e:
+        if self.data_storage_env == 'filesystem':
+            forced_model: dict = load_from_filesystem(
+                path=os.path.join(self.bucket, "utils", "model_registry", "forced_model.json")
+            )
+        elif self.data_storage_env == 'S3':
+            forced_model: dict = load_from_s3(
+                path=f"{self.bucket}/utils/model_registry/forced_model.json"
+            )
+        else:
+            raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+        
+        # Validate forced_model
+        if forced_model is None:
             LOGGER.warning(
-                "Unable to load forced_model.\n"
-                "Loading default forced_model instead.\n"
-                "Exception: %s", e
+                "forced_model is None.\n"
+                "Thus, it will be re-setted."
             )
 
             # Load dummy forced_model
             forced_model: dict = {"forced_model_id": None}
+
+            # Save dummy forced_model
+            if self.data_storage_env == 'filesystem':
+                save_to_filesystem(
+                    asset=forced_model,
+                    path=os.path.join(self.bucket, "utils", "model_registry", "forced_model.json")
+                )
+            elif self.data_storage_env == 'S3':
+                save_to_s3(
+                    asset=forced_model,
+                    path=f"{self.bucket}/utils/model_registry/forced_model.json"
+                )
         
         return forced_model
 
     def load_registry_dict(self) -> None:
         # Read registry
-        try:
-            if self.data_storage_env == 'filesystem':
-                self.registry_dict: Dict[str, List[str]] = load_from_filesystem(
-                    path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
-                    partition_cols=None,
-                    filters=None
-                )
-            elif self.data_storage_env == 'S3':
-                self.registry_dict: Dict[str, List[str]] = load_from_s3(
-                    path=f"{self.bucket}/utils/model_registry/model_registry.json",
-                    partition_cols=None,
-                    filters=None
-                )
-            else:
-                raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
-        except Exception as e:
+        if self.data_storage_env == 'filesystem':
+            self.registry_dict: Dict[str, List[str]] = load_from_filesystem(
+                path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
+                partition_cols=None,
+                filters=None
+            )
+        elif self.data_storage_env == 'S3':
+            self.registry_dict: Dict[str, List[str]] = load_from_s3(
+                path=f"{self.bucket}/utils/model_registry/model_registry.json",
+                partition_cols=None,
+                filters=None
+            )
+        else:
+            raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+        
+        # Validate registry_dict
+        if self.registry_dict is None:
             LOGGER.warning(
-                "Unable to load registry_dict.\n"
-                "Loading default registry_dict instead.\n"
-                "Exception: %s", e
+                "self.registry_dict is None.\n"
+                "Thus, it will be re-setted."
             )
 
             # Load dummy registry_dict

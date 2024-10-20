@@ -40,7 +40,7 @@ def inference_pipeline(pred_id = None) -> dict:
 
     # Interpret probabilities
     if 'classification' in pipeline.task:
-        y_pred: np.ndarray = pipeline.model.interpret_score(y_pred)
+        y_pred: np.ndarray = pipeline.estimator.interpret_score(y_pred)
 
     # Prepare new inference
     inference: dict = {

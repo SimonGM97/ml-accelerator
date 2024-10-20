@@ -26,15 +26,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 # Get logger
-LOGGER = get_logger(
-    name=__name__,
-    level=Params.LEVEL,
-    txt_fmt=Params.TXT_FMT,
-    json_fmt=Params.JSON_FMT,
-    filter_lvls=Params.FILTER_LVLS,
-    log_file=Params.LOG_FILE,
-    backup_count=Params.BACKUP_COUNT
-)
+LOGGER = get_logger(name=__name__)
 
 
 class ModelTuner:
@@ -608,6 +600,10 @@ class ModelTuner:
         # Load registry
         self.model_registry.load_registry_dict()
 
+        print(self.model_registry.registry_dict)
+        if self.model_registry.registry_dict is None:
+            raise Exception('arreloco')
+
         # Load Registry Models
         self.models: List[Model] = (
             [self.model_registry.load_prod_model()]
@@ -616,3 +612,9 @@ class ModelTuner:
 
         # Drop null models
         self.models = [m for m in self.models if m is not None]
+
+        # if self.model_registry.registry_dict is not None:
+            
+        # else:
+        #     LOGGER.warning('self.model_registry.registry_dict is None.')
+        #     self.models: List[Model] = []

@@ -1,3 +1,4 @@
+from ml_accelerator.utils.logging.logger_helper import get_logger
 import pandas as pd
 import numpy as np
 import pyarrow.parquet as pq
@@ -9,6 +10,10 @@ import yaml
 from typing import List, Set, Tuple, Any
 
 
+# Get logger
+LOGGER = get_logger(name=__name__)
+
+
 def load_from_filesystem(
     path: str,
     partition_cols: List[str] = None,
@@ -17,37 +22,45 @@ def load_from_filesystem(
     # Extract format
     read_format = path.split('.')[-1]
 
-    if read_format == 'csv':
-        # Load csv file
-        asset: pd.DataFrame = pd.read_csv(path, index_col=0)
+    try:
+        if read_format == 'csv':
+            # Load csv file
+            asset: pd.DataFrame = pd.read_csv(path, index_col=0)
 
-    elif read_format == 'parquet':
-        # Create a Parquet dataset
-        dataset = pq.ParquetDataset(
-            path_or_paths=path, # files,
-            # filesystem=FS,
-            filters=filters
+        elif read_format == 'parquet':
+            # Create a Parquet dataset
+            dataset = pq.ParquetDataset(
+                path_or_paths=path, # files,
+                # filesystem=FS,
+                filters=filters
+            )
+
+            # Read the dataset into a Pandas DataFrame
+            asset: pd.DataFrame = dataset.read_pandas().to_pandas()
+
+        elif read_format == 'pickle':
+            # Load pickle file
+            with open(path, 'rb') as handle:
+                asset: dict = pickle.load(handle)
+
+        elif read_format == 'json':
+            # Load json file
+            asset: dict = json.load(open(path))
+
+        elif read_format == 'yaml':
+            # Load yaml file
+            with open(path) as file:
+                asset: dict = yaml.load(file, Loader=yaml.FullLoader)
+
+        else:
+            raise Exception(f'Invalid read_format was received: "{read_format}".\n')
+    except Exception as e:
+        LOGGER.warning(
+            'Unable to load %s from filesystem.\n'
+            'Exception: %s',
+            path, e
         )
-
-        # Read the dataset into a Pandas DataFrame
-        asset: pd.DataFrame = dataset.read_pandas().to_pandas()
-
-    elif read_format == 'pickle':
-        # Load pickle file
-        with open(path, 'rb') as handle:
-            asset: dict = pickle.load(handle)
-
-    elif read_format == 'json':
-        # Load json file
-        asset: dict = json.load(open(path))
-
-    elif read_format == 'yaml':
-        # Load yaml file
-        with open(path) as file:
-            asset: dict = yaml.load(file, Loader=yaml.FullLoader)
-
-    else:
-        raise Exception(f'Invalid read_format was received: "{read_format}".\n')
+        asset = None
 
     return asset
 

@@ -14,22 +14,13 @@ from imblearn.over_sampling import RandomOverSampler
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import train_test_split
-import yaml
 import os
 import gc
 from typing import List, Tuple
 
 
 # Get logger
-LOGGER = get_logger(
-    name=__name__,
-    level=Params.LEVEL,
-    txt_fmt=Params.TXT_FMT,
-    json_fmt=Params.JSON_FMT,
-    filter_lvls=Params.FILTER_LVLS,
-    log_file=Params.LOG_FILE,
-    backup_count=Params.BACKUP_COUNT
-)
+LOGGER = get_logger(name=__name__)
 
 
 class DataHelper:
@@ -55,11 +46,11 @@ class DataHelper:
         self.bucket: str = bucket
         self.storage_env: str = storage_env
 
+        self.raw_datasets_path: str = os.environ.get('RAW_DATASETS_PATH')
         self.training_path: str = os.environ.get('TRAINING_PATH')
         self.inference_path: str = os.environ.get('INFERENCE_PATH')
         self.transformers_path: str = os.environ.get('TRANSFORMERS_PATH')
         self.schemas_path: str = os.environ.get('SCHEMAS_PATH')
-        self.mock_path: str = os.environ.get('MOCK_PATH')
 
         self.data_extention: str = data_extention
         self.partition_cols: str = partition_cols
@@ -135,34 +126,30 @@ class DataHelper:
         return X_train, X_test, y_train, y_test
 
     def load_schema(self) -> dict:
-        try:
-            # Extract schema path
-            path: str = self.find_path(df_name=f"{self.dataset_name}_schema")
+        # Extract schema path
+        path: str = self.find_path(f"{self.dataset_name}_schema")
 
-            # Load schema
-            if self.storage_env == 'filesystem':
-                # Load from filesystem
-                schema: dict = load_from_filesystem(
-                    path=path,
-                    partition_cols=None,
-                    filters=None
-                )
-            elif self.storage_env == 'S3':
-                # Load from S3
-                schema: dict = load_from_s3(
-                    path=path,
-                    partition_cols=None,
-                    filters=None
-                )
-            else:
-                raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
-        except Exception as e:
-            LOGGER.warning(
-                'Unable to load schema from %s.\n'
-                'Schema will be re-created.\n'
-                'Exception: %s.',
-                self.dataset_name, e
+        # Load schema
+        if self.storage_env == 'filesystem':
+            # Load from filesystem
+            schema: dict = load_from_filesystem(
+                path=path,
+                partition_cols=None,
+                filters=None
             )
+        elif self.storage_env == 'S3':
+            # Load from S3
+            schema: dict = load_from_s3(
+                path=path,
+                partition_cols=None,
+                filters=None
+            )
+        else:
+            raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
+            
+        # Verify it is not an empty schema
+        if schema is None:
+            LOGGER.warning('%s schema is None, thus it will be re-created.', self.dataset_name)
 
             # Infer schema
             schema: dict = self.infer_schema()
@@ -174,7 +161,7 @@ class DataHelper:
         schema: dict
     ) -> None:
         # Extract schema path
-        path: str = self.find_path(df_name=f"{self.dataset_name}_schema")
+        path: str = self.find_path(f"{self.dataset_name}_schema")
 
         # Load schema
         if self.storage_env == 'filesystem':
@@ -294,26 +281,60 @@ class DataHelper:
 
     def find_path(
         self,
-        df_name: str,
+        asset_name: str,
         mock: bool = False
     ) -> str:
+        # Define base_path
+        if self.storage_env == 'filesystem':
+            if mock:
+                base_path: str = os.path.join(self.bucket, "mock")
+            else:
+                base_path: str = self.bucket
+        elif self.storage_env == 'S3':
+            if mock:
+                base_path: str = f"{self.bucket}/mock"
+            else:
+                base_path: str = self.bucket
+        else:
+            base_path: str = None
+
         # Define path
         if self.storage_env == 'filesystem':
-            if 'schema' in df_name:
-                path = os.path.join(self.bucket, *self.schemas_path.split('/'), f"{df_name}.yaml")
-            else:
-                if mock:
-                    path = os.path.join(self.bucket, *self.mock_path.split('/'), f"{df_name}.{self.data_extention}")
+            if 'raw' in asset_name:
+                path: str = os.path.join(base_path, *self.raw_datasets_path.split('/'), f"{asset_name}.{self.data_extention}")
+            elif 'schema' in asset_name:
+                path: str = os.path.join(base_path, *self.schemas_path.split('/'), f"{asset_name}.yaml")
+            elif 'inference' in asset_name:
+                path: str = os.path.join(base_path, *self.inference_path.split('/'), f"{asset_name}.json")
+            elif 'transformer' in asset_name:
+                transformer_name: str = self.__class__.__name__
+                transformer_id: str = getattr(self, 'transformer_id')
+
+                if transformer_id is None:
+                    path: str = os.path.join(base_path, *self.transformers_path.split('/'), transformer_name, f"{asset_name}_attrs.pickle")
                 else:
-                    path = os.path.join(self.bucket, *self.training_path.split('/'), f"{df_name}.{self.data_extention}")
+                    path: str = os.path.join(base_path, *self.transformers_path.split('/'), transformer_name, transformer_id, f"{asset_name}_attrs.pickle")
+            else:
+                path: str = os.path.join(base_path, *self.training_path.split('/'), f"{asset_name}.{self.data_extention}")
+                    
         elif self.storage_env == 'S3':
-            if 'schema' in df_name:
-                path = f"{self.bucket}/{self.schemas_path}/{df_name}.yaml"
-            else:
-                if mock:
-                    path = f"{self.bucket}/{self.mock_path}/{df_name}.{self.data_extention}"
+            if 'raw' in asset_name:
+                path: str = f"{base_path}/{self.raw_datasets_path}/{asset_name}.{self.data_extention}"
+            elif 'schema' in asset_name:
+                path: str = f"{base_path}/{self.schemas_path}/{asset_name}.yaml"
+            elif 'inference' in asset_name:
+                path: str = f"{base_path}/{self.inference_path}/{asset_name}.json"
+            elif 'transformer' in asset_name:
+                transformer_name: str = self.__class__.__name__
+                transformer_id: str = getattr(self, 'transformer_id')
+
+                if transformer_id is None:
+                    path: str = f"{base_path}/{self.transformers_path}/{transformer_name}/{asset_name}_attrs.pickle"
                 else:
-                    path = f"{self.bucket}/{self.training_path}/{df_name}.{self.data_extention}"
+                    path: str = f"{base_path}/{self.transformers_path}/{transformer_name}/{transformer_id}/{asset_name}_attrs.pickle"
+            else:
+                path: str = f"{base_path}/{self.training_path}/{asset_name}.{self.data_extention}"
+
         else:
             raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
         
@@ -376,33 +397,28 @@ class DataHelper:
         
         return df
 
-    def save_transformer(
-        self,
-        transformer_name: str
-    ) -> None:
+    def save_transformer(self) -> None:
+        # Extract path
+        transformer_id: str = getattr(self, 'transformer_id')
+        path: str = self.find_path(f'{transformer_id}_transformer')
+
         # Define attrs to save
         attrs: dict = {key: value for (key, value) in self.__dict__.items() if key in self.pickled_attrs}
 
         if self.storage_env == 'filesystem':
-            # Define base_path
-            base_path = os.path.join(self.bucket, *self.transformers_path.split('/'), transformer_name)
-
             # Save attrs to filesystem
             save_to_filesystem(
                 asset=attrs,
-                path=os.path.join(base_path, f"{transformer_name}_attrs.pickle"),
+                path=path,
                 partition_cols=None,
                 write_mode=None
             )
 
         elif self.storage_env == 'S3':
-            # Define base_path
-            base_path = f"{self.bucket}/{self.transformers_path}/{transformer_name}"
-
             # Save attrs to S3
             save_to_s3(
                 asset=attrs,
-                path=f"{base_path}/{transformer_name}_attrs.pickle",
+                path=path,
                 partition_cols=None,
                 write_mode=None
             )
@@ -410,31 +426,18 @@ class DataHelper:
         else:
             raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
 
-    def load_transformer(
-        self,
-        transformer_name: str
-    ) -> None:
+    def load_transformer(self) -> None:
+        # Extract path
+        transformer_id: str = getattr(self, 'transformer_id')
+        path: str = self.find_path(f'{transformer_id}_transformer')
+    
         if self.storage_env == 'filesystem':
-            # Define base_path
-            base_path = os.path.join(self.bucket, *self.transformers_path.split('/'), transformer_name)
-
             # Load from filesystem
-            attrs: dict = load_from_filesystem(
-                path=os.path.join(base_path, f"{transformer_name}_attrs.pickle"),
-                partition_cols=None,
-                filters=None
-            )
+            attrs: dict = load_from_filesystem(path=path, partition_cols=None, filters=None)
         
         elif self.storage_env == 'S3':
-            # Define base_path
-            base_path = f"{self.bucket}/{self.transformers_path}/{transformer_name}"
-
             # Load from S3
-            attrs: dict = load_from_s3(
-                path=f"{base_path}/{transformer_name}_attrs.pickle",
-                partition_cols=None,
-                filters=None
-            )
+            attrs: dict = load_from_s3(path=path, partition_cols=None, filters=None)
 
         else:
             raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')

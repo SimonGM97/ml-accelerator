@@ -25,15 +25,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 
 # Get logger
-LOGGER = get_logger(
-    name=__name__,
-    level=Params.LEVEL,
-    txt_fmt=Params.TXT_FMT,
-    json_fmt=Params.JSON_FMT,
-    filter_lvls=Params.FILTER_LVLS,
-    log_file=Params.LOG_FILE,
-    backup_count=Params.BACKUP_COUNT
-)
+LOGGER = get_logger(name=__name__)
 
 
 class Model(ABC):
@@ -191,7 +183,7 @@ class Model(ABC):
         return None
 
     """
-    Abstract methods
+    Abstract methods - must be implemented by subclasses
     """
 
     @abstractmethod

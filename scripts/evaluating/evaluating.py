@@ -36,7 +36,8 @@ def evaluating_pipeline(
 
         # Encode y_test
         if 'classification' in pipeline.task:
-            y_test: pd.DataFrame = pipeline.DT._encode_target(y=y_test)
+            DS = pipeline.extract_transformer('DataStandardizer')
+            y_test: pd.DataFrame = DS._encode_target(y=y_test)
 
         # Evaluate predictions
         pipeline.evaluate(y_pred=y_pred, y_test=y_test)
@@ -128,7 +129,7 @@ def evaluating_pipeline(
 
 # conda deactivate
 # source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/evaluation/evaluation.py --evaluate_prod_pipe True --evaluate_staging_pipes True --evaluate_dev_pipes True  --update_model_stages True  --update_prod_model True
+# .ml_accel_venv/bin/python scripts/evaluating/evaluating.py --evaluate_prod_pipe True --evaluate_staging_pipes True --evaluate_dev_pipes True  --update_model_stages True  --update_prod_model True
 if __name__ == "__main__":
     # Define parser
     parser = argparse.ArgumentParser(description='Model evaluating script.')

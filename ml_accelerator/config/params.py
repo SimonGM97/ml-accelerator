@@ -104,6 +104,12 @@ class Params:
     IMPORTANCE_METHOD: str
 
     """
+    MLPIPELINE PARAMETERS
+    """
+
+    TRANSFORMERS_STEPS: List[str]
+
+    """
     WORKFLOW PARAMETERS
     """
     # MODEL BUILDING
@@ -250,6 +256,13 @@ class Params:
         FEATURE_IMPORTANCE_PARAMS: dict = config.get("FEATURE_IMPORTANCE_PARAMS")
 
         cls.IMPORTANCE_METHOD: str = FEATURE_IMPORTANCE_PARAMS.get("IMPORTANCE_METHOD")
+
+        """
+        MLPIPELINE PARAMETERS
+        """
+        MLPIPELINE_PARAMS: dict = config.get("MLPIPELINE_PARAMS")
+
+        cls.TRANSFORMERS_STEPS: List[str] = MLPIPELINE_PARAMS.get("TRANSFORMERS_STEPS")
 
         """
         WORKFLOW PARAMETERS

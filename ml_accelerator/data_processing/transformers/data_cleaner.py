@@ -1,31 +1,22 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.utils.datasets.data_helper import DataHelper
+from ml_accelerator.data_processing.transformers.transformer import Transformer
 from ml_accelerator.utils.logging.logger_helper import get_logger
 
 import pandas as pd
 import numpy as np
 from sklearn.impute import SimpleImputer
 import gc
-import os
-
 from typing import List, Tuple, Dict
 
 # Get logger
-LOGGER = get_logger(
-    name=__name__,
-    level=Params.LEVEL,
-    txt_fmt=Params.TXT_FMT,
-    json_fmt=Params.JSON_FMT,
-    filter_lvls=Params.FILTER_LVLS,
-    log_file=Params.LOG_FILE,
-    backup_count=Params.BACKUP_COUNT
-)
+LOGGER = get_logger(name=__name__)
 
 
-class DataCleaner(DataHelper):
+class DataCleaner(Transformer):
 
     # Pickled attrs
     pickled_attrs = [
+        'model_id',
         'outliers_dict',
         'str_imputer',
         'num_imputer'
@@ -33,15 +24,13 @@ class DataCleaner(DataHelper):
 
     def __init__(
         self,
+        transformer_id: str = None,
         target: str = Params.TARGET,
         dataset_name: str = Params.DATASET_NAME,
         z_threshold: float = Params.OUTLIER_Z_THRESHOLD
     ) -> None:
         # Instanciate parent classes
-        super().__init__(
-            target=target,
-            dataset_name=dataset_name
-        )
+        super().__init__(transformer_id=transformer_id)
 
         # Set attributes
         self.target: str = target
@@ -65,6 +54,10 @@ class DataCleaner(DataHelper):
         # Load self.schema
         self.schema: dict = self.load_schema()
     
+    """
+    Required methods (from Transformer abstract methods)
+    """
+
     def transform(
         self, 
         X: pd.DataFrame, 
@@ -85,6 +78,13 @@ class DataCleaner(DataHelper):
 
         return X, y
     
+    def diagnose(self) -> None:
+        return None
+    
+    """
+    Non-required methods
+    """
+
     def cleaner_pipeline(
         self,
         X: pd.DataFrame,
@@ -303,7 +303,7 @@ class DataCleaner(DataHelper):
     def remove_unexpected_values(
         self,
         df: pd.DataFrame
-    ):
+    ) -> pd.DataFrame:
         # Extract allowed values
         allowed_vals: Dict[str, List[str]] = {
             field['name']: field['allowed_values'] for field in self.schema['fields']
@@ -397,10 +397,13 @@ class DataCleaner(DataHelper):
         
         return df
 
-    def save(self) -> None:
-        # Run self.save_transformer
-        self.save_transformer(transformer_name='data_cleaner')
 
-    def load(self) -> None:
-        # Run self.load_transformer
-        self.load_transformer(transformer_name='data_cleaner')
+# conda deactivate
+# source .ml_accel_venv/bin/activate
+# .ml_accel_venv/bin/python ml_accelerator/data_processing/transformers/data_cleaner.py
+if __name__ == "__main__":
+    # Instanciate DataCleaner
+    DC: DataCleaner = DataCleaner()
+
+    # Load DataCleaner
+    DC.load()
