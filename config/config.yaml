@@ -5,26 +5,11 @@
 # PROJECT PARAMETERS
 PROJECT_PARAMS:
   VERSION: v1.0.0
-  PROJECT_NAME: ml-accelerator
+  PROJECT_NAME: ml_accelerator
   TARGET: diagnosis # target column
   # species (iris), wine_class (wine), diagnosis (breast_cancer), disease_progression (diabetes), MedHouseVal (california_housing)
   TASK: binary_classification 
   # regression, binary_classification, multiclass_classification, forecasting
-
-# ENVIRONMENT PARAMETERS
-ENV_PARAMS:
-  ENV: dev
-  REGION: sa-east-1
-  BUCKET: breast-cancer-bucket-dev
-  # project-name-bucket-env
-  DATA_STORAGE_ENV: filesystem
-  # filesystem, S3
-  MODEL_STORAGE_ENV: filesystem
-  # filesystem, S3, mlflow
-  COMPUTE_ENV: local
-  # local, sagemaker
-  DOCKER_REPOSITORY: dockerhub
-  # dockerhub, ecr
 
 # # # # #
 # DATA PROCESSING PARAMETERS
@@ -301,11 +286,6 @@ LOG_PARAMS:
   FILTER_LVLS: null
   LOG_FILE: null # no log file will be written
   BACKUP_COUNT: null
-
-# DEPLOYMENT PARAMETERS
-DEPLOYMENT_PARAMS:
-  INFERENCE_HOST: 0.0.0.0
-  INFERENCE_PORT: 8080
 
 # INFRASTRUCTURE PARAMETERS
 INFRASTRUCTURE_PARAMS: null

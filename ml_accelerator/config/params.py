@@ -40,17 +40,6 @@ class Params:
     TARGET: str
     TASK: str
 
-    # ENVIRONMENT PARAMETERS
-    ENV: str
-    REGION: str
-    BUCKET: str
-    # CWD: Path
-
-    DATA_STORAGE_ENV: str
-    MODEL_STORAGE_ENV: str
-    COMPUTE_ENV: str
-    DOCKER_REPOSITORY: str
-
     """
     DATA PROCESSING PARAMETERS
     """
@@ -158,10 +147,6 @@ class Params:
     LOG_FILE: str
     BACKUP_COUNT: int
 
-    # DEPLOYMENT PARAMETERS
-    INFERENCE_HOST: str
-    INFERENCE_PORT: int
-
     # INFRASTRUCTURE PARAMETERS
 
     # COMPUTE PARAMETERS
@@ -187,19 +172,6 @@ class Params:
         cls.PROJECT_NAME: str = PROJECT_PARAMS.get("PROJECT_NAME")
         cls.TARGET: str = PROJECT_PARAMS.get("TARGET")
         cls.TASK: str = PROJECT_PARAMS.get("TASK")
-
-        # ENVIRONMENT PARAMETERS
-        ENV_PARAMS: dict = config.get("ENV_PARAMS")
-
-        cls.ENV: str = ENV_PARAMS.get("ENV")
-        cls.REGION: str = ENV_PARAMS.get("REGION")
-        cls.BUCKET: str = ENV_PARAMS.get("BUCKET")
-        # cls.CWD = find_base_repo_root(project_name=cls.PROJECT_NAME)
-
-        cls.DATA_STORAGE_ENV: str = ENV_PARAMS.get("DATA_STORAGE_ENV")
-        cls.MODEL_STORAGE_ENV: str = ENV_PARAMS.get("MODEL_STORAGE_ENV")
-        cls.COMPUTE_ENV: str = ENV_PARAMS.get("COMPUTE_ENV")
-        cls.DOCKER_REPOSITORY: str = ENV_PARAMS.get("DOCKER_REPOSITORY")
 
         """
         DATA PARAMETERS
@@ -339,12 +311,6 @@ class Params:
         cls.FILTER_LVLS: str = LOG_PARAMS.get("FILTER_LVLS")
         cls.LOG_FILE: str = LOG_PARAMS.get("LOG_FILE")
         cls.BACKUP_COUNT: int = LOG_PARAMS.get("BACKUP_COUNT")
-
-        # DEPLOYMENT PARAMETERS
-        DEPLOYMENT_PARAMS: dict = config.get("DEPLOYMENT_PARAMS")
-
-        cls.INFERENCE_HOST: str = DEPLOYMENT_PARAMS.get("INFERENCE_HOST")
-        cls.INFERENCE_PORT: int = DEPLOYMENT_PARAMS.get("INFERENCE_PORT")
 
         # INFRASTRUCTURE PARAMETERS
         INFRASTRUCTURE_PARAMS: dict = config.get("INFRASTRUCTURE_PARAMS")

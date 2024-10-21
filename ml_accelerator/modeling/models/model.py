@@ -31,17 +31,17 @@ LOGGER = get_logger(name=__name__)
 class Model(ABC):
 
     # Pickled attrs
-    pickled_attrs = []
+    pickled_attrs: List[str] = []
 
     # csv attrs
-    csv_attrs = []
+    csv_attrs: List[str] = []
 
     # Parquet attrs
-    parquet_attrs = []
+    parquet_attrs: List[str] = []
     partition_cols = {}
 
     # Metrics
-    metric_names = []
+    metric_names: List[str] = []
 
     def __init__(
         self,
@@ -54,9 +54,7 @@ class Model(ABC):
         target: str = Params.TARGET,
         selected_features: List[str] = None,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
-        importance_method: str = Params.IMPORTANCE_METHOD,
-        storage_env: str = Params.MODEL_STORAGE_ENV,
-        bucket: str = Params.BUCKET
+        importance_method: str = Params.IMPORTANCE_METHOD
     ) -> None:
         # Register Parameters
         if model_id is not None:
@@ -68,8 +66,8 @@ class Model(ABC):
         self.stage: str = stage
 
         # Storage Parameters
-        self.storage_env: str = storage_env
-        self.bucket: str = bucket
+        self.storage_env: str = os.environ.get('DATA_STORAGE_ENV')
+        self.bucket: str = os.environ.get('BUCKET')
         self.models_path: str = os.environ.get('MODELS_PATH')
 
         # Model Parameters

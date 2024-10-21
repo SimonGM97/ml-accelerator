@@ -1,0 +1,14 @@
+[theme]
+# Custom color for primary buttons and elements
+primaryColor="#1b9ae9"
+
+# Background color of the app
+backgroundColor="#FFFFFF"
+
+# Background color of secondary elements like sidebars
+secondaryBackgroundColor="#F0F2F6"
+
+# General text color
+textColor="#31333F"
+
+font="sans serif"

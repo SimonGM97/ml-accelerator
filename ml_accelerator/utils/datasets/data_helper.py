@@ -33,27 +33,25 @@ class DataHelper:
         target: str = Params.TARGET,
         task: str = Params.TASK,
         dataset_name: str = Params.DATASET_NAME,
-        bucket: str = Params.BUCKET,
-        storage_env: str = Params.DATA_STORAGE_ENV,
         data_extention: str = Params.DATA_EXTENTION,
         partition_cols: str = Params.PARTITION_COLUMNS
     ) -> None:
         # Set attributes
         self.target: str = target
         self.task: str = task
-
         self.dataset_name: str = dataset_name
-        self.bucket: str = bucket
-        self.storage_env: str = storage_env
+        self.data_extention: str = data_extention
+        self.partition_cols: str = partition_cols
+
+        # Environment parameters
+        self.bucket: str = os.environ.get('BUCKET')
+        self.storage_env: str = os.environ.get('DATA_STORAGE_ENV')
 
         self.raw_datasets_path: str = os.environ.get('RAW_DATASETS_PATH')
         self.training_path: str = os.environ.get('TRAINING_PATH')
         self.inference_path: str = os.environ.get('INFERENCE_PATH')
         self.transformers_path: str = os.environ.get('TRANSFORMERS_PATH')
         self.schemas_path: str = os.environ.get('SCHEMAS_PATH')
-
-        self.data_extention: str = data_extention
-        self.partition_cols: str = partition_cols
 
     def divide_datasets(
         self,

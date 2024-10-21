@@ -9,8 +9,6 @@ import boto3
 from botocore.exceptions import ClientError
 import pickle
 import json
-import yaml
-import logging
 from pathlib import Path
 from tqdm import tqdm
 from typing import List, Set, Tuple, Any
@@ -38,12 +36,8 @@ def get_secrets(secret_name: str = 'access_keys') -> str:
 
     return secret
 
-# Load config file
-with open(os.path.join("config", "config.yaml")) as file:
-    config: dict = yaml.load(file, Loader=yaml.FullLoader)
-
 # Load region
-REGION = config["ENV_PARAMS"]["REGION"]
+REGION = os.environ.get("REGION")
 
 # Extract secrets
 ACCESS_KEYS = get_secrets(secret_name='access_keys')

@@ -67,9 +67,7 @@ class RegressionModel(Model):
         target: str = Params.TARGET,
         selected_features: List[str] = None,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
-        importance_method: str = Params.IMPORTANCE_METHOD,
-        storage_env: str = Params.MODEL_STORAGE_ENV,
-        bucket: str = Params.BUCKET
+        importance_method: str = Params.IMPORTANCE_METHOD
     ) -> None:
         # Instanciate parent class to inherit attrs & methods
         super().__init__(
@@ -81,9 +79,7 @@ class RegressionModel(Model):
             target=target,
             selected_features=selected_features,
             optimization_metric=optimization_metric,
-            importance_method=importance_method,
-            storage_env=storage_env,
-            bucket=bucket
+            importance_method=importance_method
         )
 
         # Correct self.hyperparameters

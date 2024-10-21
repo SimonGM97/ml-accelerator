@@ -14,6 +14,7 @@ from ml_accelerator.utils.filesystem.filesystem_helper import (
     load_from_filesystem,
     save_to_filesystem
 )
+from ml_accelerator.utils.filesystem.filesystem_helper import find_paths, find_subdirs
 from ml_accelerator.utils.logging.logger_helper import get_logger
 from tqdm import tqdm
 import os
@@ -38,10 +39,7 @@ class ModelRegistry:
     def __init__(
         self,
         n_candidates: int = Params.N_CANDIDATES,
-        task: str = Params.TASK,
-        data_storage_env: str = Params.DATA_STORAGE_ENV,
-        model_storage_env: str = Params.MODEL_STORAGE_ENV,
-        bucket: str = Params.BUCKET
+        task: str = Params.TASK
     ) -> None:
         """
         Initialize the ModelRegistry
@@ -54,10 +52,10 @@ class ModelRegistry:
         self.n_candidates: int = n_candidates
         self.task: str = task
 
-        # Storage Params
-        self.data_storage_env: str = data_storage_env
-        self.model_storage_env: str = model_storage_env
-        self.bucket: str = bucket
+        # Environment Params
+        self.data_storage_env: str = os.environ.get('DATA_STORAGE_ENV')
+        self.model_storage_env: str = os.environ.get('MODEL_STORAGE_ENV')
+        self.bucket: str = os.environ.get('BUCKET')
         self.models_path: str = os.environ.get('MODELS_PATH')
         self.transformers_path: str = os.environ.get('TRANSFORMERS_PATH')
 
@@ -539,35 +537,33 @@ class ModelRegistry:
         """
         Method that will remove any "inactive" model from the file system.
         """
-        def delete_file(root: str, directories: list, file) -> None:
-            # Construct path to delete
-            delete_path = os.path.join(*root.split('/'), *'/'.join(directories), file)
-            LOGGER.info("Deleting %s.", delete_path)
-
-            # Delete path
-            try:
-                os.remove(delete_path)
-            except Exception as e:
-                LOGGER.warning(
-                    'Unable to remove %s.\n'
-                    'Exception: %s',
-                    delete_path, e
-                )
-
-        def remove_dir(root: str, directory: str) -> None:
-            # Construct dir to delete
-            delete_dir: str = os.path.join(root, directory)
-            LOGGER.info("Deleting %s.", delete_dir)
-
-            # Delete dir
-            try:
-                os.removedirs(delete_dir)
-            except Exception as e:
-                LOGGER.warning(
-                    'Unable to delete %s.\n'
-                    'Exception: %s',
-                    delete_dir, e
-                )
+        def delete_files(bucket: str, directory: str, keep_ids: List[str]) -> None:
+            # Extract paths
+            paths: List[str] = find_paths(bucket=bucket, directory=directory)
+            for path in paths:
+                if not any([keep_id in path for keep_id in keep_ids]):
+                    LOGGER.info("Deleting %s.", path)
+                    try:
+                        os.remove(path)
+                    except Exception as e:
+                        LOGGER.warning(
+                            'Unable to remove %s.\n'
+                            'Exception: %s', path, e
+                        )
+        
+        def delete_subdirs(bucket: str, directory: str, keep_ids: List[str]) -> None:
+            # Extract subdirs
+            subdirs: List[str] = find_subdirs(bucket=bucket, directory=directory)
+            for subdir in subdirs:
+                if not any([keep_id in subdir for keep_id in keep_ids]):
+                    LOGGER.info("Deleting %s.", subdir)
+                    try:
+                        os.removedirs(subdir)
+                    except Exception as e:
+                        LOGGER.warning(
+                            'Unable to remove %s.\n'
+                            'Exception: %s', subdir, e
+                        )
 
         # Load model ids
         model_ids: List[str] = (
@@ -576,35 +572,33 @@ class ModelRegistry:
             self.registry_dict["development"]
         )
 
-        # Delete Models
-        for root, directories, files in os.walk(
-            os.path.join(self.bucket, *self.models_path.split('/'))
-        ):  
-            # Remove files
-            for file in files:
-                model_id = file.split('_')[0]
-                if model_id not in model_ids and not file.startswith('.'):
-                    delete_file(root, directories, file)
-
-            # Remove dirs
-            for directory in directories:
-                if directory not in model_ids:
-                    remove_dir(root, directory)
+        # Delete Model files
+        delete_files(
+            bucket=self.bucket, 
+            directory=self.models_path, 
+            keep_ids=model_ids
+        )
         
-        # Delete Trasnformers
-        for root, directories, files in os.walk(
-            os.path.join(self.bucket, *self.transformers_path.split('/'))
-        ):
-            # Remove files
-            for file in files:
-                transformer_id = file.split('_')[0]
-                if transformer_id not in model_ids + ['base'] and not file.startswith('.'):
-                    delete_file(root, directories, file)
-            
-            # Remove dirs
-            for directory in directories:
-                if directory not in model_ids  + ['base', 'DataCleaner', 'DataStandardizer']:
-                    remove_dir(root, directory)
+        # Delete Model dirs
+        delete_subdirs(
+            bucket=self.bucket, 
+            directory=self.models_path, 
+            keep_ids=model_ids
+        )
+        
+        # Delete Transformer files
+        delete_files(
+            bucket=self.bucket, 
+            directory=self.transformers_path, 
+            keep_ids=model_ids + ['base']
+        )
+
+        # Delete Transformer dirs
+        delete_subdirs(
+            bucket=self.bucket, 
+            directory=self.transformers_path, 
+            keep_ids=model_ids + ['base']
+        )
 
     def clean_s3_models(self) -> None:
         # Load model ids

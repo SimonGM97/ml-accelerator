@@ -35,7 +35,7 @@ class ClassificationModel(Model):
     """
 
     # Pickled attrs
-    pickled_attrs = [
+    pickled_attrs: List[str] = [
         # Register Parameters
         'model_id',
         'version',
@@ -70,15 +70,15 @@ class ClassificationModel(Model):
     ]
 
     # csv attrs
-    csv_attrs = [
+    csv_attrs: List[str] = [
         'feature_importance_df'
     ]
 
     # Parquet attrs
-    parquet_attrs = []
+    parquet_attrs: List[str] = []
 
     # Metrics
-    metric_names = [
+    metric_names: List[str] = [
         'f1_score',
         'precision_score',
         'recall_score',
@@ -98,8 +98,6 @@ class ClassificationModel(Model):
         selected_features: List[str] = None,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
         importance_method: str = Params.IMPORTANCE_METHOD,
-        storage_env: str = Params.MODEL_STORAGE_ENV,
-        bucket: str = Params.BUCKET,
         cutoff: float = None
     ) -> None:
         # Instanciate parent class to inherit attrs & methods
@@ -113,9 +111,7 @@ class ClassificationModel(Model):
             target=target,
             selected_features=selected_features,
             optimization_metric=optimization_metric,
-            importance_method=importance_method,
-            storage_env=storage_env,
-            bucket=bucket
+            importance_method=importance_method
         )
 
         # Correct self.hyperparameters

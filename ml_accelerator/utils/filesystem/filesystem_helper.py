@@ -16,21 +16,40 @@ LOGGER = get_logger(name=__name__)
 
 def find_paths(
     bucket: str,
-    subdir: str
+    directory: str
 ) -> List[str]:
     # Define empty paths
-    paths: List[str] = []
+    found_paths: List[str] = []
 
     # Define search dir
-    search_dir = os.path.join(bucket, *subdir.split('/'))
+    search_dir = os.path.join(bucket, *directory.split('/'))
 
     # Append paths
-    for root, directories, files in os.walk(search_dir):
+    for root, subdirs, files in os.walk(search_dir):
         for file in files:
-            new_path = os.path.join(*root.split('/'), *'/'.join(directories), file)
-            paths.append(new_path)
+            new_path = os.path.join(*root.split('/'), *'/'.join(subdirs), file)
+            found_paths.append(new_path)
 
-    return paths
+    return found_paths
+
+
+def find_subdirs(
+    bucket: str,
+    directory: str
+) -> List[str]:
+    # Define empty paths
+    found_subdirs: List[str] = []
+
+    # Define search dir
+    search_dir = os.path.join(bucket, *directory.split('/'))
+
+    # Append paths
+    for root, subdirs, _ in os.walk(search_dir):
+        for subdir in subdirs:
+            new_subdir = os.path.join(*root.split('/'), subdir)
+            found_subdirs.append(new_subdir)
+
+    return subdirs
 
 
 def load_from_filesystem(
@@ -53,7 +72,7 @@ def load_from_filesystem(
             prefix = key.replace(".parquet", "")
 
             # Find paths
-            paths = find_paths(bucket=bucket, subdir=prefix)
+            paths = find_paths(bucket=bucket, directory=prefix)
 
             # Create a Parquet dataset
             dataset = pq.ParquetDataset(
@@ -91,6 +110,32 @@ def load_from_filesystem(
 
     return asset
 
+
+def remove_directory(
+    bucket: str,
+    directory: str
+) -> None:
+    # Remove files
+    paths: List[str] = find_paths(bucket=bucket, directory=directory)
+    for path in paths:
+        try:
+            os.remove(path)
+        except Exception as e:
+            LOGGER.warning(
+                'Unable to remove %s.\n'
+                'Exception: %s', path, e
+            )
+    
+    # Remove subdirs
+    subdirs: List[str] = find_subdirs(bucket=bucket, directory=directory)
+    for subdir in subdirs:
+        try:
+            os.removedirs(subdir)
+        except Exception as e:
+            LOGGER.warning(
+                'Unable to remove %s.\n'
+                'Exception: %s', subdir, e
+            )
 
 def save_to_filesystem(
     asset,
@@ -175,11 +220,3 @@ def save_to_filesystem(
 
     else:
         raise Exception(f'Invalid save_format was received: "{save_format}".\n')
-    
-
-def remove_directory(directory: str) -> None:
-    for root, directories, files in os.walk(directory):
-        for file in files:
-            delete_path = os.path.join(directory, file)
-            # print(f"Deleting {delete_path}.")
-            os.remove(delete_path)
