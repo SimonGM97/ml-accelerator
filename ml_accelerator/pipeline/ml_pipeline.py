@@ -71,6 +71,7 @@ class MLPipeline:
         self,
         X: pd.DataFrame,
         y: pd.Series,
+        ignore_steps: List[str] = None,
         persist_datasets: bool = False,
         write_mode: str = None
     ) -> Tuple[pd.DataFrame, pd.Series]:
@@ -79,8 +80,13 @@ class MLPipeline:
             # Extract transformer
             transformer: Transformer = self.transformers[idx]
 
-            # Run fit_transform method
-            X, y = transformer.fit_transform(X=X, y=y)
+            if ignore_steps is None or transformer.class_name not in ignore_steps:
+                # Run fit_transform method
+                X, y = transformer.fit_transform(X=X, y=y)
+            else:
+                LOGGER.info('Ignoring fitting for %s', transformer.class_name)
+                # Run transform method
+                X, y = transformer.transform(X=X, y=y)
 
             # Re-set transformer
             self.transformers[idx] = transformer
@@ -130,12 +136,14 @@ class MLPipeline:
         self,
         X_train: pd.DataFrame,
         y_train: pd.DataFrame,
-        fit_transformers: bool = True
+        fit_transformers: bool = True,
+        ignore_steps: List[str] = None
     ) -> None:
         if fit_transformers:
             # Run fit_transform method
             X_train, y_train = self.fit_transform(
                 X=X_train, y=y_train,
+                ignore_steps=ignore_steps,
                 persist_datasets=False,
                 write_mode=None
             )

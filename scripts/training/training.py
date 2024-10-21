@@ -32,7 +32,8 @@ def training_pipeline(
         pipeline.fit(
             X_train=X_train,
             y_train=y_train,
-            fit_transformers=False
+            fit_transformers=True,
+            ignore_steps=['FeatureSelector']
         )
 
         # Save MLPipeline

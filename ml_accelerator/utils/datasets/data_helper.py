@@ -74,14 +74,14 @@ class DataHelper:
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, 
                 test_size=test_size, 
-                random_state=23111997,
+                random_state=int(os.environ.get("SEED")),
                 stratify=y
             )
         elif self.task == 'regression':
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, 
                 test_size=test_size, 
-                random_state=23111997
+                random_state=int(os.environ.get("SEED"))
             )
         elif self.task == 'forecasting':
             train_periods: int = int(test_size * X.shape[0])

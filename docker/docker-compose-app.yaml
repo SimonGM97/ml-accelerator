@@ -18,7 +18,7 @@ services:
       - app.py
 
     environment:
-      - API_KEY_PLACEHOLDER=${API_KEY_PLACEHOLDER}
+      - KXY_API_KEY=${KXY_API_KEY}
 
       - DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}
       - DOCKERHUB_REPOSITORY=${DOCKERHUB_REPOSITORY}
@@ -31,6 +31,8 @@ services:
       - MODELS_PATH=${MODELS_PATH}
       - SCHEMAS_PATH=${SCHEMAS_PATH}
       - MOCK_PATH=${MOCK_PATH}
+
+      - SEED=${SEED}
 
     ports:
       - "${INFERENCE_PORT}:${INFERENCE_PORT}"

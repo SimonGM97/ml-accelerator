@@ -20,7 +20,7 @@ def load_transformers_list(transformer_id: str) -> List[Transformer]:
     # Assert that list has expected steps
     for idx, expected_name in enumerate(Params.TRANSFORMERS_STEPS):
         # Extract transformer name
-        actual_name: str = transformers[idx].__class__.__name__
+        actual_name: str = transformers[idx].class_name
 
         assert actual_name == expected_name
 

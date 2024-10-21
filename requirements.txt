@@ -26,3 +26,4 @@ statsmodels==0.14.1
 streamlit==1.33.0
 xgboost==2.0.3
 tqdm==4.66.5
+tsfresh==0.20.2

@@ -11,12 +11,13 @@ License: BSD 3 clause
 from __future__ import print_function, division
 import numpy as np
 import scipy as sp
+import os
 from sklearn.utils import check_random_state, check_X_y
 from sklearn.base import TransformerMixin, BaseEstimator
 
 
 # Set random seed
-np.random.seed(23111997)
+np.random.seed(int(os.environ.get("SEED")))
 
 
 class BorutaPy(BaseEstimator, TransformerMixin):

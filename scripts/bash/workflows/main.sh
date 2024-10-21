@@ -2,6 +2,9 @@
 # chmod +x ./scripts/bash/workflows/main.sh
 # ./scripts/bash/workflows/main.sh
 
+# Deactivate conda
+conda deactivate
+
 # Install yq (if necessary)
 chmod +x ./scripts/bash/install_yq.sh
 ./scripts/bash/install_yq.sh

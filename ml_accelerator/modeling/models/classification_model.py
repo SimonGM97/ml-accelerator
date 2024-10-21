@@ -20,7 +20,7 @@ from sklearn.metrics import (
     roc_curve
 )
 from functools import partial
-
+import os
 from typing import List
 
 
@@ -158,7 +158,7 @@ class ClassificationModel(Model):
             "scale_pos_weight": None if Params.CLASS_WEIGHT is None else Params.CLASS_WEIGHT[1] / Params.CLASS_WEIGHT[0],
             "importance_type": 'gain',
             "verbose": -1,
-            "random_state": 23111997,
+            "random_state": int(os.environ.get("SEED")),
             "n_jobs": -1
         }
 
@@ -201,6 +201,8 @@ class ClassificationModel(Model):
                     "metric": 'multi_logloss',
                     # "num_class": n_classes,
                 })
+
+            hyper_parameters.update(**{"verbose": -1})
 
         elif self.algorithm == 'xgboost':
             if self.task == 'binary_classification':
