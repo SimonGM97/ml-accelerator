@@ -3,15 +3,15 @@
 # ./scripts/bash/workflows/main.sh
 
 # Deactivate conda
-conda deactivate
+# conda deactivate
 
 # Install yq (if necessary)
 chmod +x ./scripts/bash/install_yq.sh
 ./scripts/bash/install_yq.sh
 
 # Clean ports
-chmod +x ./scripts/bash/kill_ports.sh
-./scripts/bash/kill_ports.sh
+# chmod +x ./scripts/bash/kill_ports.sh
+# ./scripts/bash/kill_ports.sh
 
 # Run unit & integrity Tests
 chmod +x ./scripts/bash/tests_running.sh

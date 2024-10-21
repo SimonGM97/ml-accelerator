@@ -46,10 +46,7 @@ class ModelTuner:
         importance_method: str = Params.IMPORTANCE_METHOD,
         n_candidates: int = Params.N_CANDIDATES,
         min_performance: float = Params.MIN_PERFORMANCE,
-        val_splits: int = Params.VAL_SPLITS,
-        model_storage_env: str = Params.MODEL_STORAGE_ENV,
-        data_storage_env: str = Params.DATA_STORAGE_ENV,
-        bucket: str = Params.BUCKET
+        val_splits: int = Params.VAL_SPLITS
     ) -> None:
         # Define attributes
         self.algorithms: List[str] = algorithms
@@ -65,9 +62,10 @@ class ModelTuner:
         self.min_performance: float = min_performance
         self.val_splits: int = val_splits
         
-        self.model_storage_env: str = model_storage_env
-        self.data_storage_env: str = data_storage_env
-        self.bucket: str = bucket
+        # Environment parameters
+        self.model_storage_env: str = os.environ.get("MODEL_STORAGE_ENV")
+        self.data_storage_env: str = os.environ.get("DATA_STORAGE_ENV")
+        self.bucket: str = os.environ.get("BUCKET")
         self.models_path: str = os.environ.get('MODELS_PATH')
 
         # Define search space parameters
@@ -83,10 +81,7 @@ class ModelTuner:
         # Define default attrs
         self.model_registry: ModelRegistry = ModelRegistry(
             n_candidates=self.n_candidates,
-            task=self.task,
-            data_storage_env=self.data_storage_env,
-            model_storage_env=self.model_storage_env,
-            bucket=self.bucket
+            task=self.task
         )
         self.models: List[Model] = None
 
@@ -297,11 +292,6 @@ class ModelTuner:
             parameters['stage'] = 'development'
 
         # Storage Parameters
-        if 'storage_env' not in parameters.keys():
-            parameters['storage_env'] = self.model_storage_env
-        if 'bucket' not in parameters.keys():
-            parameters['bucket'] = self.bucket
-
         if 'task' not in parameters.keys():
             parameters['task'] = self.task
 

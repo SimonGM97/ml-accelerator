@@ -62,7 +62,51 @@ services:
     #   timeout: 10s
 
   # Streamlit Web App Service
-  # frontend:
+  web-app:
+    image: ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    container_name: ${ENV}_web_app_container_${VERSION}
+
+    command:
+      - streamlit
+      - run
+      - scripts/web_app/web_app.py
+
+    environment:
+      - ENV=${ENV}
+      - REGION=${REGION}
+      - BUCKET=${BUCKET}
+      - DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
+      - MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
+      - COMPUTE_ENV=${COMPUTE_ENV}
+
+      - KXY_API_KEY=${KXY_API_KEY}
+
+      - DOCKER_REPOSITORY_TYPE=${DOCKER_REPOSITORY_TYPE}
+      - DOCKER_USERNAME=${DOCKER_USERNAME}
+      - DOCKER_REPOSITORY_NAME=${DOCKER_REPOSITORY_NAME}
+      - DOCKER_TOKEN=${DOCKER_TOKEN}
+
+      - INFERENCE_HOST=${INFERENCE_HOST}
+      - INFERENCE_PORT=${INFERENCE_PORT}
+      - WEBAPP_HOST=${WEBAPP_HOST}
+      - WEBAPP_PORT=${WEBAPP_PORT}
+
+      - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
+      - TRAINING_PATH=${TRAINING_PATH}
+      - INFERENCE_PATH=${INFERENCE_PATH}
+      - TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
+      - MODELS_PATH=${MODELS_PATH}
+      - SCHEMAS_PATH=${SCHEMAS_PATH}
+      - MOCK_PATH=${MOCK_PATH}
+
+      - SEED=${SEED}
+
+    ports:
+      - "${WEBAPP_PORT}:${WEBAPP_PORT}"
+
+    volumes:
+      - ../${BUCKET}:/app/${BUCKET}
+      - ../config:/app/config
 
   # # Dummy service
   # dummy-service:

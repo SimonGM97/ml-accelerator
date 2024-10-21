@@ -3,8 +3,8 @@
 # ./scripts/bash/workflows/run_app.sh
 
 # Clean ports
-chmod +x ./scripts/bash/kill_ports.sh
-./scripts/bash/kill_ports.sh
+# chmod +x ./scripts/bash/kill_ports.sh
+# ./scripts/bash/kill_ports.sh
 
 # Build Docker images
 chmod +x ./scripts/bash/image_building.sh

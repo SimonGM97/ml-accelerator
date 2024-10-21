@@ -9,6 +9,7 @@ from scripts.drift.drift import drift_pipeline
 
 from flask import Flask, request, json, jsonify
 import pandas as pd
+import os
 
 
 # Instanciate Flask application
@@ -123,7 +124,7 @@ def drift() -> json:
 if __name__ == "__main__":
     # Run application
     app.run(
-        host=Params.INFERENCE_HOST, 
-        port=Params.INFERENCE_PORT, 
+        host=os.environ.get("INFERENCE_HOST"),
+        port=os.environ.get("INFERENCE_PORT"), 
         debug=True
     )
