@@ -5,6 +5,10 @@
 # Deactivate conda
 # conda deactivate
 
+# Set environment variables
+chmod +x ./scripts/bash/set_env_vars.sh
+./scripts/bash/set_env_vars.sh
+
 # Install yq (if necessary)
 chmod +x ./scripts/bash/install_yq.sh
 ./scripts/bash/install_yq.sh

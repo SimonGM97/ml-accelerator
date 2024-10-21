@@ -2,6 +2,10 @@
 # chmod +x ./scripts/bash/workflows/run_app.sh
 # ./scripts/bash/workflows/run_app.sh
 
+# Set environment variables
+chmod +x ./scripts/bash/set_env_vars.sh
+./scripts/bash/set_env_vars.sh
+
 # Clean ports
 # chmod +x ./scripts/bash/kill_ports.sh
 # ./scripts/bash/kill_ports.sh

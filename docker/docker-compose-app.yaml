@@ -70,6 +70,10 @@ services:
       - streamlit
       - run
       - scripts/web_app/web_app.py
+      - --server.port
+      - ${WEBAPP_PORT}
+      - --server.address
+      - ${WEBAPP_HOST}
 
     environment:
       - ENV=${ENV}

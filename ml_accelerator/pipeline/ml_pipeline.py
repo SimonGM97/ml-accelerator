@@ -44,7 +44,6 @@ class MLPipeline:
         for transformer in self.transformers:
             # Run transform method
             X, y = transformer.transform(X=X, y=y)
-            print(f'X.shape after {transformer.__class__.__name__} has been ran: {X.shape}')
 
             # Persist datasets
             if persist_datasets:
@@ -84,7 +83,6 @@ class MLPipeline:
                 # Run fit_transform method
                 X, y = transformer.fit_transform(X=X, y=y)
             else:
-                LOGGER.info('Ignoring fitting for %s', transformer.class_name)
                 # Run transform method
                 X, y = transformer.transform(X=X, y=y)
 
@@ -118,13 +116,11 @@ class MLPipeline:
         X: pd.DataFrame
     ) -> np.ndarray:
         # Apply data transformation pipeline
-        print(f'X ini ({X.shape}):')
         X, _ = self.transform(
             X=X, y=None, 
             persist_datasets=False, 
             write_mode=None
         )
-        print(f'X final ({X.shape}):')
 
         # Predict new y
         y_pred = self.estimator.predict(X=X)
