@@ -225,12 +225,14 @@ class DataHelper:
         schema: dict = {
             "name": self.dataset_name,
             "path": self.training_path,
+            "length": df.shape[0],
             "fields": [
                 {
-                    "name": col_name,
+                    "name": col_name.replace(' ', '_'),
                     "type": dtypes[col_name],
                     "mandatory": True,
                     "nullable": True if df[col_name].isnull().sum() > 0 else False,
+                    "inf_allowed": False,
                     "min_value": extract_min_value(col_name=col_name),
                     "max_value": extract_max_value(col_name=col_name),
                     "allowed_values": extract_allowed_values(col_name=col_name),

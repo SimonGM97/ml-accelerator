@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from sklearn.impute import SimpleImputer
 import gc
+from pprint import pformat
 from typing import List, Tuple, Dict
 
 # Get logger
@@ -47,7 +48,7 @@ class DataCleaner(Transformer):
         self.simple_impute_cols: List[str] = None
 
         # Load attrs
-        self.outliers_dict: dict = None
+        self.outliers_dict: Dict[str, Tuple[float]] = None
         self.str_imputer: SimpleImputer = None
         self.num_imputer: SimpleImputer = None
 
@@ -100,6 +101,9 @@ class DataCleaner(Transformer):
             del y
         gc.collect()
 
+        # Rename columns
+        df = self.rename_columns(df=df)
+
         # Drop dummy columns
         df = self.drop_dummy_columns(df=df)
         
@@ -108,7 +112,10 @@ class DataCleaner(Transformer):
 
         # Drop duplicates
         df = self.drop_duplicates(df=df) 
-
+        
+        # Add missing rows
+        df = self.add_missing_rows(df=df)
+        
         # Set data types
         df = self.set_data_types(df=df)
         
@@ -169,15 +176,25 @@ class DataCleaner(Transformer):
         else:
             return df, None
 
+    def rename_columns(
+        self,
+        df: pd.DataFrame
+    ) -> pd.DataFrame:
+        # Replace empty spaces with '_'
+        df.columns = df.columns.str.replace(' ', '_')
+
+        return df
+
     def drop_dummy_columns(
         self,
         df: pd.DataFrame
     ) -> pd.DataFrame:
-        # Drop columns where all values are NaN
-        df.dropna(axis=1, how='all', inplace=True)
+        if df.shape[0] > 0.05 * self.schema['length']:
+            # Drop columns where all values are NaN
+            df.dropna(axis=1, how='all', inplace=True)
 
-        # Drop columns with all values equal to 0
-        df = df.loc[:, (df!=0).any(axis=0)]
+            # Drop columns with all values equal to 0
+            df = df.loc[:, (df!=0).any(axis=0)]
 
         # Drop unexpected columns
         drop_columns = [c for c in df.columns if c not in [f['name'] for f in self.schema['fields']]]
@@ -194,13 +211,13 @@ class DataCleaner(Transformer):
             # Set self.num_cols
             self.num_cols: List[str] = [
                 field['name'] for field in self.schema['fields']
-                if field['type'] in ['int', 'float'] and field['name'] in df.columns
+                if ('float' in field['type'] or 'int' in field['type']) and field['name'] in df.columns
             ]
 
             # Set self.cat_cols
             self.cat_cols: List[str] = [
                 field['name'] for field in self.schema['fields']
-                if field['type'] in ['string'] and field['name'] in df.columns
+                if field['type'] in ['string', 'object'] and field['name'] in df.columns
             ]
 
             # Set self.datetime_cols
@@ -234,10 +251,23 @@ class DataCleaner(Transformer):
         self,
         df: pd.DataFrame
     ) -> pd.DataFrame:
+        # Drop duplicate columns & rows
         df: pd.DataFrame = (
             df.loc[:, ~df.columns.duplicated(keep='first')]
             .drop_duplicates()
         )
+
+        return df
+
+    def add_missing_rows(
+        self,
+        df: pd.DataFrame
+    ) -> pd.DataFrame:
+        # Add expected idx
+        # expected_idx = pd.RangeIndex(df.index.min(), df.index.max(), step=1)
+
+        # Fill missing rows with nan values
+        # df = df.reindex(expected_idx).fillna(np.nan)
 
         return df
 
@@ -331,26 +361,53 @@ class DataCleaner(Transformer):
             return mean - self.z_threshold * std, mean + self.z_threshold * std
         
         # Populate self.outliers_dict
-        self.outliers_dict = {
+        self.outliers_dict: Dict[str, Tuple[float]] = {
             col: find_threshold(col) for col in self.num_cols
         }
 
+        LOGGER.info('New self.outliers_dict was populated:\n%s', pformat(self.outliers_dict))
+
     def correct_outliers(
         self,
-        df: pd.DataFrame
+        df: pd.DataFrame,
+        debug: bool = False
     ) -> pd.DataFrame:
         for col, thresholds in self.outliers_dict.items():
             # Find low outliers mask
             low_outliers_mask = df[col] < thresholds[0]
 
+            if debug and low_outliers_mask.sum() > 0:
+                LOGGER.debug(
+                    'Low outliers found in %s (min value allowed - %s):\n%s',
+                    col, thresholds[0], df.loc[low_outliers_mask, col]
+                )
+
             # Correct low outliers
             df.loc[low_outliers_mask, col] = thresholds[0]
+
+            if debug and low_outliers_mask.sum() > 0:
+                LOGGER.debug(
+                    'Low outliers corrected:\n%s',
+                    df.loc[low_outliers_mask, col]
+                )
 
             # Find high outliers mask
             high_outliers_mask = df[col] > thresholds[1]
 
+            if debug and high_outliers_mask.sum() > 0:
+                LOGGER.debug(
+                    'High outliers found in %s (max value allowed - %s):\n%s',
+                    col, thresholds[1], df.loc[high_outliers_mask, col]
+                )
+
             # Replace high outliers
             df.loc[high_outliers_mask, col] = thresholds[1]
+
+            if debug and high_outliers_mask.sum() > 0:
+                LOGGER.debug(
+                    'High outliers corrected:\n%s',
+                    df.loc[high_outliers_mask, col]
+                )
 
         return df
     
@@ -367,6 +424,8 @@ class DataCleaner(Transformer):
         self.num_imputer = SimpleImputer(strategy='median', keep_empty_features=True)
         if len(self.num_cols) > 0:
             self.num_imputer.fit(df[self.num_cols])
+
+        LOGGER.info('New imputers have been fitted.')
     
     def fill_nulls(
         self,

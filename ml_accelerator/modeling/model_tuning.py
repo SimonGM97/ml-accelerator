@@ -599,8 +599,7 @@ class ModelTuner:
     def load(self) -> None:
         # Load registry
         self.model_registry.load_registry_dict()
-
-        print(self.model_registry.registry_dict)
+        
         if self.model_registry.registry_dict is None:
             raise Exception('arreloco')
 

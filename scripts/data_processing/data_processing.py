@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from ml_accelerator.data_processing.etl import ExtractTransformLoad
-from ml_accelerator.data_processing.transformers.data_cleaner import DataCleaner
-from ml_accelerator.data_processing.transformers.data_standardizer import DataStandardizer
+from ml_accelerator.utils.transformers.transformers_utils import load_transformers_list
 from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
@@ -41,15 +40,12 @@ def data_pipeline(
         write_mode=write_mode
     )
     
-    # Instanciate DataCleaner
-    DC: DataCleaner = DataCleaner(transformer_id='base')
-
-    # Instanciate DataStandardizer
-    DS: DataStandardizer = DataStandardizer(transformer_id='base')
+    # Extract transformers
+    transformers = load_transformers_list(transformer_id='base')
 
     # Instanciate ML Pipeline
     MLP: MLPipeline = MLPipeline(
-        transformers=[DC, DS],
+        transformers=transformers,
         estimator=None
     )
 
@@ -74,9 +70,15 @@ def data_pipeline(
     return X, y
 
 
-# conda deactivate
-# source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/data_processing/data_processing.py --fit_transformers True --save_transformers True --persist_datasets True --write_mode overwrite
+"""
+source .ml_accel_venv/bin/activate
+conda deactivate
+.ml_accel_venv/bin/python scripts/data_processing/data_processing.py \
+    --fit_transformers True \
+    --save_transformers True \
+    --persist_datasets True \
+    --write_mode overwrite
+"""
 if __name__ == "__main__":
     # Define parser
     parser = argparse.ArgumentParser(description='Data processing script.')

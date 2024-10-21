@@ -11,7 +11,6 @@ from sklearn.datasets import (
     fetch_california_housing
 )
 import gc
-import os
 import requests
 from typing import List, Tuple, Dict
 
@@ -39,7 +38,10 @@ class ExtractTransformLoad(DataHelper):
 
     def extract(
         self,
-        pred_id = None
+        pred_id = None,
+        persist: bool = False,
+        write_mode: str = None,
+        mock_datasets: bool = False
     ) -> List[pd.DataFrame]:
         """
         Extract input datasets from various sources
@@ -87,12 +89,26 @@ class ExtractTransformLoad(DataHelper):
 
             # Concatenate datasets
             df: pd.DataFrame = pd.concat([y, X], axis=1)
+
+            # Delete df from memory
+            del X
+            del y
+            gc.collect()
         else:
             raise NotImplementedError(f'Source {self.source} has not yet been implemented.\n')
         
         # Extract pred_id
         if pred_id is not None:
             df: pd.DataFrame = df.loc[pred_id:pred_id]
+
+        # Persist datasets
+        if persist:
+            self.persist_dataset(
+                df=df,
+                df_name='df_raw',
+                write_mode=write_mode,
+                mock=mock_datasets
+            )
 
         return [df]
 
@@ -127,6 +143,7 @@ class ExtractTransformLoad(DataHelper):
         """
         Load datasets into training directory
         """
+        # Persist datasets
         if persist:
             # Persist X
             self.persist_dataset(
@@ -154,7 +171,12 @@ class ExtractTransformLoad(DataHelper):
         mock_datasets: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run extract method
-        datasets: List[str] = self.extract(pred_id=pred_id)
+        datasets: List[str] = self.extract(
+            pred_id=pred_id,
+            persist=persist_datasets,
+            write_mode=write_mode,
+            mock_datasets=mock_datasets
+        )
 
         # Run transform method
         X, y = self.transform(datasets=datasets)

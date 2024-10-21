@@ -15,6 +15,8 @@ class DataStandardizer(Transformer):
 
     # Pickled attrs
     pickled_attrs = [
+        'num_cols',
+        'cat_cols',
         'label_encoder',
         'num_scaler',
         'cat_ohe'
@@ -31,13 +33,13 @@ class DataStandardizer(Transformer):
         # Instanciate parent classes
         super().__init__(transformer_id=transformer_id)
 
-        # Set other attributes
+        # Set non-load attributes
         self.target: str = target
         self.encode_target: bool = encode_target
         self.scale_num_features: bool = scale_num_features
         self.encode_cat_features: bool = encode_cat_features
 
-        # Set default attributes
+        # Set attributes to load
         self.num_cols: List[str] = None
         self.cat_cols: List[str] = None
         
@@ -54,8 +56,8 @@ class DataStandardizer(Transformer):
         X: pd.DataFrame,
         y: pd.DataFrame = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        # Run self.transformer_pipeline
-        X, y = self.transformer_pipeline(X=X, y=y, fit=False)
+        # Run self.standardizer_pipeline
+        X, y = self.standardizer_pipeline(X=X, y=y, fit=False)
         
         return X, y
 
@@ -64,8 +66,8 @@ class DataStandardizer(Transformer):
         X: pd.DataFrame,
         y: pd.DataFrame = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        # Run self.transformer_pipeline
-        X, y = self.transformer_pipeline(X=X, y=y, fit=True)
+        # Run self.standardizer_pipeline
+        X, y = self.standardizer_pipeline(X=X, y=y, fit=True)
 
         return X, y
 
@@ -76,48 +78,45 @@ class DataStandardizer(Transformer):
     Non-required methods
     """
 
-    def transformer_pipeline(
+    def standardizer_pipeline(
         self,
         X: pd.DataFrame,
         y: pd.DataFrame = None,
         fit: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        # Find column attributes
-        self.find_column_attrs(X=X)
+        # Find self.num_cols & self.cat_cols
+        if fit:
+            self.find_num_cols(X=X)
+            self.find_cat_cols(X=X)
 
+        # Encode target
         if self.encode_target and y is not None:
             # Fit self.label_encoder
             if fit:
                 self.fit_label_encoder(y=y)
 
-            # Encode target
+            # Run target encoder
             y = self._encode_target(y=y)
 
+        # Scale numerical features
         if self.scale_num_features and len(self.num_cols) > 0:
             # Fit self.num_scaler
             if fit:
                 self.fit_num_scaler(X=X)
 
-            # Scale numerical features
+            # Run StandardScaler
             X = self._scale_num_features(X=X)
 
+        # Encode categorical features
         if self.encode_cat_features and len(self.cat_cols) > 0:
             # Fit self.cat_ohe
             if fit:
                 self.fit_ohe(X=X)
             
-            # Encode categorical features
+            # Run OneHotEncoder
             X = self._encode_cat_features(X=X)
 
         return X, y
-
-    def find_column_attrs(
-        self,
-        X: pd.DataFrame
-    ) -> None:
-        # Define attributes
-        self.num_cols: List[str] = list(X.select_dtypes(include=['number']).columns)
-        self.cat_cols: List[str] = list(X.select_dtypes(exclude=['number']).columns)
 
     def fit_label_encoder(
         self,
@@ -137,6 +136,13 @@ class DataStandardizer(Transformer):
         y[self.target] = self.label_encoder.transform(y=y[self.target].values)
 
         return y
+
+    def find_num_cols(
+        self,
+        X: pd.DataFrame
+    ) -> None:
+        # Define self.num_cols
+        self.num_cols: List[str] = list(X.select_dtypes(include=['number']).columns)
 
     def fit_num_scaler(
         self,
@@ -160,6 +166,13 @@ class DataStandardizer(Transformer):
 
         return X
 
+    def find_cat_cols(
+        self,
+        X: pd.DataFrame
+    ) -> None:
+        # Define self.cat_cols
+        self.cat_cols: List[str] = list(X.select_dtypes(exclude=['number']).columns)
+
     def fit_ohe(
         self,
         X: pd.DataFrame
@@ -176,8 +189,8 @@ class DataStandardizer(Transformer):
     ) -> pd.DataFrame:
         # Apply self.cat_ohe
         X_cat = pd.DataFrame(
-            self.cat_ohe.transform(X[self.cat_ohe]),
-            columns=self.cat_ohe.get_feature_names_out(self.cat_ohe),
+            self.cat_ohe.transform(X[self.cat_cols]).toarray(),
+            columns=self.cat_ohe.get_feature_names_out(self.cat_cols),
             index=X.index
         )
 

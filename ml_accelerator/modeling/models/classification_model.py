@@ -202,10 +202,6 @@ class ClassificationModel(Model):
                     # "num_class": n_classes,
                 })
 
-            hyper_parameters.update(**{
-                "verbose": -1
-            })
-
         elif self.algorithm == 'xgboost':
             if self.task == 'binary_classification':
                 hyper_parameters.update(**{

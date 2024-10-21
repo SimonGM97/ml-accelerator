@@ -44,6 +44,7 @@ class MLPipeline:
         for transformer in self.transformers:
             # Run transform method
             X, y = transformer.transform(X=X, y=y)
+            print(f'X.shape after {transformer.__class__.__name__} has been ran: {X.shape}')
 
             # Persist datasets
             if persist_datasets:
@@ -111,11 +112,13 @@ class MLPipeline:
         X: pd.DataFrame
     ) -> np.ndarray:
         # Apply data transformation pipeline
+        print(f'X ini ({X.shape}):')
         X, _ = self.transform(
             X=X, y=None, 
             persist_datasets=False, 
             write_mode=None
         )
+        print(f'X final ({X.shape}):')
 
         # Predict new y
         y_pred = self.estimator.predict(X=X)
@@ -213,7 +216,7 @@ class MLPipeline:
             except Exception as e:
                 LOGGER.warning(
                     'Unable to load %s %s.\n'
-                    'A standard %s will be loaded.\n'
+                    'A base %s will be loaded.\n'
                     'Exception: %s', 
                     transformer.transformer_id, transformer.class_name, 
                     transformer.class_name, e

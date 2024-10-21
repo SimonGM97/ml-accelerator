@@ -55,6 +55,7 @@ dummy*
 dummy.py
 dummy.ipynb
 dummy_bucket/
+analize_datasets.ipynb
 __archive/
 *.csv
 *.xlsx

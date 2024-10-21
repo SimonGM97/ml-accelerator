@@ -33,7 +33,6 @@ def evaluating_pipeline(
     ) -> None:
         # Predict test
         y_pred: np.ndarray = pipeline.predict(X=X_test)
-
         # Encode y_test
         if 'classification' in pipeline.task:
             DS = pipeline.extract_transformer('DataStandardizer')
@@ -127,9 +126,16 @@ def evaluating_pipeline(
     LOGGER.info("%s", MR)
 
 
-# conda deactivate
-# source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/evaluating/evaluating.py --evaluate_prod_pipe True --evaluate_staging_pipes True --evaluate_dev_pipes True  --update_model_stages True  --update_prod_model True
+"""
+conda deactivate
+source .ml_accel_venv/bin/activate
+.ml_accel_venv/bin/python scripts/evaluating/evaluating.py \
+    --evaluate_prod_pipe True \
+    --evaluate_staging_pipes True \
+    --evaluate_dev_pipes True \
+    --update_model_stages True \
+    --update_prod_model True
+"""
 if __name__ == "__main__":
     # Define parser
     parser = argparse.ArgumentParser(description='Model evaluating script.')

@@ -22,4 +22,8 @@ chmod +x ./scripts/bash/image_building.sh
 chmod +x ./scripts/bash/model_building.sh
 ./scripts/bash/model_building.sh
 
+# Run docker-compose-app
+chmod +x ./scripts/bash/app.sh
+./scripts/bash/app.sh
+
 # docker container run -it dev-base-image:v1.0.0

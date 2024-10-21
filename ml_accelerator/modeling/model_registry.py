@@ -1,6 +1,5 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.data_processing.transformers.data_cleaner import DataCleaner
-from ml_accelerator.data_processing.transformers.data_standardizer import DataStandardizer
+from ml_accelerator.utils.transformers.transformers_utils import load_transformers_list
 from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.modeling.models.classification_model import ClassificationModel
 from ml_accelerator.modeling.models.regression_model import RegressionModel
@@ -174,9 +173,8 @@ class ModelRegistry:
         pipeline_id: str
     ) -> MLPipeline:
         try:
-            # Instanciate Transformers
-            DC: DataCleaner = DataCleaner(transformer_id=pipeline_id)
-            DS: DataStandardizer = DataStandardizer(transformer_id=pipeline_id)
+            # Extract transformers
+            transformers = load_transformers_list(transformer_id=pipeline_id)
 
             # Instanciate Estimator
             if self.task in ['binary_classification', 'multiclass_classification']:
@@ -188,7 +186,7 @@ class ModelRegistry:
             
             # Instanciate MLPipeline
             MLP: MLPipeline = MLPipeline(
-                transformers=[DC, DS],
+                transformers=transformers,
                 estimator=model
             )
 

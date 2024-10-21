@@ -14,12 +14,33 @@ from typing import List, Set, Tuple, Any
 LOGGER = get_logger(name=__name__)
 
 
+def find_paths(
+    bucket: str,
+    subdir: str
+) -> List[str]:
+    # Define empty paths
+    paths: List[str] = []
+
+    # Define search dir
+    search_dir = os.path.join(bucket, *subdir.split('/'))
+
+    # Append paths
+    for root, directories, files in os.walk(search_dir):
+        for file in files:
+            new_path = os.path.join(*root.split('/'), *'/'.join(directories), file)
+            paths.append(new_path)
+
+    return paths
+
+
 def load_from_filesystem(
     path: str,
     partition_cols: List[str] = None,
     filters: List[Tuple[str, str, List[str]]] = None
 ) -> pd.DataFrame | dict:
-    # Extract format
+    # Extract bucket, key & read_format
+    bucket: str = path.split('/')[0]
+    key: str = '/'.join(path.split('/')[1:])
     read_format = path.split('.')[-1]
 
     try:
@@ -28,9 +49,15 @@ def load_from_filesystem(
             asset: pd.DataFrame = pd.read_csv(path, index_col=0)
 
         elif read_format == 'parquet':
+            # Remove extention
+            prefix = key.replace(".parquet", "")
+
+            # Find paths
+            paths = find_paths(bucket=bucket, subdir=prefix)
+
             # Create a Parquet dataset
             dataset = pq.ParquetDataset(
-                path_or_paths=path, # files,
+                path_or_paths=paths,
                 # filesystem=FS,
                 filters=filters
             )
