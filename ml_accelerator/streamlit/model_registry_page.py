@@ -83,13 +83,17 @@ def show_models_table(
         models_df[col_name] = [getattr(model, metric_name) for model in models]
         metric_cols.append(col_name)
 
+    # Add validation column
+    models_df['Optimization Metric'] = [extract_metric_col_name(model.optimization_metric) for model in models]
+    models_df['Validation'] = [model.val_score for model in models]
+
     def highlight_row(row):
         color = 'background-color: white'
         if row['Stage'] == 'production':
             color = 'background-color: #93A3BC'
         return [color] * len(row)
 
-    models_df[metric_cols] = 100 * models_df[metric_cols].round(3)
+    models_df[metric_cols + ['Validation']] = 100 * models_df[metric_cols + ['Validation']].round(3)
 
     row1.dataframe(
         models_df.style.apply(highlight_row, axis=1), 

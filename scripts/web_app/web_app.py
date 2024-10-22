@@ -5,8 +5,12 @@ import streamlit as st
 from PIL import Image
 import os
 
-
-# streamlit run scripts/web_app/web_app.py
+"""
+http://localhost:8501
+streamlit run scripts/web_app/web_app.py \
+    --server.port 8501 \
+    --server.address localhost
+"""
 if __name__ == '__main__':
     # Set Page Config
     st.set_page_config(layout="wide")

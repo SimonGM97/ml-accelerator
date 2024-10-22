@@ -29,3 +29,4 @@ tqdm==4.66.5
 tsfresh==0.20.2
 plotly==5.24.1
 watchdog==5.0.3
+nancorrmp==0.23

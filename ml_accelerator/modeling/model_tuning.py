@@ -371,7 +371,7 @@ class ModelTuner:
         elif self.task == 'regression':
             model = RegressionModel(**parameters)
         else:
-            raise Exception(f'Invalid self.task was received: "{self.task}".\n')
+            raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
         
         # Build Model
         model.build(debug=debug)

@@ -45,6 +45,9 @@ class MLPipeline:
             # Run transform method
             X, y = transformer.transform(X=X, y=y)
 
+            # Show shapes
+            LOGGER.info('X.shape after %s: %s', transformer.class_name, X.shape)
+
             # Persist datasets
             if persist_datasets:
                 # Persist X
@@ -85,6 +88,9 @@ class MLPipeline:
             else:
                 # Run transform method
                 X, y = transformer.transform(X=X, y=y)
+
+            # Show shapes
+            LOGGER.info('X.shape after %s: %s', transformer.class_name, X.shape)
 
             # Re-set transformer
             self.transformers[idx] = transformer

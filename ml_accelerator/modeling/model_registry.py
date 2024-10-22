@@ -89,7 +89,7 @@ class ModelRegistry:
             elif self.task == 'regression':
                 model = RegressionModel(model_id=model_id)
             else:
-                raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
+                raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
 
             # Load Model
             model.load(light=light)
@@ -180,7 +180,7 @@ class ModelRegistry:
             elif self.task == 'regression':
                 model = RegressionModel(model_id=pipeline_id)
             else:
-                raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
+                raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
             
             # Instanciate MLPipeline
             MLP: MLPipeline = MLPipeline(

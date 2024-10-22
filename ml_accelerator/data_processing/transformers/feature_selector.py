@@ -7,8 +7,13 @@ from ml_accelerator.utils.logging.logger_helper import get_logger
 import pandas as pd
 import numpy as np
 from sklearn.feature_selection import RFE, SelectKBest
+from sklearn.preprocessing import OneHotEncoder
 import tsfresh as tsf
+from nancorrmp.nancorrmp import NaNCorrMp
+import time
+import gc
 import os
+from copy import deepcopy
 from pprint import pformat
 from typing import List, Tuple, Set
 
@@ -28,8 +33,9 @@ class FeatureSelector(Transformer):
         self,
         transformer_id: str = None,
         forced_features: List[str] = Params.FORCED_FEATURES,
-        target_feature_quantile: float = Params.TARGET_FEATURE_QUANTILE,
-        feature_feature_quantile: float = Params.FEATURE_FEATURE_QUANTILE,
+        tf_quantile_threshold: float = Params.TARGET_FEATURE_QUANTILE_THRESHOLD,
+        ff_correl_threshold: float = Params.FEATURE_FEATURE_CORREL_THRESHOLD,
+        categ_percentage: float = Params.CATEGORICAL_PERCENTAGE,
         boruta_algorithm: str = Params.BORUTA_ALGORITHM,
         rfe_n: int = Params.RFE_N,
         k_best: int = Params.K_BEST,
@@ -42,8 +48,9 @@ class FeatureSelector(Transformer):
 
         # Set non-load attributes
         self.forced_features: List[str] = forced_features
-        self.target_feature_quantile: float = target_feature_quantile
-        self.feature_feature_quantile: float = feature_feature_quantile
+        self.tf_quantile_threshold: float = tf_quantile_threshold
+        self.ff_correl_threshold: float = ff_correl_threshold
+        self.categ_percentage: float = categ_percentage
         self.boruta_algorithm: str = boruta_algorithm
         self.rfe_n: int = rfe_n
         self.k_best: int = k_best
@@ -125,40 +132,69 @@ class FeatureSelector(Transformer):
     
     def find_base_model(self):
         if self.boruta_algorithm == 'random_forest':
+            # Define hyper_parameters
+            hyper_parameters = {
+                'n_estimators': 100,
+                'max_depth': 50,
+                'n_jobs': Params.CPUS,
+                'random_state': os.environ.get("SEED"),
+                'verbose': -1
+            }
+
             if self.task in ['binary_classification', 'multiclass_classification']:
                 from sklearn.ensemble import RandomForestClassifier
                 # Return vanilla Random Forest Classifier
-                return RandomForestClassifier()
+                return RandomForestClassifier(**hyper_parameters)
             elif self.task in ['regression']:
                 from sklearn.ensemble import RandomForestRegressor
                 # Return vanilla Random Forest Regressor
-                return RandomForestRegressor()
+                return RandomForestRegressor(**hyper_parameters)
             else:
-                raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
+                raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
+            
         elif self.boruta_algorithm == 'lightgbm':
+            # Define hyper_parameters
+            hyper_parameters = {
+                'max_depth': 50,
+                'n_estimators': 100,
+                'random_state': os.environ.get("SEED"),
+                'n_jobs': Params.CPUS,
+                'verbose': -1
+            }
+
             if self.task in ['binary_classification', 'multiclass_classification']:
                 from lightgbm import LGBMClassifier
                 # Return vanilla LGBM Classifier
-                return LGBMClassifier(verbose=-1)
+                return LGBMClassifier(**hyper_parameters)
             elif self.task in ['regression']:
                 from lightgbm import LGBMRegressor
                 # Return vanilla LGBM Regressor
-                return LGBMRegressor(verbose=-1)
+                return LGBMRegressor(**hyper_parameters)
             else:
-                raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
+                raise NotImplementedError(f'Task "{self.task}" has not been implemented.\n')
+            
         elif self.boruta_algorithm == 'xgboost':
+            # Define hyper_parameters
+            hyper_parameters = {
+                'max_depth': 50,
+                'n_estimators': 100,
+                'random_state': os.environ.get("SEED"),
+                'nthread': Params.CPUS,
+                'verbosity': -1
+            }
+
             if self.task in ['binary_classification', 'multiclass_classification']:
                 from xgboost import XGBClassifier
                 # Return vanilla XGB Classifier
-                return XGBClassifier()
+                return XGBClassifier(**hyper_parameters)
             elif self.task in ['regression']:
                 from xgboost import XGBRegressor
                 # Return vanilla XGB Regressor
-                return XGBRegressor()
+                return XGBRegressor(**hyper_parameters)
             else:
-                raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
+                raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
         else:
-            raise NotImplementedError(f'Boruta algorithm "{self.boruta_algorithm}" has not been implemented yet.\n')
+            raise NotImplementedError(f'Boruta algorithm "{self.boruta_algorithm}" has not been implemented.')
     
     @timing
     def find_boruta_features(
@@ -173,7 +209,6 @@ class FeatureSelector(Transformer):
         # Instanciate and fit the BorutaPy selector
         selector = BorutaPy(
             model,
-            max_iter=70,
             verbose=-1, 
             random_state=int(os.environ.get("SEED"))
         )
@@ -226,6 +261,28 @@ class FeatureSelector(Transformer):
 
         return rfe_features
     
+    def find_score_func(self):
+        """
+        `score_func`: una función que devuelve algún score entre X e y:
+            - Para regresión: f_regression, mutual_info_regression
+            - Para clasificación: f_classif, mutual_info_classif
+
+        `F-Test`: tanto f_regression como f_classif se basan en un test estadístico 
+        llamado F-Test, en donde se compara la performance de un modelo linear que incluye 
+        a X cómo variable regresora, respecto de un modelo que sólo tiene intercept.
+
+        `Mutual Information`: la información mutua es una métrica que captura relaciones no
+        lineales entre variables.
+        """
+        if self.task in ['binary_classification', 'multiclass_classification']:
+            from sklearn.feature_selection import mutual_info_regression
+            return mutual_info_regression
+        elif self.task in ['regression']:
+            from sklearn.feature_selection import mutual_info_classif
+            return mutual_info_classif
+        else:
+            raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
+
     @timing
     def find_k_best_features(
         self,
@@ -234,35 +291,13 @@ class FeatureSelector(Transformer):
         k_best: int = None,
         debug: bool = False
     ) -> List[str]:
-        def find_score_func():
-            """
-            `score_func`: una función que devuelve algún score entre X e y:
-                - Para regresión: f_regression, mutual_info_regression
-                - Para clasificación: f_classif, mutual_info_classif
-
-            `F-Test`: tanto f_regression como f_classif se basan en un test estadístico 
-            llamado F-Test, en donde se compara la performance de un modelo linear que incluye 
-            a X cómo variable regresora, respecto de un modelo que sólo tiene intercept.
-
-            `Mutual Information`: la información mutua es una métrica que captura relaciones no
-            lineales entre variables.
-            """
-            if self.task in ['binary_classification', 'multiclass_classification']:
-                from sklearn.feature_selection import mutual_info_regression
-                return mutual_info_regression
-            elif self.task in ['regression']:
-                from sklearn.feature_extraction import mutual_info_classif
-                return mutual_info_classif
-            else:
-                raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
-        
         # Validate k_best
         if k_best is None:
             k_best = self.k_best
         
         # Instanciate and fit the Recursive Feature Eliminator
         selector = SelectKBest(
-            score_func=find_score_func(), 
+            score_func=self.find_score_func(), 
             k=k_best
         )
 
@@ -334,7 +369,7 @@ class FeatureSelector(Transformer):
             elif self.task in ['regression']:
                 return 'regression'
             else:
-                raise NotImplementedError(f'Task "{self.task}" has not been implemented yet.\n')
+                raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
 
         # Concatenate datasets
         full_df = pd.concat([X, y], axis=1)
@@ -390,4 +425,228 @@ class FeatureSelector(Transformer):
         
         LOGGER.info('Selected Features (%s):\n%s', len(selected_features), pformat(selected_features))
 
+        return selected_features
+
+    @staticmethod
+    def prepare_correlation_datasets(
+        X: pd.DataFrame,
+        y: pd.DataFrame
+    ) -> pd.DataFrame:
+        # Find intersection between X & y
+        intersection = y.index.intersection(X.index)
+
+        y = y.loc[intersection]
+        X = X.loc[intersection]
+
+        # Filter non-numeric columns
+        X = X.select_dtypes(include=['number'])
+
+        return X, y
+    
+    @staticmethod
+    def prepare_categorical_datasets(
+        X: pd.DataFrame,
+        y: pd.DataFrame
+    ) -> pd.DataFrame:
+        # Find intersection between X & y
+        intersection = y.index.intersection(X.index)
+
+        y = y.loc[intersection]
+        X = X.loc[intersection]
+
+        # Filter non-numeric columns
+        X = X.select_dtypes(include=['category', 'object'])
+
+        return X, y
+
+    def find_target_feature_correlation_features(
+        self,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        quantile_threshold: float = None,
+        debug: bool = False
+    ) -> List[str]:
+        # Validate quantile_threshold
+        if quantile_threshold is None:
+            quantile_threshold = self.tf_quantile_threshold
+
+        # Prepare X & y
+        X, y = self.prepare_correlation_datasets(X=X, y=y)
+
+        # Calculate Correlations with target
+        tf_corr_df: pd.DataFrame = pd.DataFrame(columns=[self.target])
+        for c in X.columns:
+            tf_corr_df.loc[c] = [abs(y[self.target].corr(X[c]))]
+
+        # Delete X & y from memory
+        del X
+        del y
+        gc.collect()
+
+        # Filter features
+        threshold = np.quantile(tf_corr_df[self.target].dropna(), quantile_threshold)
+        tf_corr_df = tf_corr_df.loc[tf_corr_df[self.target] >= threshold]
+
+        # Filter features
+        selected_features: List[str] = (
+            tf_corr_df
+            .sort_values(by=[self.target], ascending=False)
+            .index
+            .tolist()
+        )
+
+        if debug:
+            LOGGER.debug("threshold: %s", threshold)
+            LOGGER.debug("tf_corr_df.tail():\n%s\n", tf_corr_df.tail())
+            LOGGER.debug(
+                'Features selected with Target Feature Correlation Filter (%s):\n%s', 
+                len(selected_features), pformat(selected_features)
+            )
+
+        return selected_features
+    
+    def find_feature_feature_correlation_features(
+        self,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        correl_threshold: float = None,
+        debug: bool = False
+    ) -> List[str]:
+        # Validate quantile
+        if correl_threshold is None:
+            correl_threshold = self.ff_correl_threshold
+
+        # Prepare X & y
+        X, _ = self.prepare_correlation_datasets(X=X, y=y)
+
+        # Calculate Correlations among features
+        t0 = time.time()
+        n_jobs = Params.CPUS
+
+        ff_corr_df: pd.DataFrame = (
+            NaNCorrMp
+            .calculate(X, n_jobs=n_jobs)
+            .abs()
+            * 100
+        ).fillna(100)
+
+        if debug:
+            LOGGER.debug("ff_corr_df took %s sec to be created.", int(time.time()-t0))
+
+        # Delete X & y from memory
+        del X
+        del y
+        gc.collect()
+
+        # Define initial selected_features
+        selected_features: List[str] = deepcopy(ff_corr_df.columns)
+
+        # Filter selected_features
+        i = 0
+        while i < len(selected_features):
+            # Define feature to keep
+            keep_feature: str = selected_features[i]
+
+            # Define features to drop
+            drop_features: List[str] = ff_corr_df.loc[
+                (ff_corr_df[keep_feature] < 100) &
+                (ff_corr_df[keep_feature] >= correl_threshold * 100)
+            ][keep_feature].index.tolist()
+            
+            # Drop features
+            if len(drop_features) > 0:
+                selected_features = [c for c in selected_features if c not in drop_features]
+            i += 1
+        
+        if debug:
+            LOGGER.debug(
+                'Features selected with Feature Feature Correlation Filter (%s):\n%s', 
+                len(selected_features), pformat(selected_features)
+            )
+
+        # Remove ff_corr_df from memort
+        del ff_corr_df
+        gc.collect()
+
+        return selected_features
+    
+    @timing
+    def find_correlation_features(
+        self,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        tf_quantile_threshold: float = None,
+        ff_correl_threshold: float = None,
+        debug: bool = False
+    ) -> List[str]:
+        # Find target-features correlation features
+        tf_correl_features: List[str] = self.find_target_feature_correlation_features(
+            X=X, y=y, 
+            quantile_threshold=tf_quantile_threshold,
+            debug=debug
+        )
+
+        # Apply target-features correlation filter
+        X = X[tf_correl_features]
+
+        # Find feature-feature correlation features
+        ff_correl_features: List[str] = self.find_feature_feature_correlation_features(
+            X=X, y=y,
+            correl_threshold=ff_correl_threshold,
+            debug=debug
+        )
+
+        return ff_correl_features
+    
+    @timing
+    def find_categorical_features(
+        self,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        keep_percentage: float = None,
+        debug: bool = False
+    ) -> List[str]:
+        # Prepare X & y
+        X, _ = self.prepare_categorical_datasets(X=X, y=y)
+
+        if X.shape[1] > 1:
+            # Define initial columns
+            initial_cols = X.columns.tolist().copy()
+
+            # Instanciate OneHotEncoder
+            OHE: OneHotEncoder = OneHotEncoder(handle_unknown='ignore')
+
+            # Fit OHE
+            OHE.fit(X[initial_cols])
+
+            # Apply OHE
+            X = pd.DataFrame(
+                OHE.transform(X[initial_cols]).toarray(),
+                columns=OHE.get_feature_names_out(initial_cols),
+                index=X.index
+            )
+
+            # Apply SeleckKBest
+            k = max([1, int(keep_percentage * X.shape[1])])
+            selector = SelectKBest(score_func=self.find_score_func(), k=k)
+            selector.fit(X, y)
+            
+            # Get the selected features
+            selected_features: List[str] = X.columns[selector.get_support()].tolist()
+
+            # Delete X & y from memory
+            del X
+            del y
+            gc.collect()
+
+            selected_features: List[str] = [c for c in initial_cols if any(c in c2 for c2 in selected_features)]
+        else:
+            selected_features: List[str] = []
+
+        if debug:
+            LOGGER.debug(
+                'Features selected with Categorical Filter (%s):\n%s', 
+                len(selected_features), pformat(selected_features)
+            )
+        
         return selected_features

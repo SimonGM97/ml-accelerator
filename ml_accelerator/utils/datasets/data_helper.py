@@ -89,7 +89,7 @@ class DataHelper:
             y_train: pd.DataFrame = y.iloc[:train_periods]
             y_test: pd.DataFrame = y.iloc[train_periods:]
         else:
-            raise Exception(f'Invalid self.task parameter: "{self.task}".\n')
+            raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
         
         # Delete X & y
         del X
@@ -111,7 +111,7 @@ class DataHelper:
                 smote = SMOTE(sampling_strategy='minority', random_state=0, n_jobs=-1)
                 X_train, y_train = smote.fit_resample(X_train, y_train)
             else:
-                raise Exception(f'Invalid "balance_method" parameter was chosen: {balance_method}.\n')
+                raise ValueError(f'Invalid "balance_method" parameter was chosen: {balance_method}.\n')
         else:
             LOGGER.warning('balance_train is False, therefore test datasets will not be balanced.')
 
