@@ -65,7 +65,7 @@ class ModelTuner:
         # Environment parameters
         self.model_storage_env: str = os.environ.get("MODEL_STORAGE_ENV")
         self.data_storage_env: str = os.environ.get("DATA_STORAGE_ENV")
-        self.bucket: str = os.environ.get("BUCKET")
+        self.bucket: str = os.environ.get("BUCKET_NAME")
         self.models_path: str = os.environ.get('MODELS_PATH')
 
         # Define search space parameters

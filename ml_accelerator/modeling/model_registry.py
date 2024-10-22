@@ -19,7 +19,7 @@ from ml_accelerator.utils.logging.logger_helper import get_logger
 from tqdm import tqdm
 import os
 from pprint import pformat
-from typing import List, Dict
+from typing import List, Dict, Set
 
 import warnings
 
@@ -539,7 +539,7 @@ class ModelRegistry:
         """
         def delete_files(bucket: str, directory: str, keep_ids: List[str]) -> None:
             # Extract paths
-            paths: List[str] = find_paths(bucket=bucket, directory=directory)
+            paths: Set[str] = find_paths(bucket=bucket, directory=directory)
             for path in paths:
                 if not any([keep_id in path for keep_id in keep_ids]):
                     LOGGER.info("Deleting %s.", path)
@@ -553,7 +553,7 @@ class ModelRegistry:
         
         def delete_subdirs(bucket: str, directory: str, keep_ids: List[str]) -> None:
             # Extract subdirs
-            subdirs: List[str] = find_subdirs(bucket=bucket, directory=directory)
+            subdirs: Set[str] = find_subdirs(bucket=bucket, directory=directory)
             for subdir in subdirs:
                 if not any([keep_id in subdir for keep_id in keep_ids]):
                     LOGGER.info("Deleting %s.", subdir)

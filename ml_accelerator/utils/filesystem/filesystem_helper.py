@@ -1,55 +1,19 @@
+from ml_accelerator.config.params import Params
 from ml_accelerator.utils.logging.logger_helper import get_logger
 import pandas as pd
-import numpy as np
 import pyarrow.parquet as pq
 import pyarrow as pa
 import os
+import shutil
 import pickle
 import json
 import yaml
+from tqdm import tqdm
 from typing import List, Set, Tuple, Any
 
 
 # Get logger
 LOGGER = get_logger(name=__name__)
-
-
-def find_paths(
-    bucket: str,
-    directory: str
-) -> List[str]:
-    # Define empty paths
-    found_paths: List[str] = []
-
-    # Define search dir
-    search_dir = os.path.join(bucket, *directory.split('/'))
-
-    # Append paths
-    for root, subdirs, files in os.walk(search_dir):
-        for file in files:
-            new_path = os.path.join(*root.split('/'), *'/'.join(subdirs), file)
-            found_paths.append(new_path)
-
-    return found_paths
-
-
-def find_subdirs(
-    bucket: str,
-    directory: str
-) -> List[str]:
-    # Define empty paths
-    found_subdirs: List[str] = []
-
-    # Define search dir
-    search_dir = os.path.join(bucket, *directory.split('/'))
-
-    # Append paths
-    for root, subdirs, _ in os.walk(search_dir):
-        for subdir in subdirs:
-            new_subdir = os.path.join(*root.split('/'), subdir)
-            found_subdirs.append(new_subdir)
-
-    return subdirs
 
 
 def load_from_filesystem(
@@ -72,7 +36,7 @@ def load_from_filesystem(
             prefix = key.replace(".parquet", "")
 
             # Find paths
-            paths = find_paths(bucket=bucket, directory=prefix)
+            paths: Set[str] = find_paths(bucket=bucket, directory=prefix)
 
             # Create a Parquet dataset
             dataset = pq.ParquetDataset(
@@ -110,32 +74,6 @@ def load_from_filesystem(
 
     return asset
 
-
-def remove_directory(
-    bucket: str,
-    directory: str
-) -> None:
-    # Remove files
-    paths: List[str] = find_paths(bucket=bucket, directory=directory)
-    for path in paths:
-        try:
-            os.remove(path)
-        except Exception as e:
-            LOGGER.warning(
-                'Unable to remove %s.\n'
-                'Exception: %s', path, e
-            )
-    
-    # Remove subdirs
-    subdirs: List[str] = find_subdirs(bucket=bucket, directory=directory)
-    for subdir in subdirs:
-        try:
-            os.removedirs(subdir)
-        except Exception as e:
-            LOGGER.warning(
-                'Unable to remove %s.\n'
-                'Exception: %s', subdir, e
-            )
 
 def save_to_filesystem(
     asset,
@@ -220,3 +158,125 @@ def save_to_filesystem(
 
     else:
         raise Exception(f'Invalid save_format was received: "{save_format}".\n')
+
+
+def find_paths(
+    bucket: str,
+    directory: str
+) -> Set[str]:
+    # Define empty paths
+    found_paths: Set[str] = set()
+
+    # Define search dir
+    search_dir = os.path.join(bucket, *directory.split('/'))
+    
+    # Append paths
+    for root, subdirs, files in os.walk(search_dir):
+        for file in files:
+            new_path = os.path.join(*root.split('/'), *'/'.join(subdirs), file)
+            found_paths.update({new_path})
+
+    return found_paths
+
+
+def find_subdirs(
+    bucket: str,
+    directory: str
+) -> List[str]:
+    # Define empty paths
+    found_subdirs: Set[str] = set()
+
+    # Define search dir
+    search_dir = os.path.join(bucket, *directory.split('/'))
+
+    # Append paths
+    for root, subdirs, _ in os.walk(search_dir):
+        for subdir in subdirs:
+            new_subdir = os.path.join(*root.split('/'), subdir)
+            found_subdirs.update({new_subdir})
+
+    return found_subdirs
+
+
+def remove_directory(
+    bucket: str,
+    directory: str
+) -> None:
+    # Remove files
+    paths: Set[str] = find_paths(bucket=bucket, directory=directory)
+    for path in paths:
+        try:
+            os.remove(path)
+        except Exception as e:
+            # LOGGER.warning(
+            #     'Unable to remove %s.\n'
+            #     'Exception: %s', path, e
+            # )
+            pass
+    
+    # Remove subdirs
+    subdirs: Set[str] = find_subdirs(bucket=bucket, directory=directory)
+    for subdir in subdirs:
+        try:
+            os.removedirs(subdir)
+        except Exception as e:
+            LOGGER.warning(
+                'Unable to remove %s.\n'
+                'Exception: %s', subdir, e
+            )
+
+
+def delete_bucket(bucket: str) -> None:
+    LOGGER.info('Deleting bucket: %s (filesystem).', bucket)
+
+    # Run remove_directory function without directory
+    remove_directory(bucket=bucket, directory='')
+
+    LOGGER.info('Bucket %s (filesystem) was successfully deleted.', bucket)
+
+
+def copy_bucket(
+    source_bucket: str,
+    destination_bucket: str,
+    subdir: str = '',
+    delete_destination: bool = False
+) -> None:
+    # Delete destination bucket
+    if delete_destination:
+        delete_bucket(bucket=destination_bucket)
+
+    # Find source paths
+    source_paths: Set[str] = find_paths(bucket=source_bucket, directory=subdir)
+
+    LOGGER.info('Copying bucket %s (filesystem) into %s (filesystem).', source_bucket, destination_bucket)
+
+    # Copy files
+    for source_path in tqdm(source_paths):
+        # Define destination_path
+        destination_path = source_path.replace(source_bucket, destination_bucket)
+
+        # Create the destination directory if it doesn't exist
+        destination_dir = os.path.dirname(destination_path)
+        if not os.path.exists(destination_dir):
+            os.makedirs(destination_dir)
+
+        # Copy file
+        shutil.copy(source_path, destination_path)
+
+    LOGGER.info('Bucket %s (filesystem) was successfully copied into %s (filesystem).', source_bucket, destination_bucket)
+
+
+# conda deactivate
+# source .ml_accel_venv/bin/activate
+# .ml_accel_venv/bin/python ml_accelerator/utils/filesystem/filesystem_helper.py
+if __name__ == "__main__":
+    # Copy bucket into new dummy-bucket
+    copy_bucket(
+        source_bucket=os.environ.get('BUCKET_NAME'), 
+        destination_bucket='dummy-bucket', 
+        subdir='',
+        delete_destination=True
+    )
+
+    # Delete dummy-bucket
+    delete_bucket(bucket='dummy-bucket')

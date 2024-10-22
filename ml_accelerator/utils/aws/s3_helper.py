@@ -1,5 +1,5 @@
+from ml_accelerator.utils.logging.logger_helper import get_logger
 import pandas as pd
-import numpy as np
 import pyarrow.parquet as pq
 import pyarrow as pa
 import os
@@ -9,10 +9,13 @@ import boto3
 from botocore.exceptions import ClientError
 import pickle
 import json
-from pathlib import Path
 from tqdm import tqdm
 from typing import List, Set, Tuple, Any
-from pprint import pprint
+from pprint import pformat
+
+
+# Get logger
+LOGGER = get_logger(name=__name__)
 
 
 def get_secrets(secret_name: str = 'access_keys') -> str:
@@ -237,17 +240,6 @@ def save_to_s3(
         )
     else:
         raise Exception(f'Invalid "write_format" parameter: {write_format}, extracted from path: {path}.\n\n')
-    
-
-def delete_from_s3(
-    path: str
-) -> None:
-    bucket, key = path.split('/')[0], '/'.join(path.split('/')[1:])
-
-    S3_CLIENT.delete_object(
-        Bucket=bucket, 
-        Key=key
-    )
 
 
 def find_keys(
@@ -260,7 +252,7 @@ def find_keys(
         subdir = ''
 
     # Define keys to populate
-    s3_keys = set()
+    s3_keys: Set[str] = set()
 
     # Find dirs
     prefixes = S3_CLIENT.list_objects_v2(
@@ -281,23 +273,19 @@ def find_keys(
         
             if len(contents) > 0:
                 if not include_additional_info:
-                    s3_keys = s3_keys | {
+                    s3_keys.update({
                         content['Key'] for content in contents
                         if not(content['Key'].endswith('/'))
-                    }
+                    })
                 else:
-                    s3_keys = s3_keys | {
+                    s3_keys.update({
                         (content['Key'], content['Size'], content['LastModified']) for content in contents
                         if not(content['Key'].endswith('/'))
-                    }
-
-        # print('s3_keys:')
-        # pprint(s3_keys)
-        # print('\n\n')
+                    })
         
         return s3_keys
-    print(f'[WARNING] No keys were found for bucket: {bucket}, subdir: {subdir}.\n')
-    return {}
+    LOGGER.warning('No keys were found for bucket: %s, subdir: %s.', bucket, subdir)
+    return set()
 
 
 def find_prefixes(
@@ -305,13 +293,12 @@ def find_prefixes(
     prefix: str = None, 
     results: set = set(),
     debug: bool = False
-):
+) -> dict:
     if prefix is None:
         prefix = ''
 
     if debug:
-        print(f'bucket: {bucket}\n'
-              f'prefix: {prefix}\n\n')
+        LOGGER.debug('bucket: %s, prefix: %s', bucket, prefix)
 
     result: dict = S3_CLIENT.list_objects_v2(
         Bucket=bucket, 
@@ -319,9 +306,7 @@ def find_prefixes(
         Delimiter='/'
     )
     if debug:
-        print(f'result')
-        pprint(result)
-        print('\n\n')
+        LOGGER.debug('result:\n%s', pformat(result))
     
     for common_prefix in result.get('CommonPrefixes', []):
         subdir = common_prefix.get('Prefix')
@@ -333,10 +318,21 @@ def find_prefixes(
     return results
 
 
+def delete_from_s3(
+    path: str
+) -> None:
+    bucket, key = path.split('/')[0], '/'.join(path.split('/')[1:])
+
+    S3_CLIENT.delete_object(
+        Bucket=bucket, 
+        Key=key
+    )
+
+
 def delete_s3_directory(
     bucket, 
     directory
-):
+) -> None:
     # List objects with the common prefix
     objects = S3_CLIENT.list_objects_v2(Bucket=bucket, Prefix=directory)
     
@@ -352,56 +348,56 @@ def delete_s3_directory(
             delete_s3_directory(bucket, subdir['Prefix'])
 
     # Finally, delete the common prefix (the "directory" itself)
-    S3_CLIENT.delete_object(Bucket=bucket, Key=directory)
+    try:
+        S3_CLIENT.delete_object(Bucket=bucket, Key=directory)
+    except Exception as e:
+        LOGGER.warning('Unable to delete %s.\nException: %s', f'{bucket}/{directory}', e)
 
-    # print('\n')
+
+def delete_bucket(bucket: str) -> None:
+    LOGGER.info('Deleting bucket: %s (S3).', bucket)
+
+    # Run remove_directory function without directory
+    delete_s3_directory(bucket=bucket, directory='')
+
+    LOGGER.info('Bucket %s (S3) was successfully deleted.', bucket)
 
 
-def sincronize_buckets(
-    source_bucket: str, 
-    destination_bucket: str, 
-    sub_dir: str = None,
+def copy_bucket(
+    source_bucket: str,
+    destination_bucket: str,
+    subdir: str = '',
+    delete_destination: bool = False,
     debug: bool = False
-):
-    """
-    Objects
-    """
+) -> None:
+    LOGGER.info('Copying bucket %s (S3) into %s (S3).', source_bucket, destination_bucket)
+
+    # Delete destination bucket
+    if delete_destination:
+        delete_bucket(bucket=destination_bucket)
+
     # Find destination objects
-    dest_objects = find_keys(
+    dest_objects: Set[str] = find_keys(
         bucket=destination_bucket,
+        subdir=subdir,
         include_additional_info=False
     )
-    while len(dest_objects) > 0:
-        if debug:
-            print(f'dest_objects:')
-            pprint(dest_objects)
-            print('\n\n')
-
-        # Remove destination objects
-        print(f'Removing objects from {destination_bucket}:')
-        for obj in tqdm(dest_objects):
-            # print(f"Removing: {destination_bucket}/{obj}")
-            delete_from_s3(path=f"{destination_bucket}/{obj}")
-
-        # Re-setting dest_objects
-        dest_objects = find_keys(
-            bucket=destination_bucket,
-            include_additional_info=False
-        )
-    
-    print(f'\nAll objects in {destination_bucket} have been removed.\n\n')
     
     # Find source objects
-    source_objects = find_keys(
+    source_objects: Set[str] = find_keys(
         bucket=source_bucket,
+        subdir=subdir,
         include_additional_info=False
     )
+
+    LOGGER.info('Copying: objects from %s (S3) to %s (S3).', source_bucket, destination_bucket)
     
     while len(source_objects - dest_objects) > 0:
+        if debug:
+            LOGGER.debug('source_objects - dest_objects:\n%s', pformat(source_objects - dest_objects))
+
         # Copy source objects to destination bucket
-        print(f"Copying: objects from {source_bucket} to {destination_bucket}")
         for obj in tqdm(source_objects - dest_objects):
-            # print(f"Copying: {obj} from {source_bucket} to {destination_bucket}")
             S3_CLIENT.copy_object(
                 Bucket=destination_bucket, 
                 CopySource={
@@ -414,7 +410,26 @@ def sincronize_buckets(
         # Re-setting dest_objects
         dest_objects = find_keys(
             bucket=destination_bucket,
+            subdir=subdir,
             include_additional_info=False
         )
     
-    print(f'\n{destination_bucket} has been filled.\n\n')
+    LOGGER.info('Bucket %s (S3) was successfully copied into %s (S3).', source_bucket, destination_bucket)
+
+
+# conda deactivate
+# source .ml_accel_venv/bin/activate
+# .ml_accel_venv/bin/python ml_accelerator/utils/aws/s3_helper.py
+if __name__ == "__main__":
+    # Copy bucket into new dummy-bucket-ml-accelerator
+    copy_bucket(
+        source_bucket=os.environ.get('BUCKET_NAME'), 
+        destination_bucket='dummy-bucket-ml-accelerator', 
+        subdir='',
+        delete_destination=True,
+        debug=True
+    )
+
+    # Delete dummy-bucket-ml-accelerator
+    delete_bucket(bucket='dummy-bucket-ml-accelerator')
+
