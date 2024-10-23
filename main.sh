@@ -1,6 +1,6 @@
 #!/bin/bash
-# chmod +x ./scripts/bash/workflows/main.sh
-# ./scripts/bash/workflows/main.sh
+# chmod +x ./main.sh
+# ./main.sh
 
 # Deactivate conda
 # conda deactivate
@@ -33,10 +33,6 @@ chmod +x ./scripts/bash/image_building.sh
 # Run model building workflow
 chmod +x ./scripts/bash/model_building.sh
 ./scripts/bash/model_building.sh
-
-# Run model updating workflow
-# chmod +x ./scripts/bash/model_updating.sh
-# ./scripts/bash/model_updating.sh
 
 # Run docker-compose-app
 chmod +x ./scripts/bash/app.sh
