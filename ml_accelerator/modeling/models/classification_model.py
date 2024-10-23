@@ -1,7 +1,7 @@
 from ml_accelerator.config.params import Params
 from ml_accelerator.modeling.models.model import Model
 from ml_accelerator.utils.logging.logger_helper import get_logger
-from ml_accelerator.utils.env_helper.env_helper import find_env_var
+from ml_accelerator.config.env import Env
 
 import pandas as pd
 import numpy as np
@@ -153,7 +153,7 @@ class ClassificationModel(Model):
             "scale_pos_weight": None if Params.CLASS_WEIGHT is None else Params.CLASS_WEIGHT[1] / Params.CLASS_WEIGHT[0],
             "importance_type": 'gain',
             "verbose": -1,
-            "random_state": int(find_env_var("SEED")),
+            "random_state": int(Env.get("SEED")),
             "n_jobs": -1
         }
 

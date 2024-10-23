@@ -16,7 +16,7 @@ from ml_accelerator.utils.filesystem.filesystem_helper import (
 )
 from ml_accelerator.utils.filesystem.filesystem_helper import find_paths, find_subdirs
 from ml_accelerator.utils.logging.logger_helper import get_logger
-from ml_accelerator.utils.env_helper.env_helper import find_env_var
+from ml_accelerator.config.env import Env
 from tqdm import tqdm
 import os
 from pprint import pformat
@@ -54,11 +54,11 @@ class ModelRegistry:
         self.task: str = task
 
         # Environment Params
-        self.data_storage_env: str = find_env_var("DATA_STORAGE_ENV")
-        self.model_storage_env: str = find_env_var("MODEL_STORAGE_ENV")
-        self.bucket: str = find_env_var("BUCKET_NAME")
-        self.models_path: str = find_env_var("MODELS_PATH")
-        self.transformers_path: str = find_env_var("RANSFORMERS_PATH")
+        self.data_storage_env: str = Env.get("DATA_STORAGE_ENV")
+        self.model_storage_env: str = Env.get("MODEL_STORAGE_ENV")
+        self.bucket: str = Env.get("BUCKET_NAME")
+        self.models_path: str = Env.get("MODELS_PATH")
+        self.transformers_path: str = Env.get("TRANSFORMERS_PATH")
 
         # Define default models
         self.prod_model: Model = None
@@ -386,10 +386,8 @@ class ModelRegistry:
         )
 
         # Assert that there are no more staging models than expected
-        assert (
-            len(self.staging_models) <= self.n_candidates, 
-            f"There are {len(self.staging_models)} staging models, but a maximum of {self.n_candidates} are allowed."
-        )
+        error_msg = f"There are {len(self.staging_models)} staging models, but a maximum of {self.n_candidates} are allowed."
+        assert len(self.staging_models) <= self.n_candidates, error_msg
 
         if debug:
             self.debug()
@@ -602,6 +600,15 @@ class ModelRegistry:
         )
 
     def clean_s3_models(self) -> None:
+        def delete_keys(bucket: str, directory: str, keep_ids: List[str]) -> None:
+            # Extract keys
+            keys: Set[str] = find_keys(bucket=bucket, subdir=directory)
+            for key in keys:
+                if not any([keep_id in key for keep_id in keep_ids]):
+                    delete_path = f"{self.bucket}/{key}"
+                    LOGGER.info("Deleting %s.", delete_path)
+                    delete_from_s3(path=delete_path)
+
         # Load model ids
         model_ids: List[str] = (
             self.registry_dict["production"] +
@@ -609,13 +616,19 @@ class ModelRegistry:
             self.registry_dict["development"]
         )
 
-        for key in find_keys(
+        # Delete Model objects
+        delete_keys(
             bucket=self.bucket, 
-            subdir=self.models_path
-        ):
-            if not any([model_id in key for model_id in model_ids]):
-                LOGGER.info("Deleting %s/%s.", self.bucket, key)
-                delete_from_s3(path=f"{self.bucket}/{key}")
+            directory=self.models_path, 
+            keep_ids=model_ids
+        )
+
+        # Delete Transformer objects
+        delete_keys(
+            bucket=self.bucket, 
+            directory=self.transformers_path, 
+            keep_ids=model_ids + ['base']
+        )
 
     def clean_tracking_server(self) -> None:
         pass
@@ -757,16 +770,24 @@ class ModelRegistry:
 
     def load_forced_model(self) -> dict:
         # Read forced_model
-        if self.data_storage_env == 'filesystem':
-            forced_model: dict = load_from_filesystem(
-                path=os.path.join(self.bucket, "utils", "model_registry", "forced_model.json")
+        try:
+            if self.data_storage_env == 'filesystem':
+                forced_model: dict = load_from_filesystem(
+                    path=os.path.join(self.bucket, "utils", "model_registry", "forced_model.json")
+                )
+            elif self.data_storage_env == 'S3':
+                forced_model: dict = load_from_s3(
+                    path=f"{self.bucket}/utils/model_registry/forced_model.json"
+                )
+            else:
+                raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+        except Exception as e:
+            LOGGER.error(
+                'Unable to load forced_model from %s.\n'
+                'Exception: %s\n',
+                self.data_storage_env, e
             )
-        elif self.data_storage_env == 'S3':
-            forced_model: dict = load_from_s3(
-                path=f"{self.bucket}/utils/model_registry/forced_model.json"
-            )
-        else:
-            raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+            forced_model: dict = None
         
         # Validate forced_model
         if forced_model is None:
@@ -794,20 +815,28 @@ class ModelRegistry:
 
     def load_registry_dict(self) -> None:
         # Read registry
-        if self.data_storage_env == 'filesystem':
-            self.registry_dict: Dict[str, List[str]] = load_from_filesystem(
-                path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
-                partition_cols=None,
-                filters=None
+        try:
+            if self.data_storage_env == 'filesystem':
+                self.registry_dict: Dict[str, List[str]] = load_from_filesystem(
+                    path=os.path.join(self.bucket, "utils", "model_registry", "model_registry.json"),
+                    partition_cols=None,
+                    filters=None
+                )
+            elif self.data_storage_env == 'S3':
+                self.registry_dict: Dict[str, List[str]] = load_from_s3(
+                    path=f"{self.bucket}/utils/model_registry/model_registry.json",
+                    partition_cols=None,
+                    filters=None
+                )
+            else:
+                raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+        except Exception as e:
+            LOGGER.error(
+                'Unable to load registry_dict from %s.\n'
+                'Exception: %s\n',
+                self.data_storage_env, e
             )
-        elif self.data_storage_env == 'S3':
-            self.registry_dict: Dict[str, List[str]] = load_from_s3(
-                path=f"{self.bucket}/utils/model_registry/model_registry.json",
-                partition_cols=None,
-                filters=None
-            )
-        else:
-            raise Exception(f'Invalid self.data_storage_env was received: "{self.data_storage_env}".\n')
+            self.registry_dict: Dict[str, List[str]] = None
         
         # Validate registry_dict
         if self.registry_dict is None:

@@ -286,6 +286,3 @@ LOG_PARAMS:
   FILTER_LVLS: null
   LOG_FILE: null # no log file will be written
   BACKUP_COUNT: null
-
-# INFRASTRUCTURE PARAMETERS
-INFRASTRUCTURE_PARAMS: null

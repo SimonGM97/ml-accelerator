@@ -5,7 +5,7 @@ from ml_accelerator.utils.filesystem.filesystem_helper import (
     load_from_filesystem,
     save_to_filesystem
 )
-from ml_accelerator.utils.env_helper.env_helper import find_env_var
+from ml_accelerator.config.env import Env
 
 import pandas as pd
 import numpy as np
@@ -67,9 +67,9 @@ class Model(ABC):
         self.stage: str = stage
 
         # Storage Parameters
-        self.storage_env: str = find_env_var("DATA_STORAGE_ENV")
-        self.bucket: str = find_env_var("BUCKET_NAME")
-        self.models_path: str = find_env_var("MODELS_PATH")
+        self.storage_env: str = Env.get("DATA_STORAGE_ENV")
+        self.bucket: str = Env.get("BUCKET_NAME")
+        self.models_path: str = Env.get("MODELS_PATH")
 
         # Model Parameters
         self.model = None

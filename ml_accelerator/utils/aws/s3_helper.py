@@ -1,5 +1,5 @@
 from ml_accelerator.utils.logging.logger_helper import get_logger
-from ml_accelerator.utils.env_helper.env_helper import find_env_var
+from ml_accelerator.config.env import Env
 import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
@@ -9,6 +9,7 @@ import boto3
 from botocore.exceptions import ClientError
 import pickle
 import json
+import yaml
 from tqdm import tqdm
 from typing import List, Set, Tuple, Any
 from pprint import pformat
@@ -23,7 +24,7 @@ def get_secrets(secret_name: str = 'access_keys') -> str:
     session = boto3.session.Session()
     secrets_client = session.client(
         service_name='secretsmanager',
-        region_name=REGION
+        region_name=Env.get("REGION")
     )
 
     try:
@@ -39,8 +40,6 @@ def get_secrets(secret_name: str = 'access_keys') -> str:
 
     return secret
 
-# Load region
-REGION = find_env_var("REGION")
 
 # Extract secrets
 ACCESS_KEYS = get_secrets(secret_name='access_keys')
@@ -49,15 +48,15 @@ ACCESS_KEYS = get_secrets(secret_name='access_keys')
 # print('Instanciating S3_CLIENT.\n')
 S3_CLIENT = boto3.client(
     's3',
-    region_name=REGION,
-    aws_access_key_id=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # find_env_var("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # find_env_var("AWS_SECRET_ACCESS_KEY")
+    region_name=Env.get("REGION"),
+    aws_access_key_id=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # Env.get("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # Env.get("AWS_SECRET_ACCESS_KEY")
 )
 
 # Create an s3fs.S3FileSystem instance
 FS = s3fs.S3FileSystem(
-    key=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # find_env_var("AWS_ACCESS_KEY_ID"),
-    secret=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # find_env_var("AWS_SECRET_ACCESS_KEY"),
+    key=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # Env.get("AWS_ACCESS_KEY_ID"),
+    secret=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # Env.get("AWS_SECRET_ACCESS_KEY"),
     anon=False  # Set to True if your bucket is public
 )
 
@@ -144,6 +143,18 @@ def load_from_s3(
         asset: dict = json.loads(
             BytesIO(obj['Body'].read()).read()
         )
+    elif read_format == 'yaml':
+        # Retrieve stored object
+        obj: dict = S3_CLIENT.get_object(
+            Bucket=bucket,
+            Key=key
+        )
+
+        # Read yaml
+        asset: dict = yaml.load(
+            BytesIO(obj['Body'].read()).read(),
+            Loader=yaml.FullLoader
+        )
     else:
         raise Exception(f'Invalid "read_format" parameter: {read_format}, extracted from path: {path}.')
     
@@ -225,19 +236,29 @@ def save_to_s3(
         )
 
     elif write_format == 'pickle':
-        # Save new object
+        # Save new pickle object
         S3_CLIENT.put_object(
             Bucket=bucket,
             Key=key,
             Body=pickle.dumps(asset)
         )
+
     elif write_format == 'json':
-        # Save new object
+        # Save new json object
         S3_CLIENT.put_object(
             Bucket=bucket,
             Key=key,
             Body=json.dumps(asset)
         )
+    
+    elif write_format == 'yaml':
+        # Save new yaml object
+        S3_CLIENT.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=yaml.dump(asset)
+        )
+
     else:
         raise Exception(f'Invalid "write_format" parameter: {write_format}, extracted from path: {path}.\n\n')
 
@@ -323,10 +344,13 @@ def delete_from_s3(
 ) -> None:
     bucket, key = path.split('/')[0], '/'.join(path.split('/')[1:])
 
-    S3_CLIENT.delete_object(
-        Bucket=bucket, 
-        Key=key
-    )
+    try:
+        S3_CLIENT.delete_object(
+            Bucket=bucket, 
+            Key=key
+        )
+    except Exception as e:
+        LOGGER.warning('Unable to delete %s.\nException: %s', f's3://{bucket}/{key}', e)
 
 
 def delete_s3_directory(
@@ -423,7 +447,7 @@ def copy_bucket(
 if __name__ == "__main__":
     # Copy bucket into new dummy-bucket-ml-accelerator
     copy_bucket(
-        source_bucket=find_env_var("BUCKET_NAME"), 
+        source_bucket=Env.get("BUCKET_NAME"), 
         destination_bucket='dummy-bucket-ml-accelerator', 
         subdir='',
         delete_destination=True,

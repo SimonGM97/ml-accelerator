@@ -1,4 +1,4 @@
-from ml_accelerator.config.params import Params
+from ml_accelerator.config.env import Env
 from ml_accelerator.utils.logging.logger_helper import get_logger
 import pandas as pd
 import pyarrow.parquet as pq
@@ -272,7 +272,7 @@ def copy_bucket(
 if __name__ == "__main__":
     # Copy bucket into new dummy-bucket
     copy_bucket(
-        source_bucket=find_env_var("BUCKET_NAME"), 
+        source_bucket=Env.get("BUCKET_NAME"), 
         destination_bucket='dummy-bucket', 
         subdir='',
         delete_destination=True

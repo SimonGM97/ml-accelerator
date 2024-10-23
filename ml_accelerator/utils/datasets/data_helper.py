@@ -8,7 +8,7 @@ from ml_accelerator.utils.aws.s3_helper import (
     load_from_s3,
     save_to_s3
 )
-from ml_accelerator.utils.env_helper.env_helper import find_env_var
+from ml_accelerator.config.env import Env
 
 import pandas as pd
 from imblearn.over_sampling import RandomOverSampler
@@ -45,14 +45,14 @@ class DataHelper:
         self.partition_cols: str = partition_cols
 
         # Environment parameters
-        self.bucket: str = find_env_var("BUCKET_NAME")
-        self.storage_env: str = find_env_var("DATA_STORAGE_ENV")
+        self.bucket: str = Env.get("BUCKET_NAME")
+        self.storage_env: str = Env.get("DATA_STORAGE_ENV")
 
-        self.raw_datasets_path: str = find_env_var("RAW_DATASETS_PATH")
-        self.training_path: str = find_env_var("TRAINING_PATH")
-        self.inference_path: str = find_env_var("INFERENCE_PATH")
-        self.transformers_path: str = find_env_var("TRANSFORMERS_PATH")
-        self.schemas_path: str = find_env_var("SCHEMAS_PATH")
+        self.raw_datasets_path: str = Env.get("RAW_DATASETS_PATH")
+        self.training_path: str = Env.get("TRAINING_PATH")
+        self.inference_path: str = Env.get("INFERENCE_PATH")
+        self.transformers_path: str = Env.get("TRANSFORMERS_PATH")
+        self.schemas_path: str = Env.get("SCHEMAS_PATH")
 
     def divide_datasets(
         self,
@@ -73,14 +73,14 @@ class DataHelper:
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, 
                 test_size=test_size, 
-                random_state=int(find_env_var("SEED")),
+                random_state=int(Env.get("SEED")),
                 stratify=y
             )
         elif self.task == 'regression':
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, 
                 test_size=test_size, 
-                random_state=int(find_env_var("SEED"))
+                random_state=int(Env.get("SEED"))
             )
         elif self.task == 'forecasting':
             train_periods: int = int(test_size * X.shape[0])
@@ -129,22 +129,30 @@ class DataHelper:
         path: str = self.find_path(f"{self.dataset_name}_schema")
 
         # Load schema
-        if self.storage_env == 'filesystem':
-            # Load from filesystem
-            schema: dict = load_from_filesystem(
-                path=path,
-                partition_cols=None,
-                filters=None
+        try:
+            if self.storage_env == 'filesystem':
+                # Load from filesystem
+                schema: dict = load_from_filesystem(
+                    path=path,
+                    partition_cols=None,
+                    filters=None
+                )
+            elif self.storage_env == 'S3':
+                # Load from S3
+                schema: dict = load_from_s3(
+                    path=path,
+                    partition_cols=None,
+                    filters=None
+                )
+            else:
+                raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
+        except Exception as e:
+            LOGGER.warning(
+                'Unable to load %s schema from %s.\n'
+                'Exception: %s',
+                self.dataset_name, self.storage_env, e
             )
-        elif self.storage_env == 'S3':
-            # Load from S3
-            schema: dict = load_from_s3(
-                path=path,
-                partition_cols=None,
-                filters=None
-            )
-        else:
-            raise Exception(f'Invalid self.storage_env was received: "{self.storage_env}".\n')
+            schema: dict = None
             
         # Verify it is not an empty schema
         if schema is None:
@@ -302,7 +310,6 @@ class DataHelper:
         # Define path
         if self.storage_env == 'filesystem':
             if 'raw' in asset_name:
-                print(f'base_path: {base_path}, self.raw_datasets_path: {self.raw_datasets_path}, asset_name: {asset_name}, self.data_extention: {self.data_extention}')
                 path: str = os.path.join(base_path, *self.raw_datasets_path.split('/'), f"{asset_name}.{self.data_extention}")
             elif 'schema' in asset_name:
                 path: str = os.path.join(base_path, *self.schemas_path.split('/'), f"{asset_name}.yaml")

@@ -235,7 +235,7 @@ class FeatureEnricher(FeatureSelector):
             col: find_threshold(col) for col in outlier_cols
         }
 
-        LOGGER.info('New self.outliers_dict was populated:\n%s', pformat(self.outliers_dict))
+        LOGGER.info('New self.outliers_dict was populated.') # pformat(self.outliers_dict))
 
     def find_outlier_features(
         self,

@@ -13,11 +13,11 @@ import numpy as np
 import scipy as sp
 from sklearn.utils import check_random_state, check_X_y
 from sklearn.base import TransformerMixin, BaseEstimator
-from ml_accelerator.utils.env_helper.env_helper import find_env_var
+from ml_accelerator.config.env import Env
 
 
 # Set random seed
-np.random.seed(int(find_env_var("SEED")))
+np.random.seed(int(Env.get("SEED")))
 
 
 class BorutaPy(BaseEstimator, TransformerMixin):

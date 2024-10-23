@@ -3,7 +3,7 @@ from ml_accelerator.data_processing.transformers.transformer import Transformer
 from ml_accelerator.utils.transformers.boruta_py import BorutaPy
 from ml_accelerator.utils.timing.timing_helper import timing
 from ml_accelerator.utils.logging.logger_helper import get_logger
-from ml_accelerator.utils.env_helper.env_helper import find_env_var
+from ml_accelerator.config.env import Env
 
 import pandas as pd
 import numpy as np
@@ -134,7 +134,7 @@ class FeatureSelector(Transformer):
                 'n_estimators': 100,
                 'max_depth': 50,
                 'n_jobs': Params.CPUS,
-                'random_state': find_env_var("SEED"),
+                'random_state': Env.get("SEED"),
                 'verbose': -1
             }
 
@@ -154,7 +154,7 @@ class FeatureSelector(Transformer):
             hyper_parameters = {
                 'max_depth': 50,
                 'n_estimators': 100,
-                'random_state': find_env_var("SEED"),
+                'random_state': Env.get("SEED"),
                 'n_jobs': Params.CPUS,
                 'verbose': -1
             }
@@ -175,7 +175,7 @@ class FeatureSelector(Transformer):
             hyper_parameters = {
                 'max_depth': 50,
                 'n_estimators': 100,
-                'random_state': find_env_var("SEED"),
+                'random_state': Env.get("SEED"),
                 'nthread': Params.CPUS,
                 'verbosity': -1
             }
@@ -207,7 +207,7 @@ class FeatureSelector(Transformer):
         selector = BorutaPy(
             model,
             verbose=-1, 
-            random_state=int(find_env_var("SEED"))
+            random_state=int(Env.get("SEED"))
         )
 
         selector.fit(X.values, y.values)
@@ -431,7 +431,6 @@ class FeatureSelector(Transformer):
         p_value_threshold: float = None,
         debug: bool = False
     ) -> List[str]:
-        debug=True
         # Validate p_value_threshold
         if p_value_threshold is None:
             p_value_threshold = self.ignore_features_p_value

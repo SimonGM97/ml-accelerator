@@ -5,7 +5,7 @@ from ml_accelerator.modeling.models.regression_model import RegressionModel
 from ml_accelerator.modeling.model_registry import ModelRegistry
 from ml_accelerator.utils.logging.logger_helper import get_logger
 from ml_accelerator.utils.timing.timing_helper import timing
-from ml_accelerator.utils.env_helper.env_helper import find_env_var
+from ml_accelerator.config.env import Env
 
 from hyperopt import fmin, hp, tpe, SparkTrials, STATUS_OK, atpe
 from hyperopt.fmin import generate_trials_to_calculate
@@ -63,10 +63,10 @@ class ModelTuner:
         self.val_splits: int = val_splits
         
         # Environment parameters
-        self.model_storage_env: str = find_env_var("MODEL_STORAGE_ENV")
-        self.data_storage_env: str = find_env_var("DATA_STORAGE_ENV")
-        self.bucket: str = find_env_var("BUCKET_NAME")
-        self.models_path: str = find_env_var('MODELS_PATH')
+        self.model_storage_env: str = Env.get("MODEL_STORAGE_ENV")
+        self.data_storage_env: str = Env.get("DATA_STORAGE_ENV")
+        self.bucket: str = Env.get("BUCKET_NAME")
+        self.models_path: str = Env.get('MODELS_PATH')
 
         # Define search space parameters
         self.int_parameters: List[str] = None

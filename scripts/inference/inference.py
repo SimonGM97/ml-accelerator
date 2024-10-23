@@ -3,6 +3,7 @@ from ml_accelerator.config.params import Params
 from ml_accelerator.data_processing.etl import ExtractTransformLoad
 from ml_accelerator.modeling.model_registry import ModelRegistry
 from ml_accelerator.pipeline.ml_pipeline import MLPipeline
+from ml_accelerator.utils.inference.inference_utils import save_inference
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
 
@@ -54,6 +55,9 @@ def inference_pipeline(pred_id = None) -> dict:
         'month': ('0' + str(datetime.today().month))[-2:],
         'day': ('0' + str(datetime.today().day))[-2:]
     }
+
+    # Save Inference
+    save_inference(inference=inference)
 
     return inference
 

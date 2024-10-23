@@ -365,7 +365,7 @@ class DataCleaner(Transformer):
             col: find_threshold(col) for col in self.num_cols
         }
 
-        LOGGER.info('New self.outliers_dict was populated:\n%s', pformat(self.outliers_dict))
+        LOGGER.info('New self.outliers_dict was populated.') # pformat(self.outliers_dict))
 
     def correct_outliers(
         self,

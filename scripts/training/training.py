@@ -74,13 +74,16 @@ def training_pipeline(
         # Load MLPipeline
         pipeline: MLPipeline = MR.load_prod_pipe()
 
-        # Fit MLPipeline
-        LOGGER.info('Fitting %s Production MLPipeline.', pipeline.pipeline_id)
-        fit_pipeline(
-            pipeline=pipeline,
-            X_train=X_train.copy(),
-            y_train=y_train.copy()
-        )
+        if pipeline is not None:
+            # Fit MLPipeline
+            LOGGER.info('Fitting %s Production MLPipeline.', pipeline.pipeline_id)
+            fit_pipeline(
+                pipeline=pipeline,
+                X_train=X_train.copy(),
+                y_train=y_train.copy()
+            )
+        else:
+            LOGGER.warning('No Production MLPipeline was found.')
 
     # Fit Staging MLPipelines
     if train_staging_pipes:
@@ -111,9 +114,14 @@ def training_pipeline(
             )
 
 
-# conda deactivate
-# source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/training/training.py --train_prod_pipe True --train_staging_pipes True --train_dev_pipes True
+"""
+conda deactivate
+source .ml_accel_venv/bin/activate
+.ml_accel_venv/bin/python scripts/training/training.py \
+    --train_prod_pipe True \
+    --train_staging_pipes True \
+    --train_dev_pipes True
+"""
 if __name__ == "__main__":
     # Define parser
     parser = argparse.ArgumentParser(description='Model training script.')
