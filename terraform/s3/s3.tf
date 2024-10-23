@@ -11,7 +11,7 @@ variable "ENV" {
 }
 
 variable "REGION" {
-  description = "The AWS region."
+  description = "The AWS region where the S3 bucket will be created."
   type        = string
 }
 
@@ -27,7 +27,11 @@ provider "aws" {
 
 # Define the S3 bucket resource
 resource "aws_s3_bucket" "my_bucket" {
-  bucket = var.BUCKET_NAME
+  # S3 bucket name
+  bucket        = var.BUCKET_NAME
+
+  # Indicates if all objects (including any locked objects) should be deleted from the bucket when the bucket is destroyed.
+  force_destroy = false
 
   # Tags
   tags = {

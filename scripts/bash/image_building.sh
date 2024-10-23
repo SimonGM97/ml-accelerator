@@ -56,29 +56,29 @@ docker build \
 
 if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
     # login to docker
-    echo ${DOCKER_TOKEN} | docker login -u ${DOCKER_USERNAME} --password-stdin
+    echo ${DOCKERHUB_TOKEN} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
 
     # Tag docker images
-    docker tag ${ENV}-image:${VERSION} ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    docker tag ${ENV}-image:${VERSION} ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
 
     # Push images to repository
-    docker push ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    docker push ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
 
     # Pull images from repository
-    docker pull ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    docker pull ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
 
 elif [ "${DOCKER_REPOSITORY_TYPE}" == "ecr" ]; then
     # Log-in to ECR
-    aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
+    aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
     
     # Tag docker images
-    docker tag ${ENV}-image:${VERSION} ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    docker tag ${ENV}-image:${VERSION} ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
 
     # Push images to repository
-    docker push ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    docker push ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
 
     # Pull images from repository
-    docker pull ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    docker pull ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
 else
     echo "Unable to push docker images - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
     exit 1
