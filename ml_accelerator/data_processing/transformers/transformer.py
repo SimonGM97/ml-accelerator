@@ -47,7 +47,8 @@ class Transformer(ABC, DataHelper):
     def transform(
         self, 
         X: pd.DataFrame, 
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> np.ndarray:
         pass
 
@@ -55,7 +56,8 @@ class Transformer(ABC, DataHelper):
     def fit_transform(
         self, 
         X: pd.DataFrame, 
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> None:
         pass
     

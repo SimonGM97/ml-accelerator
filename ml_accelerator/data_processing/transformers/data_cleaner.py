@@ -62,20 +62,30 @@ class DataCleaner(Transformer):
     def transform(
         self, 
         X: pd.DataFrame, 
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.cleaner_pipeline with fit=False
-        X, y = self.cleaner_pipeline(X=X, y=y, fit=False)
+        X, y = self.cleaner_pipeline(
+            X=X, y=y, 
+            fit=False,
+            debug=debug
+        )
         
         return X, y
     
     def fit_transform(
         self, 
         X: pd.DataFrame, 
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.cleaner_pipeline with fit=True
-        X, y = self.cleaner_pipeline(X=X, y=y, fit=True)
+        X, y = self.cleaner_pipeline(
+            X=X, y=y, 
+            fit=True,
+            debug=debug
+        )
 
         return X, y
     
@@ -90,7 +100,8 @@ class DataCleaner(Transformer):
         self,
         X: pd.DataFrame,
         y: pd.DataFrame = None,
-        fit: bool = False
+        fit: bool = False,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Merge datasets
         df = self.merge_datasets(X=X, y=y)

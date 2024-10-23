@@ -2,10 +2,10 @@
 # chmod +x ./scripts/bash/model_building.sh
 # ./scripts/bash/model_building.sh
 
-# Unset environment variables
-unset VERSION ENV BUCKET \
-    FIT_TRANSFORMERS SAVE_TRANSFORMERS PERSIST_DATASETS WRITE_MODE \
-    TRAIN_PROD_MODEL TRAIN_STAGING_MODELS TRAIN_DEV_MODELS
+# Set environment variables
+set -o allexport
+source .env
+set +o allexport
 
 # Extract variables
 CONFIG_FILE="config/config.yaml"
@@ -52,8 +52,19 @@ if [ "$(docker ps -aq)" ]; then
     docker rm -f $(docker ps -aq)
 fi
 
+# Define IMAGE_NAME
+if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
+    IMAGE_NAME=${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+elif [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
+    IMAGE_NAME=${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+else
+    echo "Unable to define IMAGE_NAME - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
+    exit 1
+fi
+
 # Run docker-compose
-VERSION=${VERSION} \
+IMAGE_NAME=${IMAGE_NAME} \
+    VERSION=${VERSION} \
     FIT_TRANSFORMERS=${FIT_TRANSFORMERS} \
     SAVE_TRANSFORMERS=${SAVE_TRANSFORMERS} \
     PERSIST_DATASETS=${PERSIST_DATASETS} \

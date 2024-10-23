@@ -29,9 +29,6 @@ provider "aws" {
 resource "aws_ecr_repository" "my_ecr_repo" {
   # ECR repository name
   name                     = var.DOCKER_REPOSITORY_NAME
-  
-  # Encription configuration
-  encryption_configuration = "AES-256"
 
   # If true, will delete the repository even if it contains images.
   force_delete             = true

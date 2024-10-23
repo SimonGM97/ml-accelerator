@@ -31,6 +31,9 @@ docker build \
     -t ${ENV}-base-image:${VERSION} \
     -f docker/Dockerfile.Base . \
     --build-arg ENV=${ENV} \
+    --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
+    --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
+    --build-arg COMPUTE_ENV=${COMPUTE_ENV} \
     --build-arg REGION=${REGION} \
     --build-arg BUCKET_NAME=${BUCKET_NAME} \
     --build-arg KXY_API_KEY=${KXY_API_KEY} \
@@ -67,7 +70,7 @@ if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
     # Pull images from repository
     docker pull ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
 
-elif [ "${DOCKER_REPOSITORY_TYPE}" == "ecr" ]; then
+elif [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
     # Log-in to ECR
     aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
     

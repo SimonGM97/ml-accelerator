@@ -65,20 +65,30 @@ class FeatureSelector(Transformer):
     def transform(
         self,
         X: pd.DataFrame,
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.selector_pipeline
-        X, y = self.selector_pipeline(X=X, y=y, fit=False)
+        X, y = self.selector_pipeline(
+            X=X, y=y, 
+            fit=False,
+            debug=debug
+        )
         
         return X, y
 
     def fit_transform(
         self,
         X: pd.DataFrame,
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.selector_pipeline
-        X, y = self.selector_pipeline(X=X, y=y, fit=True)
+        X, y = self.selector_pipeline(
+            X=X, y=y, 
+            fit=True,
+            debug=debug
+        )
 
         return X, y
 
@@ -93,7 +103,8 @@ class FeatureSelector(Transformer):
         self,
         X: pd.DataFrame,
         y: pd.DataFrame = None,
-        fit: bool = False
+        fit: bool = False,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Find selected features
         if fit:
@@ -120,6 +131,7 @@ class FeatureSelector(Transformer):
                 k_best_features,
                 tsf_features,
                 # kxy_features
+                debug=debug
             )
 
         # Filter features
@@ -392,7 +404,8 @@ class FeatureSelector(Transformer):
     def concatenate_selected_features(
         self,
         X: pd.DataFrame,
-        *feature_lists: List[str]
+        *feature_lists: List[str],
+        debug: bool = False
     ) -> List[str]:
         # Concatenate features
         selected_features: Set[str] = set()
@@ -420,7 +433,9 @@ class FeatureSelector(Transformer):
                 len(ignored_features), ignored_features
             )
         
-        LOGGER.info('Selected Features (%s):\n%s', len(selected_features), pformat(selected_features))
+        LOGGER.info('Selected Features (%s).', len(selected_features)) #, pformat(selected_features))
+        if debug:
+            LOGGER.debug('Selected Features:\n%s', pformat(selected_features))
 
         return selected_features
 
@@ -496,8 +511,6 @@ class FeatureSelector(Transformer):
                     p_value, self.target, y[self.target].values.tolist()[:5],
                     feature, X[feature].values.tolist()[:5]
                 )
-
-        LOGGER.info('ignore_features found (%s):\n%s', len(ignore_features), pformat(ignore_features))
         
         return ignore_features
 

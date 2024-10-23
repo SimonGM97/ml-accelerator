@@ -54,20 +54,30 @@ class DataStandardizer(Transformer):
     def transform(
         self,
         X: pd.DataFrame,
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.standardizer_pipeline
-        X, y = self.standardizer_pipeline(X=X, y=y, fit=False)
+        X, y = self.standardizer_pipeline(
+            X=X, y=y, 
+            fit=False,
+            debug=debug
+        )
         
         return X, y
 
     def fit_transform(
         self,
         X: pd.DataFrame,
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.standardizer_pipeline
-        X, y = self.standardizer_pipeline(X=X, y=y, fit=True)
+        X, y = self.standardizer_pipeline(
+            X=X, y=y, 
+            fit=True,
+            debug=debug
+        )
 
         return X, y
 
@@ -82,7 +92,8 @@ class DataStandardizer(Transformer):
         self,
         X: pd.DataFrame,
         y: pd.DataFrame = None,
-        fit: bool = False
+        fit: bool = False,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Find self.num_cols & self.cat_cols
         if fit:

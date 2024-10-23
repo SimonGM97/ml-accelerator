@@ -25,8 +25,19 @@ if [ "$(docker ps -aq)" ]; then
     docker rm -f $(docker ps -aq)
 fi
 
+# Define IMAGE_NAME
+if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
+    IMAGE_NAME=${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+elif [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
+    IMAGE_NAME=${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+else
+    echo "Unable to define IMAGE_NAME - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
+    exit 1
+fi
+
 # Run docker-compose
-VERSION=${VERSION} \
+IMAGE_NAME=${IMAGE_NAME} \
+    VERSION=${VERSION} \
     docker-compose \
     -f docker/docker-compose-app.yaml \
     --env-file .env \

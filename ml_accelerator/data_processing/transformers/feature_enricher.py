@@ -67,20 +67,30 @@ class FeatureEnricher(FeatureSelector):
     def transform(
         self,
         X: pd.DataFrame,
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.enricher_pipeline
-        X, y = self.enricher_pipeline(X=X, y=y, fit=False)
+        X, y = self.enricher_pipeline(
+            X=X, y=y, 
+            fit=False,
+            debug=debug
+        )
         
         return X, y
 
     def fit_transform(
         self,
         X: pd.DataFrame,
-        y: pd.DataFrame = None
+        y: pd.DataFrame = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run self.enricher_pipeline
-        X, y = self.enricher_pipeline(X=X, y=y, fit=True)
+        X, y = self.enricher_pipeline(
+            X=X, y=y, 
+            fit=True,
+            debug=debug
+        )
 
         return X, y
 
@@ -208,13 +218,19 @@ class FeatureEnricher(FeatureSelector):
         # Find features to ignore
         ignore_features: List[str] = self.find_ignore_features(
             X=X, y=y,
-            debug=debug
+            debug=False
         )
 
         # Define self.engineer_cols, based on features to ignore
         self.engineer_cols: List[str] = [f for f in initial_features if f not in ignore_features]
 
-        LOGGER.info('New self.engineer_cols was found (%s):\n%s', len(self.engineer_cols), pformat(self.engineer_cols))
+        LOGGER.info('New ignore_features were found (%s).', len(ignore_features)) #, pformat(ignore_features))
+        if debug:
+            LOGGER.debug('ignore_features:\n%s', pformat(ignore_features))
+
+        LOGGER.info('New self.engineer_cols were found (%s).', len(self.engineer_cols)) #, pformat(self.engineer_cols))
+        if debug:
+            LOGGER.debug('self.engineer_cols:\n%s', pformat(self.engineer_cols))
     
     def fit_outliers_dict(
         self,

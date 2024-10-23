@@ -54,13 +54,15 @@ def data_pipeline(
         X, y = MLP.fit_transform(
             X=X, y=y,
             persist_datasets=persist_datasets,
-            write_mode=write_mode
+            write_mode=write_mode,
+            debug=True
         )
     else:
         X, y = MLP.transform(
             X=X, y=y,
             persist_datasets=persist_datasets,
-            write_mode=write_mode
+            write_mode=write_mode,
+            debug=False
         )
 
     # Save transformers

@@ -38,15 +38,20 @@ class MLPipeline:
         X: pd.DataFrame,
         y: pd.DataFrame = None,
         persist_datasets: bool = False,
-        write_mode: str = None
+        write_mode: str = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run transforer steps
         for transformer in self.transformers:
             # Run transform method
-            X, y = transformer.transform(X=X, y=y)
+            X, y = transformer.transform(
+                X=X, y=y, 
+                debug=debug
+            )
 
             # Show shapes
-            LOGGER.info('X.shape after %s: %s', transformer.class_name, X.shape)
+            if debug:
+                LOGGER.debug('X.shape after %s: %s', transformer.class_name, X.shape)
 
             # Persist datasets
             if persist_datasets:
@@ -75,7 +80,8 @@ class MLPipeline:
         y: pd.Series,
         ignore_steps: List[str] = None,
         persist_datasets: bool = False,
-        write_mode: str = None
+        write_mode: str = None,
+        debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.Series]:
         # Run transforer steps
         for idx in range(len(self.transformers)):
@@ -84,13 +90,20 @@ class MLPipeline:
 
             if ignore_steps is None or transformer.class_name not in ignore_steps:
                 # Run fit_transform method
-                X, y = transformer.fit_transform(X=X, y=y)
+                X, y = transformer.fit_transform(
+                    X=X, y=y,
+                    debug=debug
+                )
             else:
                 # Run transform method
-                X, y = transformer.transform(X=X, y=y)
+                X, y = transformer.transform(
+                    X=X, y=y,
+                    debug=debug
+                )
 
             # Show shapes
-            LOGGER.info('X.shape after %s: %s', transformer.class_name, X.shape)
+            if debug:
+                LOGGER.debug('X.shape after %s: %s', transformer.class_name, X.shape)
 
             # Re-set transformer
             self.transformers[idx] = transformer

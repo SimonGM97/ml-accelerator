@@ -46,20 +46,24 @@ class Env:
         if BUCKET_NAME.split('-')[-1] not in ['dev', 'prod']:
             raise ValueError(f'BUCKET_NAME suffix must be either dev or prod. Got: {BUCKET_NAME.split("-")[-1]} ({BUCKET_NAME})')
         
+        if ENV != BUCKET_NAME.split('-')[-1]:
+            raise Exception(f'ENV ({ENV}) and BUCKET_NAME suffix ({BUCKET_NAME.split("-")[-1]}) must match.')
+        
         # Extract branch
         branch_name: str = get_current_branch()
         
         # Validate main environment parameters
-        if branch_name == 'main':
-            if ENV != 'prod':
-                raise ValueError(f'ENV must be prod for main branch. Got: {ENV}')
-            if BUCKET_NAME.split('-')[-1] != 'prod':
-                raise ValueError(f'BUCKET_NAME suffix must be prod for main branch. Got: {BUCKET_NAME.split("-")[-1]} ({BUCKET_NAME})')
-        else:
-            if ENV == 'prod':
-                raise ValueError(f'ENV cannot be "prod" for {branch_name} branch.')
-            if BUCKET_NAME.split('-')[-1] == 'prod':
-                raise ValueError(f'BUCKET_NAME suffix cannot be "prod" for {branch_name} branch.')
+        if branch_name != "Not a git repository":
+            if branch_name == 'main':
+                if ENV != 'prod':
+                    raise ValueError(f'ENV must be prod for main branch. Got: {ENV}')
+                if BUCKET_NAME.split('-')[-1] != 'prod':
+                    raise ValueError(f'BUCKET_NAME suffix must be prod for main branch. Got: {BUCKET_NAME.split("-")[-1]} ({BUCKET_NAME})')
+            else:
+                if ENV == 'prod':
+                    raise ValueError(f'ENV cannot be "prod" for {branch_name} branch.')
+                if BUCKET_NAME.split('-')[-1] == 'prod':
+                    raise ValueError(f'BUCKET_NAME suffix cannot be "prod" for {branch_name} branch.')
 
         cls.initialized = True
 

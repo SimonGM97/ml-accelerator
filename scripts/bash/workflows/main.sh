@@ -22,13 +22,13 @@ chmod +x ./scripts/bash/install_yq.sh
 chmod +x ./scripts/bash/tests_running.sh
 ./scripts/bash/tests_running.sh
 
-# Build Docker images
-chmod +x ./scripts/bash/image_building.sh
-./scripts/bash/image_building.sh
-
 # Build infrastructure
 chmod +x ./scripts/bash/build_infra.sh
 ./scripts/bash/build_infra.sh
+
+# Build Docker images
+chmod +x ./scripts/bash/image_building.sh
+./scripts/bash/image_building.sh
 
 # Run model building workflow
 chmod +x ./scripts/bash/model_building.sh

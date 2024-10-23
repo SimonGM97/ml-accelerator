@@ -10,7 +10,7 @@ services:
 
   # App Service
   app:
-    image: ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    image: ${IMAGE_NAME}
     container_name: ${ENV}_app_container_${VERSION}
 
     command:
@@ -19,6 +19,9 @@ services:
 
     environment:
       - ENV=${ENV}
+      - DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
+      - MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
+      - COMPUTE_ENV=${COMPUTE_ENV}
       - REGION=${REGION}
       - BUCKET_NAME=${BUCKET_NAME}
       - KXY_API_KEY=${KXY_API_KEY}
@@ -47,7 +50,7 @@ services:
 
   # Streamlit Web App Service
   web-app:
-    image: ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    image: ${IMAGE_NAME}
     container_name: ${ENV}_web_app_container_${VERSION}
 
     command:
@@ -61,6 +64,9 @@ services:
 
     environment:
       - ENV=${ENV}
+      - DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
+      - MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
+      - COMPUTE_ENV=${COMPUTE_ENV}
       - REGION=${REGION}
       - BUCKET_NAME=${BUCKET_NAME}
       - KXY_API_KEY=${KXY_API_KEY}
