@@ -79,13 +79,13 @@ def show_models_table(
     # Add metrics
     metric_cols = []
     for metric_name in models[0].metric_names:
-        col_name = extract_metric_col_name(metric_name)
+        col_name = extract_metric_col_name(metric_name) + " (Test)"
         models_df[col_name] = [getattr(model, metric_name) for model in models]
         metric_cols.append(col_name)
 
     # Add validation column
     models_df['Optimization Metric'] = [extract_metric_col_name(model.optimization_metric) for model in models]
-    models_df['Validation'] = [model.val_score for model in models]
+    models_df['Validation Score'] = [model.val_score for model in models]
 
     def highlight_row(row):
         color = 'background-color: white'
@@ -93,7 +93,7 @@ def show_models_table(
             color = 'background-color: #93A3BC'
         return [color] * len(row)
 
-    models_df[metric_cols + ['Validation']] = 100 * models_df[metric_cols + ['Validation']].round(3)
+    models_df[metric_cols + ['Validation Score']] = (100 * models_df[metric_cols + ['Validation Score']]).round(3)
 
     row1.dataframe(
         models_df.style.apply(highlight_row, axis=1), 
@@ -103,7 +103,7 @@ def show_models_table(
                 format="%.1f%%",
                 min_value=0,
                 max_value=100
-            ) for col in metric_cols
+            ) for col in metric_cols + ['Validation Score']
         },
         use_container_width=True,
         hide_index=True
@@ -146,7 +146,7 @@ def show_metrics(
         metric_name: str,
     ):
         # Extract metric column name
-        col_name: str = extract_metric_col_name(metric_name)
+        col_name: str = extract_metric_col_name(metric_name) + " (Test)"
 
         # Extract score
         score = round(100 * getattr(model, metric_name), 2)
