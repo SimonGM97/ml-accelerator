@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from ml_accelerator.config.params import Params
+from ml_accelerator.utils.env_helper.env_helper import find_env_var
 from scripts.data_processing.data_processing import data_pipeline
 from scripts.tuning.tuning import tuning_pipeline
 from scripts.training.training import training_pipeline
@@ -124,7 +124,7 @@ def drift() -> json:
 if __name__ == "__main__":
     # Run application
     app.run(
-        host=os.environ.get("INFERENCE_HOST"),
-        port=os.environ.get("INFERENCE_PORT"), 
+        host=find_env_var("INFERENCE_HOST"),
+        port=find_env_var("INFERENCE_PORT"), 
         debug=True
     )

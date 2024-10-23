@@ -47,25 +47,19 @@ cover/
 # Archive
 .archive/
 
-# Keys
-# config/Keys.txt
+# Ignore Terraform state files
+*.tfstate
+*.tfstate.backup
 
-# Dummy
-dummy*
-dummy.py
-dummy.ipynb
-dummy_bucket/
-analize_datasets.ipynb
-__archive/
-*.csv
-*.xlsx
-*.parquet
+# Ignore Terraform crash logs
+crash.log
 
-# AWS CLI
-AWSCLIV2.pkg
+# Ignore local .terraform directories
+.terraform/
+.terraform.*
 
-# zip files
-pytradex_lambda.zip
+# Ignore plan output files
+*.tfplan
 
 # Distribution / packaging
 .Python
@@ -127,6 +121,20 @@ target/
 # IPython
 profile_default/
 ipython_config.py
+
+# Dummy
+dummy*
+dummy.py
+dummy.ipynb
+dummy_bucket/
+analize_datasets.ipynb
+__archive/
+*.csv
+*.xlsx
+*.parquet
+
+# AWS CLI
+AWSCLIV2.pkg
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is

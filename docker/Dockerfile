@@ -8,6 +8,7 @@ FROM ${ENV}-base-image:${VERSION} AS base
 
 # Copy required files & directories into the container at /app
 COPY .aws /root/.aws
+COPY .env .env
 COPY resources resources
 COPY scripts scripts
 COPY app.py .

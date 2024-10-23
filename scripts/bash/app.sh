@@ -2,8 +2,13 @@
 # chmod +x ./scripts/bash/model_building_workflow.sh
 # ./scripts/bash/model_building_workflow.sh
 
+# Set environment variables
+set -o allexport
+source .env
+set +o allexport
+
 # Unset environment variables
-unset VERSION ENV BUCKET INFERENCE_PORT
+unset VERSION
 
 # Extract variables
 CONFIG_FILE="config/config.yaml"

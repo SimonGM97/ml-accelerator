@@ -32,15 +32,8 @@ docker build \
     -f docker/Dockerfile.Base . \
     --build-arg ENV=${ENV} \
     --build-arg REGION=${REGION} \
-    --build-arg BUCKET=${BUCKET} \
-    --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
-    --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
-    --build-arg COMPUTE_ENV=${COMPUTE_ENV} \
+    --build-arg BUCKET_NAME=${BUCKET_NAME} \
     --build-arg KXY_API_KEY=${KXY_API_KEY} \
-    --build-arg DOCKER_REPOSITORY_TYPE=${DOCKER_REPOSITORY_TYPE} \
-    --build-arg DOCKER_USERNAME=${DOCKER_USERNAME} \
-    --build-arg DOCKER_REPOSITORY_NAME=${DOCKER_REPOSITORY_NAME} \
-    --build-arg DOCKER_TOKEN=${DOCKER_TOKEN} \
     --build-arg INFERENCE_HOST=${INFERENCE_HOST} \
     --build-arg INFERENCE_PORT=${INFERENCE_PORT} \
     --build-arg WEBAPP_HOST=${WEBAPP_HOST} \
@@ -60,14 +53,33 @@ docker build \
     --build-arg VERSION=${VERSION} \
     --build-arg ENV=${ENV}
 
-# login to docker
-echo ${DOCKER_TOKEN} | docker login -u ${DOCKER_USERNAME} --password-stdin
 
-# Tag docker images
-docker tag ${ENV}-image:${VERSION} ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
+    # login to docker
+    echo ${DOCKER_TOKEN} | docker login -u ${DOCKER_USERNAME} --password-stdin
 
-# Push images to repository
-docker push ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    # Tag docker images
+    docker tag ${ENV}-image:${VERSION} ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
 
-# Pull images from repository
-docker pull ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    # Push images to repository
+    docker push ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+
+    # Pull images from repository
+    docker pull ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+
+elif [ "${DOCKER_REPOSITORY_TYPE}" == "ecr" ]; then
+    # Log-in to ECR
+    aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
+    
+    # Tag docker images
+    docker tag ${ENV}-image:${VERSION} ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+
+    # Push images to repository
+    docker push ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+
+    # Pull images from repository
+    docker pull ${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+else
+    echo "Unable to push docker images - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
+    exit 1
+fi

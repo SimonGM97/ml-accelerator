@@ -4,8 +4,8 @@
 
 # PROJECT PARAMETERS
 PROJECT_PARAMS:
-  VERSION: v1.0.0
   PROJECT_NAME: ml_accelerator
+  VERSION: v1.0.0
   TARGET: diagnosis # target column
   # species (iris), wine_class (wine), diagnosis (breast_cancer), disease_progression (diabetes), MedHouseVal (california_housing)
   TASK: binary_classification 
@@ -57,9 +57,7 @@ DATA_TRANSFORMING_PARAMS:
 # FEATURE SELECTION PARAMETERS
 FEATURE_SELECTION_PARAMS:
   FORCED_FEATURES: null
-  TARGET_FEATURE_QUANTILE_THRESHOLD: 0.15
-  FEATURE_FEATURE_CORREL_THRESHOLD: 0.96
-  CATEGORICAL_PERCENTAGE: 0.8
+  IGNORE_FEATURES_P_VALUE: 0.02
   BORUTA_ALGORITHM: lightgbm
   # random_forest, lightgbm, xgboost
   RFE_N: 10

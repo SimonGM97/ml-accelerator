@@ -6,8 +6,9 @@
 # conda deactivate
 
 # Set environment variables
-chmod +x ./scripts/bash/set_env_vars.sh
-./scripts/bash/set_env_vars.sh
+set -o allexport
+source .env
+set +o allexport
 
 # Install yq (if necessary)
 chmod +x ./scripts/bash/install_yq.sh
@@ -25,9 +26,17 @@ chmod +x ./scripts/bash/tests_running.sh
 chmod +x ./scripts/bash/image_building.sh
 ./scripts/bash/image_building.sh
 
-# Ruun model building workflow
+# Build infrastructure
+chmod +x ./scripts/bash/build_infra.sh
+./scripts/bash/build_infra.sh
+
+# Run model building workflow
 chmod +x ./scripts/bash/model_building.sh
 ./scripts/bash/model_building.sh
+
+# Run model updating workflow
+# chmod +x ./scripts/bash/model_updating.sh
+# ./scripts/bash/model_updating.sh
 
 # Run docker-compose-app
 chmod +x ./scripts/bash/app.sh

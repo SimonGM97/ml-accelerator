@@ -1,6 +1,7 @@
 from ml_accelerator.config.params import Params
 from ml_accelerator.utils.filesystem.filesystem_helper import save_to_filesystem
 from ml_accelerator.utils.aws.s3_helper import save_to_s3
+from ml_accelerator.utils.env_helper.env_helper import find_env_var
 import os
 
 def save_inference(inference: dict) -> None:
@@ -17,15 +18,15 @@ def save_inference(inference: dict) -> None:
 
     # Save inference
     save_name = f'inference_pred_id={pred_id}_hour={hour}_mins={mins}_sec={sec}.json'
-    if os.environ.get("DATA_STORAGE_ENV") == 'filesystem':
+    if find_env_var("DATA_STORAGE_ENV") == 'filesystem':
         save_to_filesystem(
             asset=inference,
-            path=os.path.join(os.environ.get("BUCKET_NAME"), *os.environ.get("INFERENCE_PATH").split('/'), year, month, day, save_name)
+            path=os.path.join(find_env_var("BUCKET_NAME"), *find_env_var("INFERENCE_PATH").split('/'), year, month, day, save_name)
         )
-    elif os.environ.get("DATA_STORAGE_ENV") == 'S3':
+    elif find_env_var("DATA_STORAGE_ENV") == 'S3':
         save_to_s3(
             asset=inference,
-            path=f'{os.environ.get("BUCKET_NAME")}/{os.environ.get("INFERENCE_PATH") + "/".join([year, month, day])}/{save_name}'
+            path=f'{find_env_var("BUCKET_NAME")}/{find_env_var("INFERENCE_PATH") + "/".join([year, month, day])}/{save_name}'
         )
     else:
-        raise NotImplementedError(f'Data storage environment {os.environ.get("DATA_STORAGE_ENV")} is not implemented.')
+        raise NotImplementedError(f'Data storage environment {find_env_var("DATA_STORAGE_ENV")} is not implemented.')

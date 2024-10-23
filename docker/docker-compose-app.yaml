@@ -20,23 +20,8 @@ services:
     environment:
       - ENV=${ENV}
       - REGION=${REGION}
-      - BUCKET=${BUCKET}
-      - DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
-      - MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
-      - COMPUTE_ENV=${COMPUTE_ENV}
-
+      - BUCKET_NAME=${BUCKET_NAME}
       - KXY_API_KEY=${KXY_API_KEY}
-
-      - DOCKER_REPOSITORY_TYPE=${DOCKER_REPOSITORY_TYPE}
-      - DOCKER_USERNAME=${DOCKER_USERNAME}
-      - DOCKER_REPOSITORY_NAME=${DOCKER_REPOSITORY_NAME}
-      - DOCKER_TOKEN=${DOCKER_TOKEN}
-
-      - INFERENCE_HOST=${INFERENCE_HOST}
-      - INFERENCE_PORT=${INFERENCE_PORT}
-      - WEBAPP_HOST=${WEBAPP_HOST}
-      - WEBAPP_PORT=${WEBAPP_PORT}
-
       - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
       - TRAINING_PATH=${TRAINING_PATH}
       - INFERENCE_PATH=${INFERENCE_PATH}
@@ -44,14 +29,13 @@ services:
       - MODELS_PATH=${MODELS_PATH}
       - SCHEMAS_PATH=${SCHEMAS_PATH}
       - MOCK_PATH=${MOCK_PATH}
-
       - SEED=${SEED}
 
     ports:
       - "${INFERENCE_PORT}:${INFERENCE_PORT}"
 
     volumes:
-      - ../${BUCKET}:/app/${BUCKET}
+      - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
       - ../config:/app/config
     
     # healthcheck:
@@ -78,23 +62,8 @@ services:
     environment:
       - ENV=${ENV}
       - REGION=${REGION}
-      - BUCKET=${BUCKET}
-      - DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
-      - MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
-      - COMPUTE_ENV=${COMPUTE_ENV}
-
+      - BUCKET_NAME=${BUCKET_NAME}
       - KXY_API_KEY=${KXY_API_KEY}
-
-      - DOCKER_REPOSITORY_TYPE=${DOCKER_REPOSITORY_TYPE}
-      - DOCKER_USERNAME=${DOCKER_USERNAME}
-      - DOCKER_REPOSITORY_NAME=${DOCKER_REPOSITORY_NAME}
-      - DOCKER_TOKEN=${DOCKER_TOKEN}
-
-      - INFERENCE_HOST=${INFERENCE_HOST}
-      - INFERENCE_PORT=${INFERENCE_PORT}
-      - WEBAPP_HOST=${WEBAPP_HOST}
-      - WEBAPP_PORT=${WEBAPP_PORT}
-
       - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
       - TRAINING_PATH=${TRAINING_PATH}
       - INFERENCE_PATH=${INFERENCE_PATH}
@@ -102,14 +71,13 @@ services:
       - MODELS_PATH=${MODELS_PATH}
       - SCHEMAS_PATH=${SCHEMAS_PATH}
       - MOCK_PATH=${MOCK_PATH}
-
       - SEED=${SEED}
 
     ports:
       - "${WEBAPP_PORT}:${WEBAPP_PORT}"
 
     volumes:
-      - ../${BUCKET}:/app/${BUCKET}
+      - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
       - ../config:/app/config
 
   # # Dummy service
@@ -135,7 +103,7 @@ services:
 
   #   volumes:
   #     # - ${HOST_PATH}:/app # Mount the project directory
-  #     - ../${BUCKET}:/app/${BUCKET}
+  #     - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
   #     - ../config:/app/config
 
   #   deploy:

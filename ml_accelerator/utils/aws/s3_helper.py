@@ -1,8 +1,8 @@
 from ml_accelerator.utils.logging.logger_helper import get_logger
+from ml_accelerator.utils.env_helper.env_helper import find_env_var
 import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
-import os
 from io import BytesIO, StringIO
 import s3fs
 import boto3
@@ -40,7 +40,7 @@ def get_secrets(secret_name: str = 'access_keys') -> str:
     return secret
 
 # Load region
-REGION = os.environ.get("REGION")
+REGION = find_env_var("REGION")
 
 # Extract secrets
 ACCESS_KEYS = get_secrets(secret_name='access_keys')
@@ -50,14 +50,14 @@ ACCESS_KEYS = get_secrets(secret_name='access_keys')
 S3_CLIENT = boto3.client(
     's3',
     region_name=REGION,
-    aws_access_key_id=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # os.environ.get("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # os.environ.get("AWS_SECRET_ACCESS_KEY")
+    aws_access_key_id=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # find_env_var("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # find_env_var("AWS_SECRET_ACCESS_KEY")
 )
 
 # Create an s3fs.S3FileSystem instance
 FS = s3fs.S3FileSystem(
-    key=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # os.environ.get("AWS_ACCESS_KEY_ID"),
-    secret=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # os.environ.get("AWS_SECRET_ACCESS_KEY"),
+    key=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # find_env_var("AWS_ACCESS_KEY_ID"),
+    secret=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # find_env_var("AWS_SECRET_ACCESS_KEY"),
     anon=False  # Set to True if your bucket is public
 )
 
@@ -145,7 +145,7 @@ def load_from_s3(
             BytesIO(obj['Body'].read()).read()
         )
     else:
-        raise Exception(f'Invalid "read_format" parameter: {read_format}, extracted from path: {path}.\n\n')
+        raise Exception(f'Invalid "read_format" parameter: {read_format}, extracted from path: {path}.')
     
     # assert len(asset) > 0, f"Loaded asset from s3://{path} contains zero keys. {asset}"
 
@@ -423,7 +423,7 @@ def copy_bucket(
 if __name__ == "__main__":
     # Copy bucket into new dummy-bucket-ml-accelerator
     copy_bucket(
-        source_bucket=os.environ.get('BUCKET_NAME'), 
+        source_bucket=find_env_var("BUCKET_NAME"), 
         destination_bucket='dummy-bucket-ml-accelerator', 
         subdir='',
         delete_destination=True,

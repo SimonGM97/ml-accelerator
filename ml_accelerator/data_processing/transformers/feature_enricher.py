@@ -202,26 +202,17 @@ class FeatureEnricher(FeatureSelector):
             encoder: LabelEncoder = LabelEncoder()
             y[self.target] = encoder.fit_transform(y=y[self.target].values)
 
-        if self.task in ['regression', 'binary_classification']:
-            # Find correlation features
-            correlation_features: List[str] = self.find_correlation_features(
-                X=X, y=y,
-                tf_quantile_threshold=None,
-                ff_correl_threshold=None,
-                debug=debug
-            )
-            
-            # Find categorical features
-            cat_features: List[str] = self.find_categorical_features(
-                X=X, y=y,
-                keep_percentage=None,
-                debug=debug
-            )
+        # Define initial features
+        initial_features: List[str] = X.columns.tolist().copy()
 
-            # Define features to keep
-            self.engineer_cols: List[str] = correlation_features + cat_features
-        else:
-            raise NotImplementedError('')
+        # Find features to ignore
+        ignore_features: List[str] = self.find_ignore_features(
+            X=X, y=y,
+            debug=debug
+        )
+
+        # Define self.engineer_cols, based on features to ignore
+        self.engineer_cols: List[str] = [f for f in initial_features if f not in ignore_features]
 
         LOGGER.info('New self.engineer_cols was found (%s):\n%s', len(self.engineer_cols), pformat(self.engineer_cols))
     

@@ -16,6 +16,7 @@ from ml_accelerator.utils.filesystem.filesystem_helper import (
 )
 from ml_accelerator.utils.filesystem.filesystem_helper import find_paths, find_subdirs
 from ml_accelerator.utils.logging.logger_helper import get_logger
+from ml_accelerator.utils.env_helper.env_helper import find_env_var
 from tqdm import tqdm
 import os
 from pprint import pformat
@@ -53,11 +54,11 @@ class ModelRegistry:
         self.task: str = task
 
         # Environment Params
-        self.data_storage_env: str = os.environ.get('DATA_STORAGE_ENV')
-        self.model_storage_env: str = os.environ.get('MODEL_STORAGE_ENV')
-        self.bucket: str = os.environ.get('BUCKET')
-        self.models_path: str = os.environ.get('MODELS_PATH')
-        self.transformers_path: str = os.environ.get('TRANSFORMERS_PATH')
+        self.data_storage_env: str = find_env_var("DATA_STORAGE_ENV")
+        self.model_storage_env: str = find_env_var("MODEL_STORAGE_ENV")
+        self.bucket: str = find_env_var("BUCKET_NAME")
+        self.models_path: str = find_env_var("MODELS_PATH")
+        self.transformers_path: str = find_env_var("RANSFORMERS_PATH")
 
         # Define default models
         self.prod_model: Model = None

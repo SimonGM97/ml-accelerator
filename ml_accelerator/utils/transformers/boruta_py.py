@@ -11,13 +11,13 @@ License: BSD 3 clause
 from __future__ import print_function, division
 import numpy as np
 import scipy as sp
-import os
 from sklearn.utils import check_random_state, check_X_y
 from sklearn.base import TransformerMixin, BaseEstimator
+from ml_accelerator.utils.env_helper.env_helper import find_env_var
 
 
 # Set random seed
-np.random.seed(int(os.environ.get("SEED")))
+np.random.seed(int(find_env_var("SEED")))
 
 
 class BorutaPy(BaseEstimator, TransformerMixin):

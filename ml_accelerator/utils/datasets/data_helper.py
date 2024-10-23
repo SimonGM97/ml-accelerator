@@ -8,6 +8,7 @@ from ml_accelerator.utils.aws.s3_helper import (
     load_from_s3,
     save_to_s3
 )
+from ml_accelerator.utils.env_helper.env_helper import find_env_var
 
 import pandas as pd
 from imblearn.over_sampling import RandomOverSampler
@@ -44,14 +45,14 @@ class DataHelper:
         self.partition_cols: str = partition_cols
 
         # Environment parameters
-        self.bucket: str = os.environ.get('BUCKET')
-        self.storage_env: str = os.environ.get('DATA_STORAGE_ENV')
+        self.bucket: str = find_env_var("BUCKET_NAME")
+        self.storage_env: str = find_env_var("DATA_STORAGE_ENV")
 
-        self.raw_datasets_path: str = os.environ.get('RAW_DATASETS_PATH')
-        self.training_path: str = os.environ.get('TRAINING_PATH')
-        self.inference_path: str = os.environ.get('INFERENCE_PATH')
-        self.transformers_path: str = os.environ.get('TRANSFORMERS_PATH')
-        self.schemas_path: str = os.environ.get('SCHEMAS_PATH')
+        self.raw_datasets_path: str = find_env_var("RAW_DATASETS_PATH")
+        self.training_path: str = find_env_var("TRAINING_PATH")
+        self.inference_path: str = find_env_var("INFERENCE_PATH")
+        self.transformers_path: str = find_env_var("TRANSFORMERS_PATH")
+        self.schemas_path: str = find_env_var("SCHEMAS_PATH")
 
     def divide_datasets(
         self,
@@ -72,14 +73,14 @@ class DataHelper:
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, 
                 test_size=test_size, 
-                random_state=int(os.environ.get("SEED")),
+                random_state=int(find_env_var("SEED")),
                 stratify=y
             )
         elif self.task == 'regression':
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, 
                 test_size=test_size, 
-                random_state=int(os.environ.get("SEED"))
+                random_state=int(find_env_var("SEED"))
             )
         elif self.task == 'forecasting':
             train_periods: int = int(test_size * X.shape[0])
@@ -296,11 +297,12 @@ class DataHelper:
             else:
                 base_path: str = self.bucket
         else:
-            base_path: str = None
+            raise ValueError(f'Invalid self.storage_env was received: {self.storage_env}.')
 
         # Define path
         if self.storage_env == 'filesystem':
             if 'raw' in asset_name:
+                print(f'base_path: {base_path}, self.raw_datasets_path: {self.raw_datasets_path}, asset_name: {asset_name}, self.data_extention: {self.data_extention}')
                 path: str = os.path.join(base_path, *self.raw_datasets_path.split('/'), f"{asset_name}.{self.data_extention}")
             elif 'schema' in asset_name:
                 path: str = os.path.join(base_path, *self.schemas_path.split('/'), f"{asset_name}.yaml")

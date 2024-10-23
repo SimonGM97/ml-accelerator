@@ -272,7 +272,7 @@ def copy_bucket(
 if __name__ == "__main__":
     # Copy bucket into new dummy-bucket
     copy_bucket(
-        source_bucket=os.environ.get('BUCKET_NAME'), 
+        source_bucket=find_env_var("BUCKET_NAME"), 
         destination_bucket='dummy-bucket', 
         subdir='',
         delete_destination=True

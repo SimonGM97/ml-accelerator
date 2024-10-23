@@ -3,6 +3,7 @@ from ml_accelerator.data_processing.transformers.transformer import Transformer
 from ml_accelerator.utils.transformers.boruta_py import BorutaPy
 from ml_accelerator.utils.timing.timing_helper import timing
 from ml_accelerator.utils.logging.logger_helper import get_logger
+from ml_accelerator.utils.env_helper.env_helper import find_env_var
 
 import pandas as pd
 import numpy as np
@@ -10,9 +11,9 @@ from sklearn.feature_selection import RFE, SelectKBest
 from sklearn.preprocessing import OneHotEncoder
 import tsfresh as tsf
 from nancorrmp.nancorrmp import NaNCorrMp
+from scipy.stats import pearsonr, ttest_ind, chi2_contingency, f_oneway
 import time
 import gc
-import os
 from copy import deepcopy
 from pprint import pformat
 from typing import List, Tuple, Set
@@ -33,9 +34,7 @@ class FeatureSelector(Transformer):
         self,
         transformer_id: str = None,
         forced_features: List[str] = Params.FORCED_FEATURES,
-        tf_quantile_threshold: float = Params.TARGET_FEATURE_QUANTILE_THRESHOLD,
-        ff_correl_threshold: float = Params.FEATURE_FEATURE_CORREL_THRESHOLD,
-        categ_percentage: float = Params.CATEGORICAL_PERCENTAGE,
+        ignore_features_p_value: float = Params.IGNORE_FEATURES_P_VALUE,
         boruta_algorithm: str = Params.BORUTA_ALGORITHM,
         rfe_n: int = Params.RFE_N,
         k_best: int = Params.K_BEST,
@@ -48,9 +47,7 @@ class FeatureSelector(Transformer):
 
         # Set non-load attributes
         self.forced_features: List[str] = forced_features
-        self.tf_quantile_threshold: float = tf_quantile_threshold
-        self.ff_correl_threshold: float = ff_correl_threshold
-        self.categ_percentage: float = categ_percentage
+        self.ignore_features_p_value: float = ignore_features_p_value
         self.boruta_algorithm: str = boruta_algorithm
         self.rfe_n: int = rfe_n
         self.k_best: int = k_best
@@ -137,7 +134,7 @@ class FeatureSelector(Transformer):
                 'n_estimators': 100,
                 'max_depth': 50,
                 'n_jobs': Params.CPUS,
-                'random_state': os.environ.get("SEED"),
+                'random_state': find_env_var("SEED"),
                 'verbose': -1
             }
 
@@ -157,7 +154,7 @@ class FeatureSelector(Transformer):
             hyper_parameters = {
                 'max_depth': 50,
                 'n_estimators': 100,
-                'random_state': os.environ.get("SEED"),
+                'random_state': find_env_var("SEED"),
                 'n_jobs': Params.CPUS,
                 'verbose': -1
             }
@@ -178,7 +175,7 @@ class FeatureSelector(Transformer):
             hyper_parameters = {
                 'max_depth': 50,
                 'n_estimators': 100,
-                'random_state': os.environ.get("SEED"),
+                'random_state': find_env_var("SEED"),
                 'nthread': Params.CPUS,
                 'verbosity': -1
             }
@@ -210,7 +207,7 @@ class FeatureSelector(Transformer):
         selector = BorutaPy(
             model,
             verbose=-1, 
-            random_state=int(os.environ.get("SEED"))
+            random_state=int(find_env_var("SEED"))
         )
 
         selector.fit(X.values, y.values)
@@ -426,6 +423,88 @@ class FeatureSelector(Transformer):
         LOGGER.info('Selected Features (%s):\n%s', len(selected_features), pformat(selected_features))
 
         return selected_features
+
+    def find_ignore_features(
+        self,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        p_value_threshold: float = None,
+        debug: bool = False
+    ) -> List[str]:
+        debug=True
+        # Validate p_value_threshold
+        if p_value_threshold is None:
+            p_value_threshold = self.ignore_features_p_value
+
+        # Find intersection between X & y
+        intersection = y.index.intersection(X.index)
+
+        y = y.loc[intersection]
+        X = X.loc[intersection]
+
+        # Define empty ignore_features
+        ignore_features: List[str] = []
+    
+        for feature in X.columns:
+            if self.task == 'regression':
+                if X[feature].dtype in ['string', 'object'] or len(X[feature].unique()) < 10:
+                    # Perform ANOVA for categorical feature with continuous target
+                    groups = [y[X[feature] == category] for category in np.unique(X[feature])]
+                    _, p_value = f_oneway(*groups)
+                else:
+                    # Perform Pearson correlation for continuous target
+                    corr, p_value = pearsonr(X[feature].values, y[self.target].values)
+            
+            elif self.task == 'binary_classification':
+                if X[feature].dtype in ['string', 'object'] or len(X[feature].unique()) < 10:
+                    # Chi-squared test for categorical features
+                    contingency_table = pd.crosstab(X[feature], y)
+                    _, p_value, _, _ = chi2_contingency(contingency_table)
+                else:
+                    # T-test for continuous features in binary classification
+                    full_df: pd.DataFrame = pd.concat([X[[feature]], y[[self.target]]], axis=1)
+                    y_unique = np.unique(y[self.target])
+                    group1 = full_df.loc[full_df[self.target] == y_unique[0], feature]
+                    group2 = full_df.loc[full_df[self.target] == y_unique[1], feature]
+                    _, p_value = ttest_ind(group1, group2)
+            
+            elif self.task == 'multiclass_classification':
+                if X[feature].dtype == 'object' or len(X[feature].unique()) < 10:
+                    # Chi-squared test for categorical features
+                    contingency_table = pd.crosstab(X[feature], y)
+                    _, p_value, _, _ = chi2_contingency(contingency_table)
+                else:
+                    # ANOVA test for continuous features in multiclass classification
+                    groups = [X[feature].values[y == cls] for cls in np.unique(y)]
+                    _, p_value = f_oneway(*groups)
+            
+            else:
+                raise ValueError("Invalid problem_type. Choose from 'regression', 'binary', or 'multiclass'.")
+            
+            if np.isnan(p_value) or p_value > p_value_threshold:
+                ignore_features.append(feature)
+            
+            if debug:
+                LOGGER.debug(
+                    'p_value between %s (%s) and %s (%s): %s',
+                    self.target, y[self.target].values.tolist()[:5],
+                    feature, X[feature].values.tolist()[:5], p_value
+                )
+            
+            if np.isnan(p_value):
+                LOGGER.warning(
+                    'p_value was nan (%s), when comparing %s (%s) with %s (%s)', 
+                    p_value, self.target, y[self.target].values.tolist()[:5],
+                    feature, X[feature].values.tolist()[:5]
+                )
+
+        LOGGER.info('ignore_features found (%s):\n%s', len(ignore_features), pformat(ignore_features))
+        
+        return ignore_features
+
+    """
+    Deprecated methods
+    """
 
     @staticmethod
     def prepare_correlation_datasets(
