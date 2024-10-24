@@ -538,7 +538,7 @@ class ModelRegistry:
         """
         def delete_files(bucket: str, directory: str, keep_ids: List[str]) -> None:
             # Extract paths
-            paths: Set[str] = find_paths(bucket=bucket, directory=directory)
+            paths: Set[str] = find_paths(bucket_name=bucket, directory=directory)
             for path in paths:
                 if not any([keep_id in path for keep_id in keep_ids]):
                     LOGGER.info("Deleting %s.", path)
@@ -552,7 +552,7 @@ class ModelRegistry:
         
         def delete_subdirs(bucket: str, directory: str, keep_ids: List[str]) -> None:
             # Extract subdirs
-            subdirs: Set[str] = find_subdirs(bucket=bucket, directory=directory)
+            subdirs: Set[str] = find_subdirs(bucket_name=bucket, directory=directory)
             for subdir in subdirs:
                 if not any([keep_id in subdir for keep_id in keep_ids]):
                     LOGGER.info("Deleting %s.", subdir)
@@ -602,7 +602,7 @@ class ModelRegistry:
     def clean_s3_models(self) -> None:
         def delete_keys(bucket: str, directory: str, keep_ids: List[str]) -> None:
             # Extract keys
-            keys: Set[str] = find_keys(bucket=bucket, subdir=directory)
+            keys: Set[str] = find_keys(bucket_name=bucket, subdir=directory)
             for key in keys:
                 if not any([keep_id in key for keep_id in keep_ids]):
                     delete_path = f"{self.bucket}/{key}"

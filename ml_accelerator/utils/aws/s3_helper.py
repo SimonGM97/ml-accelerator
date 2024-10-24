@@ -45,18 +45,17 @@ def get_secrets(secret_name: str = 'access_keys') -> str:
 ACCESS_KEYS = get_secrets(secret_name='access_keys')
 
 # Create an S3 client instance
-# print('Instanciating S3_CLIENT.\n')
 S3_CLIENT = boto3.client(
     's3',
     region_name=Env.get("REGION"),
-    aws_access_key_id=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # Env.get("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # Env.get("AWS_SECRET_ACCESS_KEY")
+    aws_access_key_id=ACCESS_KEYS["AWS_ACCESS_KEY_ID"],
+    aws_secret_access_key=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"],
 )
 
 # Create an s3fs.S3FileSystem instance
 FS = s3fs.S3FileSystem(
-    key=ACCESS_KEYS["AWS_ACCESS_KEY_ID"], # Env.get("AWS_ACCESS_KEY_ID"),
-    secret=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"], # Env.get("AWS_SECRET_ACCESS_KEY"),
+    key=ACCESS_KEYS["AWS_ACCESS_KEY_ID"],
+    secret=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"],
     anon=False  # Set to True if your bucket is public
 )
 
@@ -264,7 +263,7 @@ def save_to_s3(
 
 
 def find_keys(
-    bucket: str,
+    bucket_name: str,
     subdir: str = None,
     include_additional_info: bool = False
 ) -> Set[str]:
@@ -277,7 +276,7 @@ def find_keys(
 
     # Find dirs
     prefixes = S3_CLIENT.list_objects_v2(
-        Bucket=bucket,
+        Bucket=bucket_name,
         Prefix=subdir, 
         Delimiter='/'
     ).get('CommonPrefixes')
@@ -288,7 +287,7 @@ def find_keys(
         for prefix in prefixes:
             # Find prefix contents
             contents = S3_CLIENT.list_objects_v2(
-                Bucket=bucket,
+                Bucket=bucket_name,
                 Prefix=prefix
             ).get('Contents', [])
         
@@ -305,12 +304,12 @@ def find_keys(
                     })
         
         return s3_keys
-    LOGGER.warning('No keys were found for bucket: %s, subdir: %s.', bucket, subdir)
+    LOGGER.warning('No keys were found for bucket: %s, subdir: %s.', bucket_name, subdir)
     return set()
 
 
 def find_prefixes(
-    bucket: str, 
+    bucket_name: str, 
     prefix: str = None, 
     results: set = set(),
     debug: bool = False
@@ -319,10 +318,10 @@ def find_prefixes(
         prefix = ''
 
     if debug:
-        LOGGER.debug('bucket: %s, prefix: %s', bucket, prefix)
+        LOGGER.debug('bucket: %s, prefix: %s', bucket_name, prefix)
 
     result: dict = S3_CLIENT.list_objects_v2(
-        Bucket=bucket, 
+        Bucket=bucket_name, 
         Prefix=prefix, 
         Delimiter='/'
     )
@@ -334,7 +333,7 @@ def find_prefixes(
         results.add(subdir)
         
         # Recursively list subdirectories
-        find_prefixes(bucket, subdir, results)
+        find_prefixes(bucket_name, subdir, results)
 
     return results
 
@@ -378,13 +377,25 @@ def delete_s3_directory(
         LOGGER.warning('Unable to delete %s.\nException: %s', f'{bucket}/{directory}', e)
 
 
-def delete_bucket(bucket: str) -> None:
-    LOGGER.info('Deleting bucket: %s (S3).', bucket)
+def delete_bucket(bucket_name: str) -> None:
+    LOGGER.info('Deleting bucket: %s (S3).', bucket_name)
 
     # Run remove_directory function without directory
-    delete_s3_directory(bucket=bucket, directory='')
+    delete_s3_directory(bucket=bucket_name, directory='')
 
-    LOGGER.info('Bucket %s (S3) was successfully deleted.', bucket)
+    # Check that all keys & prefixes have been deleted
+    keys: Set[str] = find_keys(bucket_name=bucket_name, directory='')
+    prefixes: Set[str] = find_prefixes(bucket_name=bucket_name, directory='')
+
+    if len(keys) == 0 and len(prefixes) == 0:
+        LOGGER.info('Bucket: %s (S3) was successfully deleted.', bucket_name)
+    else:
+        LOGGER.warning(
+            'Bucket: %s (S3) was NOT successfully deleted.\n'
+            'Keys remaining (%s):\n%s\n'
+            'Prefixes remaining (%s):\n%s', 
+            bucket_name, len(keys), pformat(keys), len(prefixes), pformat(prefixes)
+        )
 
 
 def copy_bucket(
@@ -398,18 +409,18 @@ def copy_bucket(
 
     # Delete destination bucket
     if delete_destination:
-        delete_bucket(bucket=destination_bucket)
+        delete_bucket(bucket_name=destination_bucket)
 
     # Find destination objects
     dest_objects: Set[str] = find_keys(
-        bucket=destination_bucket,
+        bucket_name=destination_bucket,
         subdir=subdir,
         include_additional_info=False
     )
     
     # Find source objects
     source_objects: Set[str] = find_keys(
-        bucket=source_bucket,
+        bucket_name=source_bucket,
         subdir=subdir,
         include_additional_info=False
     )
@@ -433,7 +444,7 @@ def copy_bucket(
         
         # Re-setting dest_objects
         dest_objects = find_keys(
-            bucket=destination_bucket,
+            bucket_name=destination_bucket,
             subdir=subdir,
             include_additional_info=False
         )
@@ -455,5 +466,5 @@ if __name__ == "__main__":
     )
 
     # Delete dummy-bucket-ml-accelerator
-    delete_bucket(bucket='dummy-bucket-ml-accelerator')
+    delete_bucket(bucket_name='dummy-bucket-ml-accelerator')
 

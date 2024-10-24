@@ -18,7 +18,7 @@ def filesystem_to_s3(
 ) -> None:
     # Find source paths
     source_paths: Set[str] = filesystem_helper.find_paths(
-        bucket=source_bucket,
+        bucket_name=source_bucket,
         directory=subdir
     )
 
@@ -42,7 +42,7 @@ def s3_to_filesystem(
 ) -> None:
     # Find source objects
     source_objects: Set[str] = s3_helper.find_keys(
-        bucket=source_bucket,
+        bucket_name=source_bucket,
         subdir=subdir,
         include_additional_info=False
     )
@@ -77,9 +77,9 @@ def migrate_data(
     # Delete destination bucket
     if delete_destination:
         if destination_type == 'filesystem':
-            filesystem_helper.delete_bucket(bucket=destination_bucket)
+            filesystem_helper.delete_bucket(bucket_name=destination_bucket)
         elif destination_type == 'S3':
-            s3_helper.delete_bucket(bucket=destination_bucket)
+            s3_helper.delete_bucket(bucket_name=destination_bucket)
         else:
             raise ValueError(f'destination_type: {destination_type} is not a valid destination.')
         

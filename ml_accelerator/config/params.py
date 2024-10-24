@@ -47,8 +47,8 @@ class Params:
     GENERAL PARAMETERS
     """
     # PROJECT PARAMETERS
-    VERSION: str
     PROJECT_NAME: str
+    VERSION: str
     TARGET: str
     TASK: str
 
@@ -135,20 +135,7 @@ class Params:
     WORKFLOW PARAMETERS
     """
     # MODEL BUILDING
-    FIT_TRANSFORMERS: bool
-    SAVE_TRANSFORMERS: bool
-    PERSIST_DATASETS: bool
-    WRITE_MODE: str
-
-    TRAIN_PROD_PIPE: bool
-    TRAIN_STAGING_PIPES: bool
-    TRAIN_DEV_PIPES: bool
-
-    EVALUATE_PROD_PIPE: bool
-    EVALUATE_STAGING_PIPES: bool
-    EVALUATE_DEV_PIPES: bool
-    UPDATE_MODEL_STAGES: bool
-    UPDATE_PROD_MODEL: bool
+    MODEL_BUILDING_PARAMS: dict
 
     """
     OTHER PARAMETERS

@@ -9,6 +9,7 @@ import pickle
 import json
 import yaml
 from tqdm import tqdm
+from pprint import pformat
 from typing import List, Set, Tuple, Any
 
 
@@ -36,7 +37,7 @@ def load_from_filesystem(
             prefix = key.replace(".parquet", "")
 
             # Find paths
-            paths: Set[str] = find_paths(bucket=bucket, directory=prefix)
+            paths: Set[str] = find_paths(bucket_name=bucket, directory=prefix)
 
             # Create a Parquet dataset
             dataset = pq.ParquetDataset(
@@ -161,14 +162,14 @@ def save_to_filesystem(
 
 
 def find_paths(
-    bucket: str,
+    bucket_name: str,
     directory: str
 ) -> Set[str]:
     # Define empty paths
     found_paths: Set[str] = set()
 
     # Define search dir
-    search_dir = os.path.join(bucket, *directory.split('/'))
+    search_dir = os.path.join(bucket_name, *directory.split('/'))
     
     # Append paths
     for root, subdirs, files in os.walk(search_dir):
@@ -180,14 +181,14 @@ def find_paths(
 
 
 def find_subdirs(
-    bucket: str,
+    bucket_name: str,
     directory: str
 ) -> List[str]:
     # Define empty paths
     found_subdirs: Set[str] = set()
 
     # Define search dir
-    search_dir = os.path.join(bucket, *directory.split('/'))
+    search_dir = os.path.join(bucket_name, *directory.split('/'))
 
     # Append paths
     for root, subdirs, _ in os.walk(search_dir):
@@ -203,7 +204,7 @@ def remove_directory(
     directory: str
 ) -> None:
     # Remove files
-    paths: Set[str] = find_paths(bucket=bucket, directory=directory)
+    paths: Set[str] = find_paths(bucket_name=bucket, directory=directory)
     for path in paths:
         try:
             os.remove(path)
@@ -215,24 +216,46 @@ def remove_directory(
             pass
     
     # Remove subdirs
-    subdirs: Set[str] = find_subdirs(bucket=bucket, directory=directory)
+    subdirs: Set[str] = find_subdirs(bucket_name=bucket, directory=directory)
     for subdir in subdirs:
         try:
             os.removedirs(subdir)
         except Exception as e:
-            LOGGER.warning(
-                'Unable to remove %s.\n'
-                'Exception: %s', subdir, e
-            )
+            # LOGGER.warning(
+            #     'Unable to remove %s.\n'
+            #     'Exception: %s', subdir, e
+            # )
+            pass
 
 
-def delete_bucket(bucket: str) -> None:
-    LOGGER.info('Deleting bucket: %s (filesystem).', bucket)
+def delete_bucket(bucket_name: str) -> None:
+    LOGGER.info('Deleting bucket: %s (filesystem).', bucket_name)
 
-    # Run remove_directory function without directory
-    remove_directory(bucket=bucket, directory='')
+    # Rmove all files & directories withing the bucket
+    remove_directory(bucket=bucket_name, directory='')
 
-    LOGGER.info('Bucket %s (filesystem) was successfully deleted.', bucket)
+    # Remove empty bucket
+    try:
+        os.removedirs(bucket_name)
+    except Exception as e:
+        LOGGER.warning(
+            'Unable to remove %s.\n'
+            'Exception: %s', bucket_name, e
+        )
+
+    # Check that all files & directories have been deleted
+    paths: Set[str] = find_paths(bucket_name=bucket_name, directory='')
+    subdirs: Set[str] = find_subdirs(bucket_name=bucket_name, directory='')
+
+    if len(paths) == 0 and len(subdirs) == 0:
+        LOGGER.info('Bucket: %s (filesystem) was successfully deleted.', bucket_name)
+    else:
+        LOGGER.warning(
+            'Bucket: %s (filesystem) was NOT successfully deleted.\n'
+            'Paths remaining (%s):\n%s\n'
+            'Subdirs remaining (%s):\n%s', 
+            bucket_name, len(paths), pformat(paths), len(subdirs), pformat(subdirs)
+        )
 
 
 def copy_bucket(
@@ -243,10 +266,10 @@ def copy_bucket(
 ) -> None:
     # Delete destination bucket
     if delete_destination:
-        delete_bucket(bucket=destination_bucket)
+        delete_bucket(bucket_name=destination_bucket)
 
     # Find source paths
-    source_paths: Set[str] = find_paths(bucket=source_bucket, directory=subdir)
+    source_paths: Set[str] = find_paths(bucket_name=source_bucket, directory=subdir)
 
     LOGGER.info('Copying bucket %s (filesystem) into %s (filesystem).', source_bucket, destination_bucket)
 
@@ -279,4 +302,4 @@ if __name__ == "__main__":
     )
 
     # Delete dummy-bucket
-    delete_bucket(bucket='dummy-bucket')
+    delete_bucket(bucket_name='dummy-bucket')

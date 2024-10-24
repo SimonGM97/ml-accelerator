@@ -7,34 +7,43 @@ set -o allexport
 source .env
 set +o allexport
 
+# Extract config variables
+CONFIG_FILE="config/config.yaml"
+
+PROJECT_NAME=$(yq eval '.PROJECT_PARAMS.PROJECT_NAME' ${CONFIG_FILE})
+VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
+
 # Define terraform variables
+export TF_VAR_PROJECT_NAME=${PROJECT_NAME}
+export TF_VAR_VERSION=${VERSION}
 export TF_VAR_ENV=${ENV}
 export TF_VAR_REGION=${REGION}
 export TF_VAR_BUCKET_NAME=${BUCKET_NAME}
+export TF_VAR_SAGEMAKER_EXECUTION_ROLE_NAME=${SAGEMAKER_EXECUTION_ROLE_NAME}
 export TF_VAR_DOCKER_REPOSITORY_NAME=${DOCKER_REPOSITORY_NAME}
 
-# Check if DOCKER_REPOSITORY_TYPE is equal to "ECR"
-if [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
-    echo "DOCKER_REPOSITORY_TYPE is set to ECR, running Terraform commands for ECR..."
+# Build SageMaker execution role
+if [ "${COMPUTE_ENV}" == "sagemaker" ]; then
+    echo "COMPUTE_ENV is set to sagemaker, running Terraform commands for SageMaker execution role..."
     echo ""
 
     # Initialize Terraform
-    terraform -chdir=terraform/ecr init
+    terraform -chdir=terraform/iam init
     
     # Validate Terraform configuration
-    # terraform -chdir=terraform/ecr validate
+    # terraform -chdir=terraform/iam validate
 
     # Shows what Terraform will apply
-    # terraform -chdir=terraform/ecr plan
+    # terraform -chdir=terraform/iam plan
 
     # Apply the configurations and create resources
-    terraform -chdir=terraform/ecr apply -auto-approve
+    terraform -chdir=terraform/iam apply -auto-approve
 
     # Delete all resources created by terraform
-    # terraform -chdir=terraform/ecr destroy -auto-approve
+    # terraform -chdir=terraform/iam destroy -auto-approve
 fi
 
-# Check if DATA_STORAGE_ENV is equal to "S3"
+# Build S3 bucket
 if [ "${DATA_STORAGE_ENV}" == "S3" ]; then
     echo "DATA_STORAGE_ENV is set to S3, running Terraform commands for S3..."
     echo ""
@@ -53,6 +62,27 @@ if [ "${DATA_STORAGE_ENV}" == "S3" ]; then
 
     # Delete all resources created by terraform
     # terraform -chdir=terraform/s3 destroy -auto-approve
+fi
+
+# Build ECR repository
+if [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
+    echo "DOCKER_REPOSITORY_TYPE is set to ECR, running Terraform commands for ECR..."
+    echo ""
+
+    # Initialize Terraform
+    terraform -chdir=terraform/ecr init
+    
+    # Validate Terraform configuration
+    # terraform -chdir=terraform/ecr validate
+
+    # Shows what Terraform will apply
+    # terraform -chdir=terraform/ecr plan
+
+    # Apply the configurations and create resources
+    terraform -chdir=terraform/ecr apply -auto-approve
+
+    # Delete all resources created by terraform
+    # terraform -chdir=terraform/ecr destroy -auto-approve
 fi
 
 # Remove terraform.tfstate

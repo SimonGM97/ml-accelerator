@@ -33,10 +33,6 @@ Default output format: json
 ```
 3. Clone the `ml-accelerator` CodeCommit repository:
 ```bash
-git config --global credential.helper '!aws codecommit credential-helper $@'
-git config --global credential.UseHttpPath true
-git config --global user.email "simongmorillo1@gmail.com"
-git config --global user.name "simon.garcia.morillo"
 git clone ...
 ```
 4. Create & activate python virtual environment:

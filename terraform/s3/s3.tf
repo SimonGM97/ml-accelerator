@@ -1,10 +1,20 @@
-# terraform init: initialize Terraform & download the necessary provider plugins for AWS.
-# terraform validate: validate Terraform configuration before applying it to ensure there are no syntax errors.
-# terraform plan: shows what Terraform will do when applying the configuration (won’t make any changes).
-# terraform apply: apply the configuration to create the resources.
-# terraform destroy: delete all resources created by Terraform.
+# terraform -chdir=terraform/s3 init: initialize Terraform & download the necessary provider plugins for AWS.
+# terraform -chdir=terraform/s3 validate: validate Terraform configuration before applying it to ensure there are no syntax errors.
+# terraform -chdir=terraform/s3 plan: shows what Terraform will do when applying the configuration (won’t make any changes).
+# terraform -chdir=terraform/s3 apply: apply the configuration to create the resources.
+# terraform -chdir=terraform/s3 destroy: delete all resources created by Terraform.
 
 # Variables
+variable "PROJECT_NAME" {
+    description = "Name of the Project."
+    type        = string
+}
+
+variable "VERSION" {
+    description = "Version of the Project."
+    type        = string
+}
+
 variable "ENV" {
     description = "Environment to create resources on."
     type        = string
@@ -35,6 +45,8 @@ resource "aws_s3_bucket" "my_bucket" {
 
   # Tags
   tags = {
+    Project     = var.PROJECT_NAME
+    Version     = var.VERSION
     Environment = var.ENV
   }
 }
