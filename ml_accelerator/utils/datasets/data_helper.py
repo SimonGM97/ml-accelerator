@@ -49,16 +49,17 @@ class DataHelper:
         self.storage_env: str = Env.get("DATA_STORAGE_ENV")
 
         self.raw_datasets_path: str = Env.get("RAW_DATASETS_PATH")
-        self.training_path: str = Env.get("TRAINING_PATH")
+        self.processing_datasets_path: str = Env.get("PROCESSING_DATASETS_PATH")
         self.inference_path: str = Env.get("INFERENCE_PATH")
         self.transformers_path: str = Env.get("TRANSFORMERS_PATH")
         self.schemas_path: str = Env.get("SCHEMAS_PATH")
 
     def divide_datasets(
         self,
-        X: pd.DataFrame,
-        y: pd.Series,
-        test_size: float,
+        df: pd.DataFrame = None,
+        X: pd.DataFrame = None,
+        y: pd.DataFrame = None,
+        test_size: float = 0,
         balance_train: bool = False,
         balance_method: str = None,
         debug: bool = False
@@ -68,29 +69,40 @@ class DataHelper:
         pd.DataFrame, 
         pd.DataFrame
     ]:
-        # Divide into X_train, y_train, X_test, y_test
-        if self.task in ['binary_classification', 'multiclass_classification']:
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, 
-                test_size=test_size, 
-                random_state=int(Env.get("SEED")),
-                stratify=y
-            )
-        elif self.task == 'regression':
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, 
-                test_size=test_size, 
-                random_state=int(Env.get("SEED"))
-            )
-        elif self.task == 'forecasting':
-            train_periods: int = int(test_size * X.shape[0])
+        if df is not None:
+            # Divide df into X & y
+            X, y = df.drop(columns=[self.target]), df[[self.target]]
+            
+            # Delete df_raw from memory
+            del df
+            gc.collect()
 
-            X_train: pd.DataFrame = X.iloc[:train_periods]
-            X_test: pd.DataFrame = X.iloc[train_periods:]
-            y_train: pd.DataFrame = y.iloc[:train_periods]
-            y_test: pd.DataFrame = y.iloc[train_periods:]
+        # Divide into X_train, y_train, X_test, y_test
+        if test_size > 0:
+            if self.task in ['binary_classification', 'multiclass_classification']:
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, 
+                    test_size=test_size, 
+                    random_state=int(Env.get("SEED")),
+                    stratify=y
+                )
+            elif self.task == 'regression':
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, 
+                    test_size=test_size, 
+                    random_state=int(Env.get("SEED"))
+                )
+            elif self.task == 'forecasting':
+                train_periods: int = int(test_size * X.shape[0])
+
+                X_train: pd.DataFrame = X.iloc[:train_periods]
+                X_test: pd.DataFrame = X.iloc[train_periods:]
+                y_train: pd.DataFrame = y.iloc[:train_periods]
+                y_test: pd.DataFrame = y.iloc[train_periods:]
+            else:
+                raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
         else:
-            raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
+            X_train, X_test, y_train, y_test = X, None, y, None
         
         # Delete X & y
         del X
@@ -116,11 +128,11 @@ class DataHelper:
         else:
             LOGGER.warning('balance_train is False, therefore test datasets will not be balanced.')
 
-        if debug:
-            LOGGER.debug("train balance: \n%s\n"
+        if debug and 'classification' in self.task:
+            LOGGER.debug("train balance: \n%s\n\n"
                          "test balance: \n%s\n",
                          y_train.groupby(self.target)[self.target].count() / y_train.shape[0],
-                         y_test.groupby(self.target)[self.target].count() / y_test.shape[0])
+                         y_test.groupby(self.target)[self.target].count() / y_test.shape[0] if y_test is not None else None)
         
         return X_train, X_test, y_train, y_test
 
@@ -219,10 +231,9 @@ class DataHelper:
         LOGGER.info('Infering new schema for %s', self.dataset_name)
 
         # Load df
-        df: pd.DataFrame = pd.concat([
-            self.load_dataset(df_name="y_raw", filters=None),
-            self.load_dataset(df_name="X_raw", filters=None)
-        ], axis=1)
+        df: pd.DataFrame = self.load_dataset(df_name="df_raw", filters=None)
+
+        assert df is not None, "Loaded df_raw is None."
 
         # Extract dtypes
         dtypes: pd.Series = df.dtypes
@@ -231,7 +242,7 @@ class DataHelper:
         # Define schema
         schema: dict = {
             "name": self.dataset_name,
-            "path": self.training_path,
+            "path": self.processing_datasets_path,
             "length": df.shape[0],
             "fields": [
                 {
@@ -324,7 +335,7 @@ class DataHelper:
                 else:
                     path: str = os.path.join(base_path, *self.transformers_path.split('/'), transformer_name, transformer_id, f"{asset_name}_attrs.pickle")
             else:
-                path: str = os.path.join(base_path, *self.training_path.split('/'), f"{asset_name}.{self.data_extention}")
+                path: str = os.path.join(base_path, *self.processing_datasets_path.split('/'), f"{asset_name}.{self.data_extention}")
                     
         elif self.storage_env == 'S3':
             if 'raw' in asset_name:
@@ -342,7 +353,7 @@ class DataHelper:
                 else:
                     path: str = f"{base_path}/{self.transformers_path}/{transformer_name}/{transformer_id}/{asset_name}_attrs.pickle"
             else:
-                path: str = f"{base_path}/{self.training_path}/{asset_name}.{self.data_extention}"
+                path: str = f"{base_path}/{self.processing_datasets_path}/{asset_name}.{self.data_extention}"
 
         else:
             raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
@@ -386,7 +397,7 @@ class DataHelper:
     ) -> pd.DataFrame:        
         # Define path
         path: str = self.find_path(df_name, mock)
-
+        
         if self.storage_env == 'filesystem':
             # Load from filesystem
             df: pd.DataFrame = load_from_filesystem(

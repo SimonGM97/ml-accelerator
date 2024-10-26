@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-from ml_accelerator.data_processing.etl import ExtractTransformLoad
+from ml_accelerator.utils.datasets.data_helper import DataHelper
 from ml_accelerator.utils.transformers.transformers_utils import load_transformers_list
 from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
 
 import pandas as pd
+import gc
 from typing import Tuple
 import argparse
 
@@ -31,13 +32,22 @@ def data_pipeline(
         }
     )
 
-    # Instanciate ETL
-    ETL: ExtractTransformLoad = ExtractTransformLoad()
+    # Instanciate DataHelper
+    DH: DataHelper = DataHelper()
 
-    # Load input datasets
-    X, y = ETL.run_pipeline(
-        persist_datasets=persist_datasets,
-        write_mode=write_mode
+    # Load input dataset
+    df_raw: pd.DataFrame = DH.load_dataset(
+        df_name='df_raw',
+        filters=None
+    )
+
+    # Divide datasets
+    X, _, y, _ = DH.divide_datasets(
+        df=df_raw,
+        test_size=0,
+        balance_train=False,
+        balance_method=None,
+        debug=True
     )
     
     # Extract transformers

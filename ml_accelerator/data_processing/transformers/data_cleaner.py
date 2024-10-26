@@ -114,9 +114,9 @@ class DataCleaner(Transformer):
 
         # Rename columns
         df = self.rename_columns(df=df)
-
+        
         # Drop dummy columns
-        df = self.drop_dummy_columns(df=df)
+        df = self.drop_dummy_columns(df=df, debug=debug)
         
         # Find column attributes
         self.find_column_attrs(df=df)
@@ -198,7 +198,8 @@ class DataCleaner(Transformer):
 
     def drop_dummy_columns(
         self,
-        df: pd.DataFrame
+        df: pd.DataFrame,
+        debug: bool = False
     ) -> pd.DataFrame:
         if df.shape[0] > 0.05 * self.schema['length']:
             # Drop columns where all values are NaN
@@ -210,6 +211,9 @@ class DataCleaner(Transformer):
         # Drop unexpected columns
         drop_columns = [c for c in df.columns if c not in [f['name'] for f in self.schema['fields']]]
         df.drop(columns=drop_columns, inplace=True)
+
+        if debug:
+            LOGGER.debug('Dummy columns dropped (%s):\n%s', len(drop_columns), drop_columns)
 
         return df
 

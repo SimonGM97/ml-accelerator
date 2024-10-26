@@ -115,7 +115,7 @@ class ExtractTransformLoad(DataHelper):
     def transform(
         self,
         datasets: List[pd.DataFrame]
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> pd.DataFrame:
         """
         Method designed to perform transformations required to create a tabular 
         DataFrame that can be consumed by an ML model.
@@ -123,45 +123,29 @@ class ExtractTransformLoad(DataHelper):
         # Concatenate datasets into tabular form
         df: pd.DataFrame = pd.concat(datasets, axis=1)
 
-        # Divide df into X & y
-        X, y = df.drop(columns=[self.target]), df[[self.target]]
-
-        # Delete df from memory
-        del df
-        gc.collect()
-
-        return X, y
+        return df
     
     def load(
         self,
-        X: pd.DataFrame,
-        y: pd.DataFrame,
+        df: pd.DataFrame,
         persist: bool = False,
         write_mode: str = None,
         mock_datasets: bool = False
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> pd.DataFrame:
         """
         Load datasets into training directory
         """
         # Persist datasets
         if persist:
-            # Persist X
+            # Persist df
             self.persist_dataset(
-                df=X, 
-                df_name='X_raw',
+                df=df, 
+                df_name='df_raw',
                 write_mode=write_mode,
                 mock=mock_datasets
             )
 
-            # Persist y
-            self.persist_dataset(
-                df=y, 
-                df_name='y_raw',
-                write_mode=write_mode,
-                mock=mock_datasets
-            )
-
-        return X, y
+        return df
 
     def run_pipeline(
         self,
@@ -169,7 +153,7 @@ class ExtractTransformLoad(DataHelper):
         persist_datasets: bool = False,
         write_mode: str = None,
         mock_datasets: bool = False
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> pd.DataFrame:
         # Run extract method
         datasets: List[str] = self.extract(
             pred_id=pred_id,
@@ -179,14 +163,14 @@ class ExtractTransformLoad(DataHelper):
         )
 
         # Run transform method
-        X, y = self.transform(datasets=datasets)
+        df = self.transform(datasets=datasets)
 
         # Run load method
-        X, y = self.load(
-            X=X, y=y,
+        df = self.load(
+            df=df,
             persist=persist_datasets,
             write_mode=write_mode,
             mock_datasets=mock_datasets
         )
 
-        return X, y
+        return df

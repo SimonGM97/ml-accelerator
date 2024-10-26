@@ -17,23 +17,6 @@ services:
       - python
       - app.py
 
-    environment:
-      - ENV=${ENV}
-      - DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
-      - MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
-      - COMPUTE_ENV=${COMPUTE_ENV}
-      - REGION=${REGION}
-      - BUCKET_NAME=${BUCKET_NAME}
-      - KXY_API_KEY=${KXY_API_KEY}
-      - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
-      - TRAINING_PATH=${TRAINING_PATH}
-      - INFERENCE_PATH=${INFERENCE_PATH}
-      - TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
-      - MODELS_PATH=${MODELS_PATH}
-      - SCHEMAS_PATH=${SCHEMAS_PATH}
-      - MOCK_PATH=${MOCK_PATH}
-      - SEED=${SEED}
-
     ports:
       - "${INFERENCE_PORT}:${INFERENCE_PORT}"
 
@@ -61,23 +44,6 @@ services:
       - ${WEBAPP_PORT}
       - --server.address
       - ${WEBAPP_HOST}
-
-    environment:
-      - ENV=${ENV}
-      - DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
-      - MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
-      - COMPUTE_ENV=${COMPUTE_ENV}
-      - REGION=${REGION}
-      - BUCKET_NAME=${BUCKET_NAME}
-      - KXY_API_KEY=${KXY_API_KEY}
-      - RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
-      - TRAINING_PATH=${TRAINING_PATH}
-      - INFERENCE_PATH=${INFERENCE_PATH}
-      - TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
-      - MODELS_PATH=${MODELS_PATH}
-      - SCHEMAS_PATH=${SCHEMAS_PATH}
-      - MOCK_PATH=${MOCK_PATH}
-      - SEED=${SEED}
 
     ports:
       - "${WEBAPP_PORT}:${WEBAPP_PORT}"

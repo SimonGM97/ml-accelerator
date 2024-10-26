@@ -123,6 +123,7 @@ profile_default/
 ipython_config.py
 
 # Dummy
+example*
 dummy*
 dummy.py
 dummy.ipynb

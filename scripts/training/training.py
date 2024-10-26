@@ -8,6 +8,7 @@ from ml_accelerator.utils.timing.timing_helper import timing
 
 import pandas as pd
 from tqdm import tqdm
+import gc
 import argparse
 from typing import List
 
@@ -53,13 +54,15 @@ def training_pipeline(
     # Instanciate DataHelper
     DH: DataHelper = DataHelper()
 
-    # Load persisted datasets
-    X: pd.DataFrame = DH.load_dataset(df_name='X_raw', filters=None)
-    y: pd.Series = DH.load_dataset(df_name='y_raw', filters=None)
+    # Load input dataset
+    df_raw: pd.DataFrame = DH.load_dataset(
+        df_name='df_raw',
+        filters=None
+    )
 
     # Divide into X_train, X_test, y_train & y_test
     X_train, _, y_train, _ = DH.divide_datasets(
-        X=X, y=y, 
+        df=df_raw, 
         test_size=Params.TEST_SIZE, 
         balance_train=Params.BALANCE_TRAIN,
         balance_method=Params.BALANCE_METHOD,

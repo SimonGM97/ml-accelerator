@@ -1,6 +1,6 @@
 #!/bin/bash
 # chmod +x ./main.sh
-# ./main.sh
+# ./main.sh build_new_image | dont_build_new_image
 
 # Deactivate conda
 # conda deactivate
@@ -19,8 +19,8 @@ chmod +x ./scripts/bash/install_yq.sh
 # ./scripts/bash/kill_ports.sh
 
 # Run unit & integrity Tests
-chmod +x ./scripts/bash/tests_running.sh
-./scripts/bash/tests_running.sh
+# chmod +x ./scripts/bash/tests_running.sh
+# ./scripts/bash/tests_running.sh
 
 # Build infrastructure
 chmod +x ./scripts/bash/build_infra.sh
@@ -28,14 +28,18 @@ chmod +x ./scripts/bash/build_infra.sh
 
 # Build Docker images
 chmod +x ./scripts/bash/image_building.sh
-./scripts/bash/image_building.sh
+./scripts/bash/image_building.sh $1
+
+# Run ETL workflow
+chmod +x ./scripts/bash/etl.sh
+./scripts/bash/etl.sh
 
 # Run model building workflow
 chmod +x ./scripts/bash/model_building.sh
 ./scripts/bash/model_building.sh
 
 # Run docker-compose-app
-chmod +x ./scripts/bash/app.sh
-./scripts/bash/app.sh
+# chmod +x ./scripts/bash/app.sh
+# ./scripts/bash/app.sh
 
 # docker container run -it dev-base-image:v1.0.0

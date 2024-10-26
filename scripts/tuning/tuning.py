@@ -47,9 +47,11 @@ def tuning_pipeline() -> None:
     )
 
 
-# conda deactivate
-# source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python scripts/tuning/tuning.py
+"""
+conda deactivate
+source .ml_accel_venv/bin/activate
+.ml_accel_venv/bin/python scripts/tuning/tuning.py
+"""
 if __name__ == "__main__":
     # Run main
     tuning_pipeline()

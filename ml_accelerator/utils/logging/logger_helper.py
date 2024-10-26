@@ -262,6 +262,7 @@ def log_params(
 
     # Extract initial logger_msg
     logger_msg = {
+        "etl.py": "\nETL PARAMS:\n",
         "data_processing.py": "\nDATA PROCESSING PARAMS:\n",
         "tuning.py": "\nMODEL TUNING PARAMS:\n",
         "training.py": "\nMODEL TRAINING PARAMS:\n",

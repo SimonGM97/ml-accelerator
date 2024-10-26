@@ -69,95 +69,106 @@ def load_from_s3(
     bucket, key = path.split('/')[0], '/'.join(path.split('/')[1:])
     read_format = key.split('.')[-1]
 
-    if read_format == 'csv':
-        # Retrieve stored object
-        obj: dict = S3_CLIENT.get_object(
-            Bucket=bucket,
-            Key=key
+    try:
+        if read_format == 'csv':
+            # Retrieve stored object
+            obj: dict = S3_CLIENT.get_object(
+                Bucket=bucket,
+                Key=key
+            )
+
+            # Read csv
+            asset: pd.DataFrame = pd.read_csv(
+                StringIO(obj['Body'].read().decode('utf-8'))
+            )
+        
+        elif read_format == 'parquet':
+            # Remove extention
+            prefix = key.replace(".parquet", "")
+
+            # Find keys
+            keys: Set[str] = find_keys(bucket_name=bucket, directory=prefix)
+
+            # Find files
+            # files = FS.glob(f's3://{bucket}/{prefix}/*/*.parquet')
+            # if len(files) == 0:
+            #     files = FS.glob(f's3://{bucket}/{prefix}/*/*/*.parquet')
+            #     if len(files) == 0:
+            #         files = f"s3://{bucket}/{prefix}/dataset-0.parquet"
+
+            # Create a Parquet dataset
+            dataset = pq.ParquetDataset(
+                path_or_paths=list(keys),
+                filesystem=FS,
+                filters=filters
+            )
+
+            # Read the dataset into a Pandas DataFrame
+            asset: pd.DataFrame = dataset.read_pandas().to_pandas()
+
+            # # Sort index, drop duplicated indexes & drop unrequired columns
+            # drop_cols = [
+            #     'month',
+            #     'bimester',
+            #     'quarter',
+            #     'year',
+            #     'year_month',
+            #     'year_bimester',
+            #     'year_quarter'
+            # ]
+
+            # asset: pd.DataFrame = (
+            #     asset
+            #     .sort_index(ascending=True)
+            #     .loc[~asset.index.duplicated(keep='last')]
+            #     .drop(columns=drop_cols, errors='ignore')
+            # )
+
+        elif read_format == 'pickle':
+            # Retrieve stored object
+            obj: dict = S3_CLIENT.get_object(
+                Bucket=bucket,
+                Key=key
+            )
+
+            # Read pickle
+            asset: dict = pickle.loads(
+                BytesIO(obj['Body'].read()).read()
+            )
+        elif read_format == 'json':
+            # Retrieve stored object
+            obj: dict = S3_CLIENT.get_object(
+                Bucket=bucket,
+                Key=key
+            )
+
+            # Read json
+            asset: dict = json.loads(
+                BytesIO(obj['Body'].read()).read()
+            )
+        elif read_format == 'yaml':
+            # Retrieve stored object
+            obj: dict = S3_CLIENT.get_object(
+                Bucket=bucket,
+                Key=key
+            )
+
+            # Read yaml
+            asset: dict = yaml.load(
+                BytesIO(obj['Body'].read()).read(),
+                Loader=yaml.FullLoader
+            )
+        else:
+            raise Exception(f'Invalid "read_format" parameter: {read_format}, extracted from path: {path}.')
+        
+        # assert len(asset) > 0, f"Loaded asset from s3://{path} contains zero keys. {asset}"
+    except Exception as e:
+        LOGGER.warning(
+            'Unable to load %s from S3.\n'
+            'Exception: %s',
+            path, e
         )
-
-        # Read csv
-        asset: pd.DataFrame = pd.read_csv(
-            StringIO(obj['Body'].read().decode('utf-8'))
-        )
-    
-    elif read_format == 'parquet':
-        # Remove extention
-        prefix = key.replace(".parquet", "")
-
-        # Find files
-        files = FS.glob(f's3://{bucket}/{prefix}/*/*.parquet')
-        if len(files) == 0:
-            files = FS.glob(f's3://{bucket}/{prefix}/*/*/*.parquet')
-            if len(files) == 0:
-                files = f"s3://{bucket}/{prefix}/dataset-0.parquet"
-
-        # Create a Parquet dataset
-        dataset = pq.ParquetDataset(
-            path_or_paths=files,
-            filesystem=FS,
-            filters=filters
-        )
-
-        # Read the dataset into a Pandas DataFrame
-        asset: pd.DataFrame = dataset.read_pandas().to_pandas()
-
-        # # Sort index, drop duplicated indexes & drop unrequired columns
-        # drop_cols = [
-        #     'month',
-        #     'bimester',
-        #     'quarter',
-        #     'year',
-        #     'year_month',
-        #     'year_bimester',
-        #     'year_quarter'
-        # ]
-
-        # asset: pd.DataFrame = (
-        #     asset
-        #     .sort_index(ascending=True)
-        #     .loc[~asset.index.duplicated(keep='last')]
-        #     .drop(columns=drop_cols, errors='ignore')
-        # )
-
-    elif read_format == 'pickle':
-        # Retrieve stored object
-        obj: dict = S3_CLIENT.get_object(
-            Bucket=bucket,
-            Key=key
-        )
-
-        # Read pickle
-        asset: dict = pickle.loads(
-            BytesIO(obj['Body'].read()).read()
-        )
-    elif read_format == 'json':
-        # Retrieve stored object
-        obj: dict = S3_CLIENT.get_object(
-            Bucket=bucket,
-            Key=key
-        )
-
-        # Read json
-        asset: dict = json.loads(
-            BytesIO(obj['Body'].read()).read()
-        )
-    elif read_format == 'yaml':
-        # Retrieve stored object
-        obj: dict = S3_CLIENT.get_object(
-            Bucket=bucket,
-            Key=key
-        )
-
-        # Read yaml
-        asset: dict = yaml.load(
-            BytesIO(obj['Body'].read()).read(),
-            Loader=yaml.FullLoader
-        )
-    else:
-        raise Exception(f'Invalid "read_format" parameter: {read_format}, extracted from path: {path}.')
-    
-    # assert len(asset) > 0, f"Loaded asset from s3://{path} contains zero keys. {asset}"
+        asset = None
 
     return asset
 

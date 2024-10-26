@@ -4,7 +4,7 @@
 # terraform -chdir=terraform/iam apply: apply the configuration to create the resources.
 # terraform -chdir=terraform/iam destroy: delete all resources created by Terraform.
 
-# Variables
+# VARIABLES
 variable "PROJECT_NAME" {
     description = "Name of the Project."
     type        = string
@@ -21,7 +21,7 @@ variable "ENV" {
 }
 
 variable "REGION" {
-  description = "The AWS region where the S3 bucket will be created."
+  description = "AWS region where the S3 bucket will be created."
   type        = string
 }
 
@@ -30,12 +30,17 @@ variable "SAGEMAKER_EXECUTION_ROLE_NAME" {
     type        = string
 }
 
-# Define the AWS provider
+variable "STEP_FUNCTIONS_EXECUTION_ROLE_NAME" {
+    description = "Execution role name to run Step Functions."
+    type        = string
+}
+
+# AWS PROVIDER
 provider "aws" {
   region = var.REGION
 }
 
-# Define the IAM role for SageMaker
+# SAGEMAKER IAM ROLE
 resource "aws_iam_role" "sagemaker_execution_role" {
   name = var.SAGEMAKER_EXECUTION_ROLE_NAME
   
@@ -75,4 +80,31 @@ resource "aws_iam_role_policy_attachment" "s3_access_policy" {
 resource "aws_iam_role_policy_attachment" "cloudwatch_access_policy" {
   role       = aws_iam_role.sagemaker_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+# STEP FUNCTIONS IAM ROLE
+resource "aws_iam_role" "step_functions_execution_role" {
+  name = "StepFunctionsExecutionRole"
+
+  tags = {
+    Project     = var.PROJECT_NAME
+    Version     = var.VERSION
+    Environment = var.ENV
+  }
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        Service = "states.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "step_functions_sagemaker_access" {
+  role       = aws_iam_role.step_functions_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSLambdaSageMakerExecutionPolicy"
 }

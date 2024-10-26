@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 from ml_accelerator.config.params import Params
-from ml_accelerator.data_processing.etl import ExtractTransformLoad
+from ml_accelerator.data_processing.extract_transform_load import ExtractTransformLoad
 from ml_accelerator.modeling.model_registry import ModelRegistry
 from ml_accelerator.pipeline.ml_pipeline import MLPipeline
 from ml_accelerator.utils.inference.inference_utils import save_inference
 from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
 
+import pandas as pd
 import numpy as np
 from datetime import datetime
 import argparse
@@ -27,8 +28,17 @@ def inference_pipeline(pred_id = None) -> dict:
     # Instanciate ExtractTransformLoad
     ETL: ExtractTransformLoad = ExtractTransformLoad()
 
-    # Extract new X
-    X, _ = ETL.run_pipeline(pred_id=pred_id)
+    # Extract new df
+    df: pd.DataFrame = ETL.run_pipeline(pred_id=pred_id)
+
+    # Extract X
+    X: pd.DataFrame = ETL.divide_datasets(
+        df=df, 
+        test_size=0, 
+        balance_train=False,
+        balance_method=None,
+        debug=False
+    )[0]
 
     # Instanciate ModelRegistry
     MR: ModelRegistry = ModelRegistry()

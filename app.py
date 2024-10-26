@@ -118,9 +118,11 @@ def drift() -> json:
     return jsonify({})
 
 
-# conda deactivate
-# source .ml_accel_venv/bin/activate
-# .ml_accel_venv/bin/python app.py
+"""
+conda deactivate
+source .ml_accel_venv/bin/activate
+.ml_accel_venv/bin/python app.py
+"""
 if __name__ == "__main__":
     # Run application
     app.run(

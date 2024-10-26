@@ -1,5 +1,5 @@
 from ml_accelerator.config.params import Params
-from ml_accelerator.data_processing.etl import ExtractTransformLoad
+from ml_accelerator.data_processing.extract_transform_load import ExtractTransformLoad
 from unittest import TestCase
 from unittest.mock import patch
 from pandas.testing import assert_frame_equal

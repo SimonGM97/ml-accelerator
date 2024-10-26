@@ -4,7 +4,7 @@
 # terraform -chdir=terraform/s3 apply: apply the configuration to create the resources.
 # terraform -chdir=terraform/s3 destroy: delete all resources created by Terraform.
 
-# Variables
+# VARIABLES
 variable "PROJECT_NAME" {
     description = "Name of the Project."
     type        = string
@@ -21,7 +21,7 @@ variable "ENV" {
 }
 
 variable "REGION" {
-  description = "The AWS region where the S3 bucket will be created."
+  description = "AWS region where the S3 bucket will be created."
   type        = string
 }
 
@@ -30,12 +30,12 @@ variable "BUCKET_NAME" {
     type        = string
 }
 
-# Define the provider (AWS)
+# AWS PROVIDER
 provider "aws" {
   region = var.REGION
 }
 
-# Define the S3 bucket resource
+# S3 BUCKET
 resource "aws_s3_bucket" "my_bucket" {
   # S3 bucket name
   bucket        = var.BUCKET_NAME
