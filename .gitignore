@@ -134,6 +134,10 @@ __archive/
 *.xlsx
 *.parquet
 
+# Output files
+*output.txt
+*output.json
+
 # AWS CLI
 AWSCLIV2.pkg
 

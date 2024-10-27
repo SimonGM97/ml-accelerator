@@ -11,8 +11,8 @@ source .env
 set +o allexport
 
 # Install yq (if necessary)
-chmod +x ./scripts/bash/install_yq.sh
-./scripts/bash/install_yq.sh
+# chmod +x ./scripts/bash/install_yq.sh
+# ./scripts/bash/install_yq.sh
 
 # Clean ports
 # chmod +x ./scripts/bash/kill_ports.sh
@@ -22,21 +22,21 @@ chmod +x ./scripts/bash/install_yq.sh
 # chmod +x ./scripts/bash/tests_running.sh
 # ./scripts/bash/tests_running.sh
 
-# Build infrastructure
-chmod +x ./scripts/bash/build_infra.sh
-./scripts/bash/build_infra.sh
-
 # Build Docker images
 chmod +x ./scripts/bash/image_building.sh
 ./scripts/bash/image_building.sh $1
+
+# Build infrastructure
+chmod +x ./scripts/bash/build_infra.sh
+./scripts/bash/build_infra.sh
 
 # Run ETL workflow
 chmod +x ./scripts/bash/etl.sh
 ./scripts/bash/etl.sh
 
 # Run model building workflow
-chmod +x ./scripts/bash/model_building.sh
-./scripts/bash/model_building.sh
+# chmod +x ./scripts/bash/model_building.sh
+# ./scripts/bash/model_building.sh
 
 # Run docker-compose-app
 # chmod +x ./scripts/bash/app.sh

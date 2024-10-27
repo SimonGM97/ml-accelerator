@@ -46,9 +46,3 @@ pip install -e .
 ```
   - *Note that this command will also install the dependencies, specified in `requirements.txt`.*
 6. Install & run the [Docker Desktop](https://docs.docker.com/engine/install/) application (if it's not already installed). 
-7. Set the `ECR` environment variables to pull images from the `ml-accelerator-ecr` ECR repository:
-```bash
-export ECR_REPOSITORY_NAME=ml-accelerator-ecr
-export ECR_REPOSITORY_URI=097866913509.dkr.ecr.sa-east-1.amazonaws.com
-export REGION=sa-east-1
-```

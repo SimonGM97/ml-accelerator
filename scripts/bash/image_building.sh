@@ -21,7 +21,7 @@ echo "  - MODEL_STORAGE_ENV: ${MODEL_STORAGE_ENV}"
 echo "  - ETL_ENV: ${ETL_ENV}"
 echo "  - MODEL_BUILDING_ENV: ${MODEL_BUILDING_ENV}"
 echo "  - APP_ENV: ${APP_ENV}"
-echo "  - REGION: ${REGION}"
+echo "  - REGION_NAME: ${REGION_NAME}"
 echo "  - BUCKET_NAME: ${BUCKET_NAME}"
 # echo "  - KXY_API_KEY: ${KXY_API_KEY}"
 echo "  - INFERENCE_HOST: ${INFERENCE_HOST}"
@@ -51,19 +51,16 @@ fi
 
 if [ $1 == "build_new_image" ]; then
     # Show message
-    echo "Building new ${ENV}-base-image:${VERSION} and ${ENV}-image:${VERSION} docker images..."
+    echo "Building new ${ENV} - ${VERSION} docker images..."
 
-    # Build Docker images
+    # Build base Docker image
     docker build \
         -t ${ENV}-base-image:${VERSION} \
         -f docker/Dockerfile.Base . \
         --build-arg ENV=${ENV} \
         --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
         --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
-        --build-arg ETL_ENV=${ETL_ENV} \
-        --build-arg MODEL_BUILDING_ENV=${MODEL_BUILDING_ENV} \
-        --build-arg APP_ENV=${APP_ENV} \
-        --build-arg REGION=${REGION} \
+        --build-arg REGION_NAME=${REGION_NAME} \
         --build-arg BUCKET_NAME=${BUCKET_NAME} \
         --build-arg KXY_API_KEY=${KXY_API_KEY} \
         --build-arg INFERENCE_HOST=${INFERENCE_HOST} \
@@ -79,13 +76,30 @@ if [ $1 == "build_new_image" ]; then
         --build-arg MOCK_PATH=${MOCK_PATH} \
         --build-arg SEED=${SEED} \
 
+    # Build Docker image
     docker build \
         -t ${ENV}-image:${VERSION} \
         -f docker/Dockerfile . \
         --build-arg VERSION=${VERSION} \
-        --build-arg ENV=${ENV} \
-        --build-arg BUCKET_NAME=${BUCKET_NAME}
+        --build-arg ENV=${ENV}
 
+    # Build lambda Docker images
+    docker build \
+        --platform linux/amd64 \
+        -t ${ENV}-etl-lambda-image:${VERSION} \
+        -f docker/Dockerfile.ETLLambda . \
+        --build-arg ENV=${ENV} \
+        --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
+        --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
+        --build-arg REGION_NAME=${REGION_NAME} \
+        --build-arg BUCKET_NAME=${BUCKET_NAME} \
+        --build-arg RAW_DATASETS_PATH=${RAW_DATASETS_PATH} \
+        --build-arg PROCESSING_DATASETS_PATH=${PROCESSING_DATASETS_PATH} \
+        --build-arg INFERENCE_PATH=${INFERENCE_PATH} \
+        --build-arg TRANSFORMERS_PATH=${TRANSFORMERS_PATH} \
+        --build-arg MODELS_PATH=${MODELS_PATH} \
+        --build-arg SCHEMAS_PATH=${SCHEMAS_PATH} \
+        --build-arg MOCK_PATH=${MOCK_PATH}
 
     if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
         # login to docker
@@ -93,21 +107,38 @@ if [ $1 == "build_new_image" ]; then
 
         # Tag docker images
         docker tag ${ENV}-image:${VERSION} ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+        docker tag ${ENV}-etl-lambda-image:${VERSION} ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
 
         # Push images to repository
-        echo "Pushing ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION} image to dockerhub repository..."
+        echo "Pushing images to dockerhub repository..."
         docker push ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+        docker push ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
 
     elif [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
         # Log-in to ECR
-        aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
+        aws ecr get-login-password --region ${REGION_NAME} | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
+
+        # Delete current ECR images
+        DELETE_IMAGE_IDS=$(aws ecr list-images --repository-name $DOCKER_REPOSITORY_NAME --region $REGION_NAME --query 'imageIds[*]' --output json)
+        # echo "DELETE_IMAGE_IDS: $DELETE_IMAGE_IDS"
+        if [ $DELETE_IMAGE_IDS != "[]" ]; then
+            echo "Deleting existing images in ECR repository..."
+            aws ecr batch-delete-image \
+                --repository-name $DOCKER_REPOSITORY_NAME \
+                --region $REGION_NAME \
+                --image-ids "$DELETE_IMAGE_IDS"
+        else
+            echo "No images found in ECR repository to delete."
+        fi
         
         # Tag docker images
         docker tag ${ENV}-image:${VERSION} ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+        docker tag ${ENV}-etl-lambda-image:${VERSION} ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
 
         # Push images to repository
-        echo "Pushing ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION} image to ECR repository..."
+        echo "Pushing images to ECR repository..."
         docker push ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+        docker push ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
 
     else
         echo "Unable to push docker images - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
@@ -116,12 +147,14 @@ if [ $1 == "build_new_image" ]; then
 else
     if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
         # Pull images from dockerhub repository
-        echo "Pulling ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION} image from dockerhub repository..."
+        echo "Pulling images from dockerhub repository..."
         docker pull ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+        docker pull ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
     elif [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
         # Pull images from repository
-        echo "Pulling ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION} image from ECR repository..."
+        echo "Pulling images from ECR repository..."
         docker pull ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+        docker pull ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
     else
         echo "Unable to pull docker images - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
         exit 1

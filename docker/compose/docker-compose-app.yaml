@@ -1,8 +1,8 @@
 # COMMANDS:
-# docker-compose -f docker/docker-compose.yaml --env-file .env up: start all the services defined in your compose.yaml file
-# docker-compose -f docker/docker-compose.yaml --env-file .env down: stop and remove the running services
-# docker-compose -f docker/docker-compose.yaml --env-file .env logs: monitor the output of your running containers and debug issues, viewing logs
-# docker-compose -f docker/docker-compose.yaml --env-file .env ps: lists all the services along with their current status
+# docker-compose -f docker/compose/docker-compose.yaml --env-file .env up: start all the services defined in your compose.yaml file
+# docker-compose -f docker/compose/docker-compose.yaml --env-file .env down: stop and remove the running services
+# docker-compose -f docker/compose/docker-compose.yaml --env-file .env logs: monitor the output of your running containers and debug issues, viewing logs
+# docker-compose -f docker/compose/docker-compose.yaml --env-file .env ps: lists all the services along with their current status
 
 # version: "3.8"
 
@@ -21,8 +21,8 @@ services:
       - "${INFERENCE_PORT}:${INFERENCE_PORT}"
 
     volumes:
-      - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      - ../config:/app/config
+      - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
+      - ./../../config:/app/config
     
     # healthcheck:
     #   test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}"]
@@ -49,8 +49,10 @@ services:
       - "${WEBAPP_PORT}:${WEBAPP_PORT}"
 
     volumes:
-      - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      - ../config:/app/config
+      - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
+      - ./../../config:/app/config
+      # - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
+      # - ../config:/app/config
 
   # # Dummy service
   # dummy-service:

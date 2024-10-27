@@ -45,7 +45,7 @@ ARG ETL_ENV
 ARG MODEL_BUILDING_ENV
 ARG APP_ENV
 
-ARG REGION
+ARG REGION_NAME
 ARG BUCKET_NAME
 
 ARG KXY_API_KEY
@@ -69,11 +69,8 @@ ARG SEED
 ENV ENV=${ENV}
 ENV DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
 ENV MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
-ENV ETL_ENV=${ETL_ENV}
-ENV MODEL_BUILDING_ENV=${MODEL_BUILDING_ENV}
-ENV APP_ENV=${APP_ENV}
 
-ENV REGION=${REGION}
+ENV REGION_NAME=${REGION_NAME}
 ENV BUCKET_NAME=${BUCKET_NAME}
 
 ENV KXY_API_KEY=${KXY_API_KEY}
@@ -92,3 +89,52 @@ ENV SCHEMAS_PATH=${SCHEMAS_PATH}
 ENV MOCK_PATH=${MOCK_PATH}
 
 ENV SEED=${SEED}
+
+# Copy .env file
+COPY .env .env
+
+# Copy AWS credentials
+COPY .aws /root/.aws
+
+# Copy resources
+COPY resources resources
+
+# TRAINING JOBS directory convention:
+# /opt/ml/input/: This is typically used for training jobs to store input data.
+# /opt/ml/model/: For training jobs, this directory is where trained models are stored.
+# /opt/ml/output/: This is used for outputs from processing or training jobs.
+
+# Create training job directories inside the container
+RUN mkdir -p /opt/ml/input && \
+    mkdir -p /opt/ml/output && \
+    mkdir -p /opt/ml/model
+
+# PROCESSING JOBS directory convention:
+# /opt/ml/processing/input/: This is where input data from S3 is downloaded.
+# /opt/ml/processing/output/: This is where output data should be written (if your processing job produces results).
+# Other optional outputs:
+#   - /opt/ml/processing/train/: train datasets
+#   - /opt/ml/processing/validation/: validation datasets
+#   - /opt/ml/processing/test/: test datasets
+#   - /opt/ml/processing/model/: model artifacts
+#   - /opt/ml/processing/evaluation/: evaluation data
+
+# Create processing job directories inside the container
+RUN mkdir -p /opt/ml/processing/input && \
+    mkdir -p /opt/ml/processing/output && \
+    mkdir -p /opt/ml/processing/train && \
+    mkdir -p /opt/ml/processing/validation && \
+    mkdir -p /opt/ml/processing/test && \
+    mkdir -p /opt/ml/processing/model && \
+    mkdir -p /opt/ml/processing/evaluation
+
+# Define volumes
+VOLUME ["/app/${BUCKET_NAME}", "/app/config"]
+VOLUME ["/opt/ml/input", "/opt/ml/output", "/opt/ml/model"]
+VOLUME ["/opt/ml/processing/input", "/opt/ml/processing/output"]
+VOLUME ["/opt/ml/processing/train", "/opt/ml/processing/validation", "/opt/ml/processing/test"]
+VOLUME ["/opt/ml/processing/model", "/opt/ml/processing/evaluation"]
+
+# Expose inference & webapp ports
+EXPOSE ${INFERENCE_PORT}
+EXPOSE ${WEBAPP_PORT}

@@ -20,7 +20,7 @@ variable "ENV" {
     type        = string
 }
 
-variable "REGION" {
+variable "REGION_NAME" {
   description = "AWS region where the S3 bucket will be created."
   type        = string
 }
@@ -37,7 +37,7 @@ variable "BUCKET_NAME" {
 
 # AWS PROVIDER
 provider "aws" {
-  region = var.REGION
+  region = var.REGION_NAME
 }
 
 # MODEL BUILDING WORKFLOW STEP FUNCTION

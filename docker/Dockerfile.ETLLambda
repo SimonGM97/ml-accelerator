@@ -1,0 +1,91 @@
+# Use a python 3.10-slim base image
+FROM python:3.10.8-slim
+
+# Set the working directory to /app
+WORKDIR /app
+
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Install git (required by GitPython)
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# Updates the package lists for the APT (Advanced Package Tool) package management system.
+RUN apt-get update
+
+# Install requirements
+RUN pip install pandas
+RUN pip install numpy
+RUN pip install requests
+RUN pip install scikit-learn
+RUN pip install imbalanced-learn
+RUN pip install boto3
+RUN pip install botocore
+RUN pip install s3fs
+RUN pip install s3transfer
+RUN pip install pyarrow
+RUN pip install pyyaml
+RUN pip install gitpython
+RUN pip install python-dotenv
+RUN pip install colorlog
+RUN pip install python-json-logger
+RUN pip install tqdm
+
+# Copy required ml_accelerator files & directories into the container at /app
+COPY ml_accelerator/config ml_accelerator/config
+COPY ml_accelerator/data_processing/extract_transform_load.py ml_accelerator/data_processing/extract_transform_load.py
+COPY ml_accelerator/utils/aws ml_accelerator/utils/aws
+COPY ml_accelerator/utils/datasets ml_accelerator/utils/datasets
+COPY ml_accelerator/utils/filesystem ml_accelerator/utils/filesystem
+COPY ml_accelerator/utils/logging ml_accelerator/utils/logging
+COPY ml_accelerator/utils/timing ml_accelerator/utils/timing
+
+# Define build arguments
+ARG ENV
+ARG DATA_STORAGE_ENV
+ARG MODEL_STORAGE_ENV
+
+ARG REGION_NAME
+ARG BUCKET_NAME
+
+ARG RAW_DATASETS_PATH
+ARG PROCESSING_DATASETS_PATH
+ARG INFERENCE_PATH
+ARG TRANSFORMERS_PATH
+ARG MODELS_PATH
+ARG SCHEMAS_PATH
+ARG MOCK_PATH
+
+# Set environment variables from the build argument
+ENV ENV=${ENV}
+ENV DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
+ENV MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
+
+ENV REGION_NAME=${REGION_NAME}
+ENV BUCKET_NAME=${BUCKET_NAME}
+
+ENV RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
+ENV PROCESSING_DATASETS_PATH=${PROCESSING_DATASETS_PATH}
+ENV INFERENCE_PATH=${INFERENCE_PATH}
+ENV TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
+ENV MODELS_PATH=${MODELS_PATH}
+ENV SCHEMAS_PATH=${SCHEMAS_PATH}
+ENV MOCK_PATH=${MOCK_PATH}
+
+# Copy required files & directories into the container at /app
+COPY .aws /root/.aws
+COPY .env .env
+COPY config config
+COPY scripts/etl/etl.py .
+
+# Define volumes
+VOLUME ["/app/${BUCKET_NAME}", "/app/config"]
+
+# Install awslambdaric
+RUN pip install awslambdaric
+
+# Set runtime interface client as default command for the container runtime
+ENTRYPOINT [ "/usr/local/bin/python", "-m", "awslambdaric" ]
+
+# Pass the name of the function handler as an argument to the runtime
+CMD [ "etl.lambda_handler" ]

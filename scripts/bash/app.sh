@@ -39,13 +39,13 @@ fi
 IMAGE_NAME=${IMAGE_NAME} \
     VERSION=${VERSION} \
     docker-compose \
-    -f docker/docker-compose-app.yaml \
+    -f docker/compose/docker-compose-app.yaml \
     --env-file .env \
     up
 
 # Remove running services
 # VERSION=${VERSION} \
 #     docker-compose \
-#     -f docker/docker-compose-app.yaml \
+#     -f docker/compose/docker-compose-app.yaml \
 #     --env-file .env \
 #     down

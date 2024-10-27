@@ -20,7 +20,7 @@ variable "ENV" {
     type        = string
 }
 
-variable "REGION" {
+variable "REGION_NAME" {
   description = "The AWS region where the ECR repository will be created."
   type        = string
 }
@@ -32,7 +32,7 @@ variable "DOCKER_REPOSITORY_NAME" {
 
 # Define the provider (AWS)
 provider "aws" {
-  region = var.REGION
+  region = var.REGION_NAME
 }
 
 # Create an ECR repository

@@ -24,7 +24,7 @@ def get_secrets(secret_name: str = 'access_keys') -> str:
     session = boto3.session.Session()
     secrets_client = session.client(
         service_name='secretsmanager',
-        region_name=Env.get("REGION")
+        region_name=Env.get("REGION_NAME")
     )
 
     try:
@@ -47,7 +47,7 @@ ACCESS_KEYS = get_secrets(secret_name='access_keys')
 # Create an S3 client instance
 S3_CLIENT = boto3.client(
     's3',
-    region_name=Env.get("REGION"),
+    region_name=Env.get("REGION_NAME"),
     aws_access_key_id=ACCESS_KEYS["AWS_ACCESS_KEY_ID"],
     aws_secret_access_key=ACCESS_KEYS["AWS_SECRET_ACCESS_KEY"],
 )

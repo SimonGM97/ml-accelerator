@@ -6,13 +6,13 @@
 
 # VARIABLES
 variable "PROJECT_NAME" {
-    description = "Name of the Project."
-    type        = string
+  description = "Name of the Project."
+  type        = string
 }
 
 variable "VERSION" {
-    description = "Version of the Project."
-    type        = string
+  description = "Version of the Project."
+  type        = string
 }
 
 variable "ENV" {
@@ -20,7 +20,7 @@ variable "ENV" {
     type        = string
 }
 
-variable "REGION" {
+variable "REGION_NAME" {
   description = "AWS region where the S3 bucket will be created."
   type        = string
 }
@@ -32,7 +32,8 @@ variable "BUCKET_NAME" {
 
 # AWS PROVIDER
 provider "aws" {
-  region = var.REGION
+  # Region name
+  region = var.REGION_NAME
 }
 
 # S3 BUCKET

@@ -20,7 +20,7 @@ variable "ENV" {
     type        = string
 }
 
-variable "REGION" {
+variable "REGION_NAME" {
   description = "AWS region where the S3 bucket will be created."
   type        = string
 }
@@ -37,10 +37,10 @@ variable "STEP_FUNCTIONS_EXECUTION_ROLE_NAME" {
 
 # AWS PROVIDER
 provider "aws" {
-  region = var.REGION
+  region = var.REGION_NAME
 }
 
-# SAGEMAKER IAM ROLE
+# SAGEMAKER EXECUTION ROLE
 resource "aws_iam_role" "sagemaker_execution_role" {
   name = var.SAGEMAKER_EXECUTION_ROLE_NAME
   

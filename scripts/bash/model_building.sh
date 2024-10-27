@@ -105,7 +105,7 @@ elif [ "${MODEL_BUILDING_ENV}" == "docker-compose" ]; then
         UPDATE_MODEL_STAGES=${UPDATE_MODEL_STAGES} \
         UPDATE_PROD_MODEL=${UPDATE_PROD_MODEL} \
         docker-compose \
-        -f docker/model_building/docker-compose-model-building.yaml \
+        -f docker/compose/docker-compose-model-building.yaml \
         --env-file .env \
         up
 
@@ -126,7 +126,7 @@ elif [ "${MODEL_BUILDING_ENV}" == "docker-compose" ]; then
         UPDATE_MODEL_STAGES=${UPDATE_MODEL_STAGES} \
         UPDATE_PROD_MODEL=${UPDATE_PROD_MODEL} \
         docker-compose \
-        -f docker/model_building/docker-compose-model-building.yaml \
+        -f docker/compose/docker-compose-model-building.yaml \
         --env-file .env \
         down
 
