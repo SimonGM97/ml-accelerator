@@ -18,6 +18,7 @@ VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
 # Show variables
 echo "Model Building Workflow variables:"
 echo "  - VERSION: ${VERSION}"
+echo "  - ENV: ${ENV}"
 echo ""
 
 # Clean containers
@@ -35,17 +36,36 @@ else
     exit 1
 fi
 
-# Run docker-compose
-IMAGE_NAME=${IMAGE_NAME} \
-    VERSION=${VERSION} \
-    docker-compose \
-    -f docker/compose/docker-compose-app.yaml \
-    --env-file .env \
-    up
+if [ "${APP_ENV}" == "local" ]; then
+    # Run app.py
+    # .ml_accel_venv/bin/python app.py
 
-# Remove running services
-# VERSION=${VERSION} \
-#     docker-compose \
-#     -f docker/compose/docker-compose-app.yaml \
-#     --env-file .env \
-#     down
+    # Run streamlit web app
+    streamlit run scripts/web_app/web_app.py \
+        --server.port ${WEBAPP_PORT} \
+        --server.address ${WEBAPP_HOST}
+
+elif [ "${APP_ENV}" == "docker-compose" ]; then
+    # Run docker-compose
+    IMAGE_NAME=${IMAGE_NAME} \
+        ENV=${ENV} \
+        VERSION=${VERSION} \
+        docker-compose \
+        -f docker/compose/docker-compose-app.yaml \
+        --env-file .env \
+        up
+
+    # Remove running services
+    # VERSION=${VERSION} \
+    #     docker-compose \
+    #     -f docker/compose/docker-compose-app.yaml \
+    #     --env-file .env \
+    #     down
+
+elif [ "${APP_ENV}" == "EC2" ]; then
+    echo "EC2 APP_ENV environment has not been implemented yet"
+
+else
+    echo "Unable to run app script - Invalid APP_ENV: ${APP_ENV}"
+    exit 1
+fi

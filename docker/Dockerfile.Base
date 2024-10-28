@@ -90,13 +90,10 @@ ENV MOCK_PATH=${MOCK_PATH}
 
 ENV SEED=${SEED}
 
-# Copy .env file
+# Copy required files & directories
+COPY config config
 COPY .env .env
-
-# Copy AWS credentials
 COPY .aws /root/.aws
-
-# Copy resources
 COPY resources resources
 
 # TRAINING JOBS directory convention:

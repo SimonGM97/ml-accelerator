@@ -64,6 +64,7 @@ export TF_VAR_ETL_LAMBDA_LOG_GROUP=${ETL_LAMBDA_LOG_GROUP}
 export TF_VAR_ETL_LAMBDA_FUNCTION_MEMORY_SIZE=${ETL_LAMBDA_FUNCTION_MEMORY_SIZE}
 export TF_VAR_ETL_LAMBDA_FUNCTION_TIMEOUT=${ETL_LAMBDA_FUNCTION_TIMEOUT}
 export TF_VAR_SAGEMAKER_EXECUTION_ROLE_NAME=${SAGEMAKER_EXECUTION_ROLE_NAME}
+export TF_VAR_DOCKER_REPOSITORY_NAME=${DOCKER_REPOSITORY_NAME}
 
 # Build S3 bucket
 if [ "${DATA_STORAGE_ENV}" == "S3" ]; then
@@ -114,6 +115,7 @@ fi
 if [ "${MODEL_BUILDING_ENV}" == "sagemaker" ]; then
     echo "Building Model Building Step Function with Terraform..."
     echo ""
+fi
 
 # Build ECR repository
 if [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then

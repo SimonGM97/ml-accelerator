@@ -5,9 +5,11 @@ services:
     image: ${IMAGE_NAME}
     container_name: ${ENV}_data_processing_container_${VERSION}
 
-    command:
-      - python
+    entrypoint:
+      - python3
       - scripts/data_processing/data_processing.py
+
+    command:
       - --fit_transformers
       - ${FIT_TRANSFORMERS}
       - --save_transformers
@@ -19,20 +21,19 @@ services:
 
     volumes:
       - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      - ./../../config:/app/config
+      # - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
 
   # Tuning Service
   tuning:
     image: ${IMAGE_NAME}
     container_name: ${ENV}_tuning_container_${VERSION}
 
-    command:
-      - python
+    entrypoint:
+      - python3
       - scripts/tuning/tuning.py
 
     volumes:
       - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      - ./../../config:/app/config
 
     depends_on:
       data-processing:
@@ -43,9 +44,11 @@ services:
     image: ${IMAGE_NAME}
     container_name: ${ENV}_training_container_${VERSION}
 
-    command:
-      - python
+    entrypoint:
+      - python3
       - scripts/training/training.py
+
+    command:
       - --train_prod_pipe
       - ${TRAIN_PROD_PIPE} 
       - --train_staging_pipes 
@@ -55,7 +58,6 @@ services:
 
     volumes:
       - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      - ./../../config:/app/config
 
     depends_on:
       tuning:
@@ -66,9 +68,11 @@ services:
     image: ${IMAGE_NAME}
     container_name: ${ENV}_evaluating_container_${VERSION}
 
-    command:
-      - python
+    entrypoint:
+      - python3
       - scripts/evaluating/evaluating.py
+
+    command:
       - --evaluate_prod_pipe 
       - ${EVALUATE_PROD_PIPE}
       - --evaluate_staging_pipes 
@@ -82,28 +86,26 @@ services:
 
     volumes:
       - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      - ./../../config:/app/config
 
     depends_on:
       training:
         condition: service_completed_successfully
 
   # Drift Service
-  drift:
-    image: ${IMAGE_NAME}
-    container_name: ${ENV}_drift_container_${VERSION}
+  # drift:
+  #   image: ${IMAGE_NAME}
+  #   container_name: ${ENV}_drift_container_${VERSION}
 
-    command:
-      - python
-      - scripts/drift/drift.py
+  #   command:
+  #     - python3
+  #     - scripts/drift/drift.py
       
-    volumes:
-      - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      - ./../../config:/app/config
+  #   volumes:
+  #     - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
 
-    depends_on:
-      evaluating:
-        condition: service_completed_successfully
+  #   depends_on:
+  #     evaluating:
+  #       condition: service_completed_successfully
 
 volumes:
   datasets:

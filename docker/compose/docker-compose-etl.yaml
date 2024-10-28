@@ -1,0 +1,73 @@
+# COMMANDS:
+# docker-compose -f docker/compose/docker-compose-etl.yaml --env-file .env up: start all the services defined in your compose.yaml file
+# docker-compose -f docker/compose/docker-compose-etl.yaml --env-file .env down: stop and remove the running services
+# docker-compose -f docker/compose/docker-compose-etl.yaml --env-file .env logs: monitor the output of your running containers and debug issues, viewing logs
+# docker-compose -f docker/compose/docker-compose-etl.yaml --env-file .env ps: lists all the services along with their current status
+
+# version: "3.8"
+
+services:
+
+  # ETL Service
+  etl:
+    image: ${IMAGE_NAME}
+    container_name: ${ENV}_etl_container_${VERSION}
+
+    entrypoint:
+      - python3
+      - scripts/etl/etl.py
+
+    command:
+      - --persist_datasets
+      - ${PERSIST_DATASETS}
+      - --write_mode
+      - ${WRITE_MODE}
+
+    volumes:
+      - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
+      # - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
+
+  # # Dummy service
+  # dummy-service:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - ARG_KEY=${ARG_VALUE}
+
+  #   image: ${USERNAME}/${REPO_NAME}:${ENV}-image-${VERSION} # latest
+  #   container_name: ${ENV}_container_name_${VERSION}
+
+  #   command: # Overwrite the CMD commands specified in the Dockerfile
+  #     - python
+  #     - app.py
+
+  #   environment:
+  #     - ENV_KEY=${ENV_VALUE}
+
+  #   ports:
+  #     - "8000:8000"
+
+  #   volumes:
+  #     # - ${HOST_PATH}:/app # Mount the project directory
+  #     - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
+  #     - ../config:/app/config
+
+  #   deploy:
+  #     replicas: 3
+  #     update_config:
+  #       parallelism: 2
+  #       delay: 10s
+  #     resources:
+  #       limits:
+  #         cpus: "0.5"
+  #         memory: "512M"
+
+  #   depends_on:
+  #     dependence-service:
+  #       condition: service_completed_successfully
+
+volumes:
+  datasets:
+    labels:
+      environment: "development"

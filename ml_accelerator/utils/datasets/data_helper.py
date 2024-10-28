@@ -129,10 +129,12 @@ class DataHelper:
             LOGGER.warning('balance_train is False, therefore test datasets will not be balanced.')
 
         if debug and 'classification' in self.task:
-            LOGGER.debug("train balance: \n%s\n\n"
-                         "test balance: \n%s\n",
-                         y_train.groupby(self.target)[self.target].count() / y_train.shape[0],
-                         y_test.groupby(self.target)[self.target].count() / y_test.shape[0] if y_test is not None else None)
+            LOGGER.debug(
+                "train balance: \n%s\n\n"
+                "test balance: \n%s\n",
+                y_train.groupby(self.target)[self.target].count() / y_train.shape[0],
+                y_test.groupby(self.target)[self.target].count() / y_test.shape[0] if y_test is not None else None
+            )
         
         return X_train, X_test, y_train, y_test
 

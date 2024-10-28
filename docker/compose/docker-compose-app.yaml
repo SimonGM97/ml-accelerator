@@ -13,8 +13,8 @@ services:
     image: ${IMAGE_NAME}
     container_name: ${ENV}_app_container_${VERSION}
 
-    command:
-      - python
+    entrypoint:
+      - python3
       - app.py
 
     ports:
@@ -22,7 +22,7 @@ services:
 
     volumes:
       - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      - ./../../config:/app/config
+      # - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
     
     # healthcheck:
     #   test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}"]
@@ -36,10 +36,12 @@ services:
     image: ${IMAGE_NAME}
     container_name: ${ENV}_web_app_container_${VERSION}
 
-    command:
+    entrypoint:
       - streamlit
       - run
       - scripts/web_app/web_app.py
+
+    command:
       - --server.port
       - ${WEBAPP_PORT}
       - --server.address
@@ -50,9 +52,6 @@ services:
 
     volumes:
       - ./../../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      - ./../../config:/app/config
-      # - ../${BUCKET_NAME}:/app/${BUCKET_NAME}
-      # - ../config:/app/config
 
   # # Dummy service
   # dummy-service:

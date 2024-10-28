@@ -90,7 +90,6 @@ elif [ "${MODEL_BUILDING_ENV}" == "docker-compose" ]; then
 
     # Run docker-compose
     IMAGE_NAME=${IMAGE_NAME} \
-        ENV=${ENV} \
         VERSION=${VERSION} \
         FIT_TRANSFORMERS=${FIT_TRANSFORMERS} \
         SAVE_TRANSFORMERS=${SAVE_TRANSFORMERS} \
@@ -111,7 +110,6 @@ elif [ "${MODEL_BUILDING_ENV}" == "docker-compose" ]; then
 
     # Remove running services
     IMAGE_NAME=${IMAGE_NAME} \
-        ENV=${ENV} \
         VERSION=${VERSION} \
         FIT_TRANSFORMERS=${FIT_TRANSFORMERS} \
         SAVE_TRANSFORMERS=${SAVE_TRANSFORMERS} \

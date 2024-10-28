@@ -32,24 +32,43 @@ if [ "${ETL_ENV}" == "local" ]; then
         --persist_datasets ${PERSIST_DATASETS} \
         --write_mode ${WRITE_MODE}
 
-elif [ "${ETL_ENV}" == "docker" ]; then
+elif [ "${ETL_ENV}" == "docker-compose" ]; then
     echo "Running ETL job on docker environment..."
 
-    # Delete current container
-    docker rm -f ${ENV}_etl_container_${VERSION}
+    # Clean containers
+    if [ "$(docker ps -aq)" ]; then
+        docker rm -f $(docker ps -aq)
+    fi
 
-    # Run docker container
-    docker run \
-        --name ${ENV}_etl_container_${VERSION} \
-        -it \
-        --volume ./${BUCKET_NAME}:/app/${BUCKET_NAME} \
-        --volume ./config:/app/config \
+    # Define IMAGE_NAME
+    if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
+        IMAGE_NAME=${DOCKER_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    elif [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
+        IMAGE_NAME=${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
+    else
+        echo "Unable to define IMAGE_NAME - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
+        exit 1
+    fi
+
+    # Run docker-compose
+    IMAGE_NAME=${IMAGE_NAME} \
+        VERSION=${VERSION} \
+        PERSIST_DATASETS=${PERSIST_DATASETS} \
+        WRITE_MODE=${WRITE_MODE} \
+        docker-compose \
+        -f docker/compose/docker-compose-etl.yaml \
         --env-file .env \
-        ${ENV}-image:${VERSION} \
-        python scripts/etl/etl.py
+        up
 
-        # -p host_port:container_port or --publish host_port:container_port
-        # --log-driver json-file --log-opt max-size=10m
+    # Remove running services
+    IMAGE_NAME=${IMAGE_NAME} \
+        VERSION=${VERSION} \
+        PERSIST_DATASETS=${PERSIST_DATASETS} \
+        WRITE_MODE=${WRITE_MODE} \
+        docker-compose \
+        -f docker/compose/docker-compose-etl.yaml \
+        --env-file .env \
+        down
     
     echo "Finished running ETL job."
 
@@ -82,11 +101,12 @@ elif [ "${ETL_ENV}" == "lambda" ]; then
     aws lambda invoke \
         --function-name ${ETL_LAMBDA_FUNCTION_NAME} \
         --invocation-type RequestResponse \
-        --payload '{ "persist_datasets": "True", "write_mode": "overwrite" }' \
-        --output json \
+        --payload "${PAYLOAD}" \
         --region ${REGION_NAME} \
         --cli-binary-format raw-in-base64-out \
+        --output json \
         ${OUTPUT_FILE}
+         
         # --log-type Tail \
         # --query 'LogResult' \
 

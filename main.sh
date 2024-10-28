@@ -1,6 +1,6 @@
 #!/bin/bash
 # chmod +x ./main.sh
-# ./main.sh build_new_image | dont_build_new_image
+# ./main.sh build_new_images | dont_build_new_image
 
 # Deactivate conda
 # conda deactivate
@@ -11,8 +11,12 @@ source .env
 set +o allexport
 
 # Install yq (if necessary)
-# chmod +x ./scripts/bash/install_yq.sh
-# ./scripts/bash/install_yq.sh
+chmod +x ./scripts/bash/install_yq.sh
+./scripts/bash/install_yq.sh
+
+# Update requirements.txt
+# chmod +x ./scripts/bash/update_requirements.sh
+# ./scripts/bash/update_requirements.sh
 
 # Clean ports
 # chmod +x ./scripts/bash/kill_ports.sh
@@ -38,7 +42,7 @@ chmod +x ./scripts/bash/etl.sh
 # chmod +x ./scripts/bash/model_building.sh
 # ./scripts/bash/model_building.sh
 
-# Run docker-compose-app
+# Run apps
 # chmod +x ./scripts/bash/app.sh
 # ./scripts/bash/app.sh
 

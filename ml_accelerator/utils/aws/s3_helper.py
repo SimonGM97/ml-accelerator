@@ -87,7 +87,10 @@ def load_from_s3(
             prefix = key.replace(".parquet", "")
 
             # Find keys
-            keys: Set[str] = find_keys(bucket_name=bucket, directory=prefix)
+            keys: Set[str] = find_keys(bucket_name=bucket, subdir=prefix)
+
+            # Add bucket to keys
+            keys = {f's3://{bucket}/{key}' for key in keys}
 
             # Find files
             # files = FS.glob(f's3://{bucket}/{prefix}/*/*.parquet')
@@ -95,7 +98,7 @@ def load_from_s3(
             #     files = FS.glob(f's3://{bucket}/{prefix}/*/*/*.parquet')
             #     if len(files) == 0:
             #         files = f"s3://{bucket}/{prefix}/dataset-0.parquet"
-
+            
             # Create a Parquet dataset
             dataset = pq.ParquetDataset(
                 path_or_paths=list(keys),
@@ -160,7 +163,7 @@ def load_from_s3(
             )
         else:
             raise Exception(f'Invalid "read_format" parameter: {read_format}, extracted from path: {path}.')
-        
+    
         # assert len(asset) > 0, f"Loaded asset from s3://{path} contains zero keys. {asset}"
     except Exception as e:
         LOGGER.warning(
@@ -393,10 +396,10 @@ def delete_bucket(bucket_name: str) -> None:
 
     # Run remove_directory function without directory
     delete_s3_directory(bucket=bucket_name, directory='')
-
+    
     # Check that all keys & prefixes have been deleted
-    keys: Set[str] = find_keys(bucket_name=bucket_name, directory='')
-    prefixes: Set[str] = find_prefixes(bucket_name=bucket_name, directory='')
+    keys: Set[str] = find_keys(bucket_name=bucket_name, subdir='')
+    prefixes: Set[str] = find_prefixes(bucket_name=bucket_name, prefix='')
 
     if len(keys) == 0 and len(prefixes) == 0:
         LOGGER.info('Bucket: %s (S3) was successfully deleted.', bucket_name)

@@ -73,13 +73,13 @@ ENV SCHEMAS_PATH=${SCHEMAS_PATH}
 ENV MOCK_PATH=${MOCK_PATH}
 
 # Copy required files & directories into the container at /app
-COPY .aws /root/.aws
-COPY .env .env
 COPY config config
+COPY .env .env
+COPY .aws /root/.aws
 COPY scripts/etl/etl.py .
 
 # Define volumes
-VOLUME ["/app/${BUCKET_NAME}", "/app/config"]
+VOLUME [ "/app/${BUCKET_NAME}" ]
 
 # Install awslambdaric
 RUN pip install awslambdaric

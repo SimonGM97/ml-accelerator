@@ -1,6 +1,6 @@
 #!/bin/bash
 # chmod +x ./scripts/bash/image_building.sh
-# ./scripts/bash/image_building.sh build_new_image
+# ./scripts/bash/image_building.sh build_new_images
 
 # Set environment variables
 set -o allexport
@@ -18,9 +18,6 @@ echo "  - VERSION: ${VERSION}"
 echo "  - ENV: ${ENV}"
 echo "  - DATA_STORAGE_ENV: ${DATA_STORAGE_ENV}"
 echo "  - MODEL_STORAGE_ENV: ${MODEL_STORAGE_ENV}"
-echo "  - ETL_ENV: ${ETL_ENV}"
-echo "  - MODEL_BUILDING_ENV: ${MODEL_BUILDING_ENV}"
-echo "  - APP_ENV: ${APP_ENV}"
 echo "  - REGION_NAME: ${REGION_NAME}"
 echo "  - BUCKET_NAME: ${BUCKET_NAME}"
 # echo "  - KXY_API_KEY: ${KXY_API_KEY}"
@@ -49,14 +46,26 @@ if [ "$(docker images -q)" ]; then
     docker rmi -f $(docker images -q)
 fi
 
-if [ $1 == "build_new_image" ]; then
+# # Check if at least one variable is not "local"
+# if [[ "$ETL_ENV" != "local" || "$MODEL_BUILDING_ENV" != "local" || "$APP_ENV" != "local" ]]; then
+#     echo "At least one of the variables (ETL_ENV, MODEL_BUILDING_ENV, or APP_ENV) is not set to 'local'."
+#     # Add your code here to execute if the condition is true
+# else
+#     echo "All variables (ETL_ENV, MODEL_BUILDING_ENV, and APP_ENV) are set to 'local'."
+#     # Add your code here if all are "local"
+# fi
+
+if [ $1 == "build_new_images" ]; then
     # Show message
     echo "Building new ${ENV} - ${VERSION} docker images..."
 
-    # Build base Docker image
+    # Build base Docker image (compatible with linux/amd64 architecture)
+    # docker buildx build \
     docker build \
+        --platform linux/amd64 \
         -t ${ENV}-base-image:${VERSION} \
         -f docker/Dockerfile.Base . \
+        --load \
         --build-arg ENV=${ENV} \
         --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
         --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
@@ -74,20 +83,23 @@ if [ $1 == "build_new_image" ]; then
         --build-arg MODELS_PATH=${MODELS_PATH} \
         --build-arg SCHEMAS_PATH=${SCHEMAS_PATH} \
         --build-arg MOCK_PATH=${MOCK_PATH} \
-        --build-arg SEED=${SEED} \
+        --build-arg SEED=${SEED}
 
-    # Build Docker image
+    # Build Docker image (compatible with linux/amd64 architecture)
     docker build \
+        --platform linux/amd64 \
         -t ${ENV}-image:${VERSION} \
         -f docker/Dockerfile . \
+        --load \
         --build-arg VERSION=${VERSION} \
         --build-arg ENV=${ENV}
 
-    # Build lambda Docker images
+    # Build lambda Docker images (compatible with linux/amd64 architecture)
     docker build \
         --platform linux/amd64 \
         -t ${ENV}-etl-lambda-image:${VERSION} \
         -f docker/Dockerfile.ETLLambda . \
+        --load \
         --build-arg ENV=${ENV} \
         --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
         --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
@@ -121,7 +133,7 @@ if [ $1 == "build_new_image" ]; then
         # Delete current ECR images
         DELETE_IMAGE_IDS=$(aws ecr list-images --repository-name $DOCKER_REPOSITORY_NAME --region $REGION_NAME --query 'imageIds[*]' --output json)
         # echo "DELETE_IMAGE_IDS: $DELETE_IMAGE_IDS"
-        if [ $DELETE_IMAGE_IDS != "[]" ]; then
+        if [[ $DELETE_IMAGE_IDS != "[]" ]]; then
             echo "Deleting existing images in ECR repository..."
             aws ecr batch-delete-image \
                 --repository-name $DOCKER_REPOSITORY_NAME \

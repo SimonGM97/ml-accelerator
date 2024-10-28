@@ -12,6 +12,8 @@ FROM ${ENV}-base-image:${VERSION} AS base
 COPY scripts scripts
 COPY app.py .
 
-# Run the app.py script when the container launches
-# NOTE: The CMD can be re-written while running a container
-CMD [ "python", "app.py" ]
+# Define the entrypoint for the container
+#   - Run the app.py script when the container launches
+# ENTRYPOINT [ "python3", "app.py" ]
+
+# NOTE: Both the ENTRYPOINT and the CMD can be re-written while running a container

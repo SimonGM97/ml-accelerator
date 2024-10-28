@@ -6,7 +6,6 @@ from ml_accelerator.utils.logging.logger_helper import get_logger, log_params
 from ml_accelerator.utils.timing.timing_helper import timing
 
 import pandas as pd
-import gc
 from typing import Tuple
 import argparse
 
