@@ -39,8 +39,8 @@ chmod +x ./scripts/bash/etl.sh
 ./scripts/bash/etl.sh
 
 # Run model building workflow
-# chmod +x ./scripts/bash/model_building.sh
-# ./scripts/bash/model_building.sh
+chmod +x ./scripts/bash/model_building.sh
+./scripts/bash/model_building.sh
 
 # Run apps
 # chmod +x ./scripts/bash/app.sh

@@ -6,6 +6,7 @@ holidays
 hyperopt
 imbalanced-learn
 joblib
+libxgboost
 lightgbm
 mlflow
 nancorrmp
@@ -17,6 +18,7 @@ pyarrow
 python-dotenv
 python-json-logger
 PyYAML
+py-xgboost
 requests
 s3fs
 s3transfer

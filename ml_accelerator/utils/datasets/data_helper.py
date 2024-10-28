@@ -53,6 +53,7 @@ class DataHelper:
         self.inference_path: str = Env.get("INFERENCE_PATH")
         self.transformers_path: str = Env.get("TRANSFORMERS_PATH")
         self.schemas_path: str = Env.get("SCHEMAS_PATH")
+        self.step_functions_path: str = Env.get("STEP_FUNCTIONS_PATH")
 
     def divide_datasets(
         self,

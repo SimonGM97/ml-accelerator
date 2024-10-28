@@ -42,6 +42,8 @@ echo "  - ETL_LAMBDA_LOG_GROUP: ${ETL_LAMBDA_LOG_GROUP}"
 echo "  - ETL_LAMBDA_FUNCTION_MEMORY_SIZE: ${ETL_LAMBDA_FUNCTION_MEMORY_SIZE}"
 echo "  - ETL_LAMBDA_FUNCTION_TIMEOUT: ${ETL_LAMBDA_FUNCTION_TIMEOUT}"
 echo "  - SAGEMAKER_EXECUTION_ROLE_NAME: ${SAGEMAKER_EXECUTION_ROLE_NAME}"
+echo "  - MODEL_BUILDING_STEP_FUNCTIONS_NAME: ${MODEL_BUILDING_STEP_FUNCTIONS_NAME}"
+echo "  - STEP_FUNCTIONS_EXECUTION_ROLE_NAME: ${STEP_FUNCTIONS_EXECUTION_ROLE_NAME}"
 echo "  - DOCKER_REPOSITORY_NAME: ${DOCKER_REPOSITORY_NAME}"
 echo "  - DATA_STORAGE_ENV: ${DATA_STORAGE_ENV}"
 echo "  - ETL_ENV: ${ETL_ENV}"
@@ -64,6 +66,9 @@ export TF_VAR_ETL_LAMBDA_LOG_GROUP=${ETL_LAMBDA_LOG_GROUP}
 export TF_VAR_ETL_LAMBDA_FUNCTION_MEMORY_SIZE=${ETL_LAMBDA_FUNCTION_MEMORY_SIZE}
 export TF_VAR_ETL_LAMBDA_FUNCTION_TIMEOUT=${ETL_LAMBDA_FUNCTION_TIMEOUT}
 export TF_VAR_SAGEMAKER_EXECUTION_ROLE_NAME=${SAGEMAKER_EXECUTION_ROLE_NAME}
+export TF_VAR_MODEL_BUILDING_STEP_FUNCTIONS_NAME=${MODEL_BUILDING_STEP_FUNCTIONS_NAME}
+export TF_VAR_STEP_FUNCTIONS_EXECUTION_ROLE_NAME=${STEP_FUNCTIONS_EXECUTION_ROLE_NAME}
+export TF_VAR_MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME=${MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME}
 export TF_VAR_DOCKER_REPOSITORY_NAME=${DOCKER_REPOSITORY_NAME}
 
 # Build S3 bucket
@@ -95,9 +100,6 @@ if [ "${ETL_ENV}" == "lambda" ]; then
     # Initialize Terraform
     terraform -chdir=terraform/lambda init
 
-    # Delete lambda function
-    aws lambda delete-function --function-name ${ETL_LAMBDA_FUNCTION_NAME}
-
     # Validate Terraform configuration
     # terraform -chdir=terraform/lambda validate
 
@@ -114,6 +116,30 @@ fi
 # Build Model Building Step Function
 if [ "${MODEL_BUILDING_ENV}" == "sagemaker" ]; then
     echo "Building Model Building Step Function with Terraform..."
+
+    # Delete the current step function
+    # echo "Deleating ${MODEL_BUILDING_STEP_FUNCTIONS_NAME} step function..."
+    # aws stepfunctions delete-state-machine \
+    #     --state-machine-arn ${MODEL_BUILDING_STEP_FUNCTIONS_ARN}
+
+    # Wait for step function to be deleted
+    # sleep 30
+
+    # Initialize Terraform
+    terraform -chdir=terraform/step_functions init
+
+    # Validate Terraform configuration
+    # terraform -chdir=terraform/step_functions validate
+
+    # Shows what Terraform will apply
+    # terraform -chdir=terraform/step_functions plan
+
+    # Apply the configurations and create resources
+    terraform -chdir=terraform/step_functions apply -auto-approve
+
+    # Destroy all resources created by terraform
+    # terraform -chdir=terraform/step_functions destroy -auto-approve
+
     echo ""
 fi
 

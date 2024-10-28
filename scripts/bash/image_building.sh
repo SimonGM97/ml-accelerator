@@ -31,6 +31,7 @@ echo "  - INFERENCE_PATH: ${INFERENCE}"
 echo "  - TRANSFORMERS_PATH: ${TRANSFORMERS_PATH}"
 echo "  - MODELS_PATH: ${MODELS_PATH}"
 echo "  - SCHEMAS_PATH: ${SCHEMAS_PATH}"
+echo "  - STEP_FUNCTIONS_PATH: ${STEP_FUNCTIONS_PATH}"
 echo "  - MOCK_PATH: ${MOCK_PATH}"
 echo "  - SEED: ${SEED}"
 echo "  - DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
@@ -82,6 +83,7 @@ if [ $1 == "build_new_images" ]; then
         --build-arg TRANSFORMERS_PATH=${TRANSFORMERS_PATH} \
         --build-arg MODELS_PATH=${MODELS_PATH} \
         --build-arg SCHEMAS_PATH=${SCHEMAS_PATH} \
+        --build-arg STEP_FUNCTIONS_PATH=${STEP_FUNCTIONS_PATH} \
         --build-arg MOCK_PATH=${MOCK_PATH} \
         --build-arg SEED=${SEED}
 
@@ -111,6 +113,7 @@ if [ $1 == "build_new_images" ]; then
         --build-arg TRANSFORMERS_PATH=${TRANSFORMERS_PATH} \
         --build-arg MODELS_PATH=${MODELS_PATH} \
         --build-arg SCHEMAS_PATH=${SCHEMAS_PATH} \
+        --build-arg STEP_FUNCTIONS_PATH=${STEP_FUNCTIONS_PATH} \
         --build-arg MOCK_PATH=${MOCK_PATH}
 
     if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
@@ -125,6 +128,11 @@ if [ $1 == "build_new_images" ]; then
         echo "Pushing images to dockerhub repository..."
         docker push ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
         docker push ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
+
+        # Update image being ran by lambda function
+        aws lambda update-function-code \
+            --function-name ${ETL_LAMBDA_FUNCTION_NAME} \
+            --image-uri ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
 
     elif [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
         # Log-in to ECR
@@ -152,10 +160,22 @@ if [ $1 == "build_new_images" ]; then
         docker push ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
         docker push ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
 
+        # Update image being ran by lambda function
+        aws lambda update-function-code \
+            --function-name ${ETL_LAMBDA_FUNCTION_NAME} \
+            --image-uri ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
+
     else
         echo "Unable to push docker images - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
         exit 1
     fi
+
+    # Wait for lambda function to be updated
+    echo "Waiting for lambda function to be updated..."
+    sleep 30
+
+    # Delete lambda function
+    # aws lambda delete-function --function-name ${ETL_LAMBDA_FUNCTION_NAME}
 else
     if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
         # Pull images from dockerhub repository

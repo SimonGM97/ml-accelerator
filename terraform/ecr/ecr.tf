@@ -6,18 +6,18 @@
 
 # Variables
 variable "PROJECT_NAME" {
-    description = "Name of the Project."
-    type        = string
+  description = "Name of the Project."
+  type        = string
 }
 
 variable "VERSION" {
-    description = "Version of the Project."
-    type        = string
+  description = "Version of the Project."
+  type        = string
 }
 
 variable "ENV" {
-    description = "Environment to create resources on."
-    type        = string
+  description = "Environment to create resources on."
+  type        = string
 }
 
 variable "REGION_NAME" {
@@ -26,8 +26,8 @@ variable "REGION_NAME" {
 }
 
 variable "DOCKER_REPOSITORY_NAME" {
-    description = "Name of the ECR repository that will be created."
-    type        = string
+  description = "Name of the ECR repository that will be created."
+  type        = string
 }
 
 # Define the provider (AWS)

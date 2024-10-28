@@ -274,6 +274,28 @@ MODEL_BUILDING_PARAMS:
   UPDATE_MODEL_STAGES: True
   UPDATE_PROD_MODEL: False
 
+STEP_FUNCTION_STATES:
+  - step_n: 0
+    resource: sagemaker:createProcessingJob.sync
+    job_name: data-processing
+    next_step: tuning
+    end: False
+  - step_n: 1
+    resource: sagemaker:createProcessingJob.sync
+    job_name: tuning
+    next_step: training
+    end: False
+  - step_n: 2
+    resource: sagemaker:createProcessingJob.sync
+    job_name: training
+    next_step: evaluating
+    end: False
+  - step_n: 3
+    resource: sagemaker:createProcessingJob.sync
+    job_name: evaluating
+    next_step: null
+    end: True
+
 # # # # #
 # OTHER PARAMETERS
 # # # # #

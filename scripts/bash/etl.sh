@@ -110,6 +110,16 @@ elif [ "${ETL_ENV}" == "lambda" ]; then
         # --log-type Tail \
         # --query 'LogResult' \
 
+    # Remove etl_output.json
+    FILE_TO_DELETE="etl_output.json"
+
+    # Check if the file exists
+    if [ -f "${FILE_TO_DELETE}" ]; then
+        # Delete the file
+        rm "${FILE_TO_DELETE}"
+        echo "File ${FILE_TO_DELETE} was deleted."
+    fi
+
     echo "Finished running ETL job."
 
 else

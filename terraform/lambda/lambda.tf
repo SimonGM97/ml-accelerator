@@ -68,7 +68,7 @@ provider "aws" {
 
 # LAMBDA EXECUTION ROLE
 resource "aws_iam_role" "lambda_execution_role" {
-  # Execution role name
+  # Lambda execution role name
   name = var.LAMBDA_EXECUTION_ROLE_NAME
 
   # Tags

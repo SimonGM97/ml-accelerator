@@ -1,7 +1,6 @@
 from ml_accelerator.config.env import Env
 from ml_accelerator.config.params import Params
 from ml_accelerator.utils.logging.logger_helper import get_logger
-from ml_accelerator.utils.logging.logger_helper import get_logger
 import boto3
 from datetime import datetime
 import argparse
@@ -271,10 +270,19 @@ def get_environment() -> dict:
         'TRANSFORMERS_PATH': Env.get("TRANSFORMERS_PATH"),
         'MODELS_PATH': Env.get("MODELS_PATH"),
         'SCHEMAS_PATH': Env.get("SCHEMAS_PATH"),
+        'STEP_FUNCTIONS_PATH': Env.get("STEP_FUNCTIONS_PATH"),
         'MOCK_PATH': Env.get("MOCK_PATH"),
 
         'SEED': Env.get("SEED")
     }
+
+
+def get_role_arn() -> str:
+    """
+    RoleArn (string) – [REQUIRED]: The Amazon Resource Name (ARN) of an IAM role that Amazon 
+    SageMaker can assume to perform tasks on your behalf.
+    """
+    return Env.get("SAGEMAKER_EXECUTION_ROLE_ARN")
 
 
 def get_tags() -> List[dict]:
@@ -591,104 +599,79 @@ def get_processing_outputs(job_name: str) -> List[str]:
     return {'Outputs': processing_outputs}
 
 
+def get_job_parameters(job_name: str) -> dict:
+    """
+    # Experiment configuration
+    ExperimentConfig={
+        'ExperimentName': 'string',
+        'TrialName': 'string',
+        'TrialComponentDisplayName': 'string',
+        'RunName': 'string'
+    }
+
+    # Network configuration
+    NetworkConfig={
+        'EnableInterContainerTrafficEncryption': True|False,
+        'EnableNetworkIsolation': True|False,
+        'VpcConfig': {
+            'SecurityGroupIds': [
+                'string',
+            ],
+            'Subnets': [
+                'string',
+            ]
+        }
+    }
+    """
+    # Define job name
+    job_name = define_job_name(job_name=job_name)
+
+    return {
+        # Define job name
+        'ProcessingJobName': job_name,
+        
+        # Define processing resources
+        'ProcessingResources': get_processing_resources(job_name=job_name),
+
+        # Define stopping condition
+        'StoppingCondition': get_stopping_condition(job_name=job_name),
+
+        # Define app specification
+        'AppSpecification': get_app_specification(job_name=job_name),
+
+        # Define environment variables
+        'Environment': get_environment(), # {k: v for k, v in environmnent.items() if 'KEY' not in k},
+
+        # Find role ARN
+        'RoleArn': get_role_arn(),
+
+        # Define tags
+        'Tags': get_tags(),
+
+        # Define processing inputs
+        'ProcessingInputs': get_processing_inputs(job_name=job_name),
+
+        # Define processing output configuration
+        'ProcessingOutputConfig': get_processing_outputs(job_name=job_name)
+    }
+
+
 def run_sagemaker_processing_job(job_name: str) -> dict:
     # Instanciate SageMaker client
     sagemaker_client = boto3.client('sagemaker')
 
-    # Define processing_job_name
-    job_name: str = define_job_name(job_name=job_name)
-
-    # Define processing_resources
-    processing_resources = get_processing_resources(job_name=job_name)
-
-    # Define stopping condition
-    stopping_condition = get_stopping_condition(job_name=job_name)
-
-    # Find app specification
-    app_specification = get_app_specification(job_name=job_name)
-
-    # Find environment
-    environmnent: dict = get_environment()
-
-    # Find sagemaker role ARN
-    role_arn: str = Env.get("SAGEMAKER_EXECUTION_ROLE_ARN")
-
-    # Find tags
-    tags: List[dict] = get_tags()
-
-    # Find processing inputs
-    processing_inputs: List[str] = get_processing_inputs(job_name=job_name)
-
-    # Find processing outputs
-    processing_outputs: List[str] = get_processing_outputs(job_name=job_name)
+    # Find job parameters
+    job_parameters: dict = get_job_parameters(job_name=job_name)
 
     # Show job details
     LOGGER.info(
         'Running %s job with parameters:\n%s',
         job_name,
-        pformat({
-            'processing_resources': processing_resources,
-            'stopping_condition': stopping_condition,
-            'app_specification': app_specification,
-            'environmnent': {k: v for k, v in environmnent.items() if 'KEY' not in k},
-            'role_arn': role_arn,
-            'tags': tags,
-            'processing_inputs': processing_inputs,
-            'processing_outputs': processing_outputs
-        })
+        pformat({k: v for k, v in job_parameters.items() if k != 'Environment'})
     )
 
     # Create Processing Job
-    response: dict = sagemaker_client.create_processing_job(
-        # Define job name
-        ProcessingJobName=job_name,
-
-        # Resource configuration
-        ProcessingResources=processing_resources,
-
-        # Stopping condition
-        StoppingCondition=stopping_condition,
-
-        # Docker image parameters
-        AppSpecification=app_specification,
-
-        # Environment configuration for the Docker image
-        Environment=environmnent,
-
-        # Sagemaker role ARN
-        RoleArn=role_arn,
-
-        # Tags
-        Tags=tags,
-        
-        # Input configuration
-        ProcessingInputs=processing_inputs,
-
-        # Output configuration
-        ProcessingOutputConfig=processing_outputs,
-
-        # Experiment configuration
-        # ExperimentConfig={
-        #     'ExperimentName': 'string',
-        #     'TrialName': 'string',
-        #     'TrialComponentDisplayName': 'string',
-        #     'RunName': 'string'
-        # }
-
-        # Network configuration
-        # NetworkConfig={
-        #     'EnableInterContainerTrafficEncryption': True|False,
-        #     'EnableNetworkIsolation': True|False,
-        #     'VpcConfig': {
-        #         'SecurityGroupIds': [
-        #             'string',
-        #         ],
-        #         'Subnets': [
-        #             'string',
-        #         ]
-        #     }
-        # }
-    )
+    response: dict = sagemaker_client.create_processing_job(**job_parameters)
 
     # Log response
     LOGGER.info(f"Processing job {job_name} created with response:\n{pformat(response)}")
@@ -699,7 +682,7 @@ def run_sagemaker_processing_job(job_name: str) -> dict:
 """
 source .ml_accel_venv/bin/activate
 conda deactivate
-.ml_accel_venv/bin/python ml_accelerator/utils/pipeline/pipeline_helper.py --job_name evaluating
+.ml_accel_venv/bin/python ml_accelerator/utils/aws/sagemaker/sagemaker_jobs_helper.py --job_name data-processing
 """
 if __name__ == "__main__":
     # Define parser
@@ -716,10 +699,6 @@ if __name__ == "__main__":
     # Extract arguments from parser
     args = parser.parse_args()
     job_name: str = args.job_name
-
-    # Assert that job_name is valid
-    # if not job_name.endswith(f'-{Env.get("ENV")}'):
-    #     raise ValueError(f'Job name must end with {Env.get("ENV")}.')
 
     # Run processing job
     run_sagemaker_processing_job(job_name=job_name)

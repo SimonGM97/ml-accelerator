@@ -48,6 +48,8 @@ echo "  - UPDATE_PROD_MODEL: ${UPDATE_PROD_MODEL}"
 echo ""
 
 if [ "${MODEL_BUILDING_ENV}" == "local" ]; then
+    echo "Starting model-building workflow in local environment."
+
     # Run data_processing.py script
     .ml_accel_venv/bin/python scripts/data_processing/data_processing.py \
         --fit_transformers ${FIT_TRANSFORMERS} \
@@ -87,6 +89,8 @@ elif [ "${MODEL_BUILDING_ENV}" == "docker-compose" ]; then
         echo "Unable to define IMAGE_NAME - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
         exit 1
     fi
+
+    echo "Starting model-building workflow in docker-compose environment."
 
     # Run docker-compose
     IMAGE_NAME=${IMAGE_NAME} \
@@ -129,8 +133,30 @@ elif [ "${MODEL_BUILDING_ENV}" == "docker-compose" ]; then
         down
 
 elif [ "${MODEL_BUILDING_ENV}" == "sagemaker" ]; then
-    echo "Unable to run model-building workflow - MODEL_BUILDING_ENV ${MODEL_BUILDING_ENV} is not yet implemented."
-    exit 1
+    echo "Starting model-building workflow in SageMaker environment."
+
+    # Update step functions json file
+    .ml_accel_venv/bin/python ml_accelerator/utils/aws/step_functions_helper.py
+
+    # Push new json file to step function
+    aws stepfunctions update-state-machine \
+        --state-machine-arn ${MODEL_BUILDING_STEP_FUNCTIONS_ARN} \
+        --definition file://terraform/step_functions/${MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME}
+
+    # Generate a unique name using timestamp to avoid "ExecutionAlreadyExists" error
+    EXECUTION_NAME="${MODEL_BUILDING_STEP_FUNCTIONS_NAME}_$(date +%s)"
+
+    # Trigger model building step function with a unique execution name
+    EXECUTION_ARN=$(aws stepfunctions start-execution \
+        --state-machine-arn ${MODEL_BUILDING_STEP_FUNCTIONS_ARN} \
+        --name ${EXECUTION_NAME} \
+        --output text \
+        --query 'executionArn')
+    
+    echo "Started Step Function execution with ARN: ${EXECUTION_ARN}"
+
+    # Check execution status
+    aws stepfunctions describe-execution --execution-arn "${EXECUTION_ARN}"
 
 else
     echo "Unable to run model-building workflow - Invalid MODEL_BUILDING_ENV: ${MODEL_BUILDING_ENV}"

@@ -3,6 +3,7 @@ from git.repo.base import Repo
 from git.exc import InvalidGitRepositoryError
 from dotenv import load_dotenv, find_dotenv
 import os
+from typing import Dict, List
 
 
 # Get logger
@@ -18,6 +19,28 @@ def get_current_branch() -> str:
         return branch_name
     except InvalidGitRepositoryError:
         return "Not a git repository"
+
+
+def extract_suffix(parameter_name: str, parameter_value: str) -> str:
+    if '-' in parameter_value:
+        suffix = parameter_value.split('-')[-1]
+    elif '_' in parameter_value:
+        suffix = parameter_value.split('_')[-1]
+    else:
+        raise ValueError(f'{parameter_name} ({parameter_value}) must contain a "-" or "_" separator.')
+    
+    if '.' in suffix:
+        suffix = suffix.split('.')[0]
+    
+    return suffix
+
+
+def validate_suffix(env: str, parameter_name: str, suffix: str, valid_sufixes: List[str]) -> None:
+    if suffix.upper() not in [s.upper() for s in valid_sufixes]:
+        raise ValueError(f'{parameter_name} suffix ({suffix}) must be one of: {valid_sufixes}')
+    
+    if env.upper() != suffix.upper():
+        raise ValueError(f'ENV ({env}) and {parameter_name} suffix ({suffix}) must match.')
 
 
 class Env:
@@ -36,34 +59,45 @@ class Env:
             override=True
         )
 
-        # Extract parameters to validate
+        # Extract ENV
         ENV: str = cls.get('ENV')
-        BUCKET_NAME: str = cls.get('BUCKET_NAME')
 
-        # Validate parameters
-        if ENV not in ['dev', 'prod']:
-            raise ValueError(f'ENV must be either dev or prod. Got: {ENV}')
-        if BUCKET_NAME.split('-')[-1] not in ['dev', 'prod']:
-            raise ValueError(f'BUCKET_NAME suffix must be either dev or prod. Got: {BUCKET_NAME.split("-")[-1]} ({BUCKET_NAME})')
-        
-        if ENV != BUCKET_NAME.split('-')[-1]:
-            raise Exception(f'ENV ({ENV}) and BUCKET_NAME suffix ({BUCKET_NAME.split("-")[-1]}) must match.')
-        
         # Extract branch
         branch_name: str = get_current_branch()
         
         # Validate main environment parameters
         if branch_name != "Not a git repository":
-            if branch_name == 'main':
-                if ENV != 'prod':
-                    raise ValueError(f'ENV must be prod for main branch. Got: {ENV}')
-                if BUCKET_NAME.split('-')[-1] != 'prod':
-                    raise ValueError(f'BUCKET_NAME suffix must be prod for main branch. Got: {BUCKET_NAME.split("-")[-1]} ({BUCKET_NAME})')
-            else:
-                if ENV == 'prod':
-                    raise ValueError(f'ENV cannot be "prod" for {branch_name} branch.')
-                if BUCKET_NAME.split('-')[-1] == 'prod':
-                    raise ValueError(f'BUCKET_NAME suffix cannot be "prod" for {branch_name} branch.')
+            if branch_name == 'main' and ENV != 'prod':
+                raise ValueError(f'ENV must be prod for main branch. Got: {ENV}')
+            elif branch_name != 'main' and ENV == 'prod':
+                raise ValueError(f'ENV must be dev for {branch_name} branch. Got: {ENV}')
+
+            # Define parameters to validate
+            params: Dict[str, str] = {
+                'BUCKET_NAME': cls.get('BUCKET_NAME'), 
+                'ETL_LAMBDA_FUNCTION_NAME': cls.get('ETL_LAMBDA_FUNCTION_NAME'), 
+                'LAMBDA_EXECUTION_ROLE_NAME': cls.get('LAMBDA_EXECUTION_ROLE_NAME'), 
+                'LAMBDA_EXECUTION_ROLE_ARN': cls.get('LAMBDA_EXECUTION_ROLE_ARN'),
+                'SAGEMAKER_EXECUTION_ROLE_NAME': cls.get('SAGEMAKER_EXECUTION_ROLE_NAME'), 
+                'SAGEMAKER_EXECUTION_ROLE_ARN': cls.get('SAGEMAKER_EXECUTION_ROLE_ARN'), 
+                'MODEL_BUILDING_STEP_FUNCTIONS_NAME': cls.get('MODEL_BUILDING_STEP_FUNCTIONS_NAME'),
+                'MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME': cls.get('MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME'), 
+                'STEP_FUNCTIONS_EXECUTION_ROLE_NAME': cls.get('STEP_FUNCTIONS_EXECUTION_ROLE_NAME'), 
+                'STEP_FUNCTIONS_EXECUTION_ROLE_ARN': cls.get('STEP_FUNCTIONS_EXECUTION_ROLE_ARN')
+            }
+        else:
+            # Define parameters to validate
+            params: Dict[str, str] = {
+                'BUCKET_NAME': cls.get('BUCKET_NAME')
+            }
+
+        # Validate parameter suffixes
+        for param in params:
+            # Extract suffix
+            suffix: str = extract_suffix(param, params[param])
+
+            # Validate suffix
+            validate_suffix(ENV, param, suffix, ['dev', 'prod'])
 
         cls.initialized = True
 

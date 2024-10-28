@@ -261,7 +261,7 @@ def save_to_s3(
         S3_CLIENT.put_object(
             Bucket=bucket,
             Key=key,
-            Body=json.dumps(asset)
+            Body=json.dumps(asset, indent=4)
         )
     
     elif write_format == 'yaml':

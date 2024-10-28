@@ -237,11 +237,8 @@ class MLPipeline:
                 transformer.load()
             except Exception as e:
                 LOGGER.warning(
-                    'Unable to load %s %s.\n'
-                    'A base %s will be loaded.\n'
-                    'Exception: %s', 
-                    transformer.transformer_id, transformer.class_name, 
-                    transformer.class_name, e
+                    'A base %s Transformer will be loaded for %s MLPipeline.', 
+                    transformer.class_name, self.pipeline_id
                 )
 
                 transformer.transformer_id = 'base'

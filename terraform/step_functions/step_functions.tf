@@ -6,32 +6,47 @@
 
 # VARIABLES
 variable "PROJECT_NAME" {
-    description = "Name of the Project."
-    type        = string
-}
-
-variable "VERSION" {
-    description = "Version of the Project."
-    type        = string
-}
-
-variable "ENV" {
-    description = "Environment to create resources on."
-    type        = string
-}
-
-variable "REGION_NAME" {
-  description = "AWS region where the S3 bucket will be created."
+  description = "Name of the Project."
   type        = string
 }
 
-variable "STEP_FUNCTIONS_EXECUTION_ROLE_ARN" {
-    description = "Execution role ARN to run SageMaker pipelines."
-    type        = string
+variable "VERSION" {
+  description = "Version of the Project."
+  type        = string
+}
+
+variable "ENV" {
+  description = "Environment to create resources on."
+  type        = string
+}
+
+variable "REGION_NAME" {
+  description = "AWS region where the resources will be created."
+  type        = string
 }
 
 variable "BUCKET_NAME" {
-  description = "S3 bucket name where training datasets will be stored."
+  description = "S3 bucket name where processing datasets will be stored."
+  type        = string
+}
+
+variable "SAGEMAKER_EXECUTION_ROLE_NAME" {
+  description = "Execution role name to run SageMaker Processing jobs."
+  type        = string
+}
+
+variable "MODEL_BUILDING_STEP_FUNCTIONS_NAME" {
+  description = "Step Functions name."
+  type        = string
+}
+
+variable "STEP_FUNCTIONS_EXECUTION_ROLE_NAME" {
+  description = "Execution role name to run Step Functions."
+  type        = string
+}
+
+variable "MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME" {
+  description = "Model Building Step Functions file name describing Step Functions steps."
   type        = string
 }
 
@@ -40,169 +55,134 @@ provider "aws" {
   region = var.REGION_NAME
 }
 
+# SAGEMAKER EXECUTION ROLE
+resource "aws_iam_role" "sagemaker_execution_role" {
+  # SageMaker execution role name
+  name = var.SAGEMAKER_EXECUTION_ROLE_NAME
+  
+  # Tags
+  tags = {
+    Project     = var.PROJECT_NAME
+    Version     = var.VERSION
+    Environment = var.ENV
+  }
+
+  # Role policy
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "sagemaker.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+# Attach permissions to sagemaker_execution_role
+resource "aws_iam_role_policy" "sagemaker_custom_policy" {
+  name = "SageMakerCustomPermissions"
+
+  role = aws_iam_role.sagemaker_execution_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          # S3 full access
+          "s3:*",
+          "s3-object-lambda:*",
+          # SageMaker full access
+          "sagemaker:*",
+          "sagemaker-geospatial:*",
+          # ECR Full access
+          "ecr:*",
+          # CloudWatch full access
+          "logs:*",
+          "cloudwatch:*",
+          # IAM full access
+          "iam:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# STEP FUNCTIONS EXECUTION ROLE
+resource "aws_iam_role" "step_functions_execution_role" {
+  name = var.STEP_FUNCTIONS_EXECUTION_ROLE_NAME
+  
+  tags = {
+    Project     = var.PROJECT_NAME
+    Version     = var.VERSION
+    Environment = var.ENV
+  }
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        Service = "states.amazonaws.com"
+      }
+    }]
+  })
+}
+
+# Attach permissions for Step Functions to create and manage state machines
+resource "aws_iam_role_policy" "step_functions_custom_policy" {
+  name = "StepFunctionsCustomPermissions"
+
+  role = aws_iam_role.step_functions_execution_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          # S3 full access
+          "s3:*",
+          "s3-object-lambda:*",
+          # SageMaker full access
+          "sagemaker:*",
+          "sagemaker-geospatial:*",
+          # ECR Full access
+          "ecr:*",
+          # CloudWatch full access
+          "logs:*",
+          "cloudwatch:*",
+          # Step Functions full access
+          "states:*",
+          "sts:*",
+          # Amazon EventBridge full access
+          "events:*",
+          # AWS X-Ray full access
+          "xray:*",
+          # IAM Full access
+          "iam:PassRole"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # MODEL BUILDING WORKFLOW STEP FUNCTION
 resource "aws_sfn_state_machine" "model_building_workflow" {
   # Step function name
-  name     = "ModelBuildingWorkflow"
+  name     = var.MODEL_BUILDING_STEP_FUNCTIONS_NAME
 
   # Role ARN
-  role_arn = var.STEP_FUNCTIONS_EXECUTION_ROLE_ARN
+  role_arn = aws_iam_role.step_functions_execution_role.arn
 
-  definition = jsonencode({
-    "Comment": "Model Building Workflow",
-    "StartAt": "DataProcessingJob",
-    "States": {
-      "DataProcessingJob": {
-        "Type": "Task",
-        "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
-        "Parameters": {
-          "ProcessingJobName": "DataProcessing",
-          "ProcessingResources": {
-            "ClusterConfig": {
-              "InstanceCount": 1,
-              "InstanceType": "ml.m5.xlarge",  # Specify instance type
-              "VolumeSizeInGB": 30
-            }
-          },
-          "AppSpecification": {
-            "ImageUri": "your-docker-image-url",
-            "ContainerEntrypoint": ["python3", "/opt/ml/processing/input/code/data_processing.py"]
-          },
-          "RoleArn": "${var.sagemaker_execution_role_arn}",
-          "ProcessingInputs": [{
-            "InputName": "input-data",
-            "S3Input": {
-              "S3Uri": "s3://${var.s3_bucket_name}/input-data/",
-              "LocalPath": "/opt/ml/processing/input",
-              "S3DataType": "S3Prefix",
-              "S3InputMode": "File",
-              "S3DataDistributionType": "FullyReplicated"
-            }
-          }],
-          "ProcessingOutputConfig": {
-            "Outputs": [{
-              "OutputName": "output-data",
-              "S3Output": {
-                "S3Uri": "s3://${var.s3_bucket_name}/output-data/",
-                "LocalPath": "/opt/ml/processing/output",
-                "S3UploadMode": "EndOfJob"
-              }
-            }]
-          }
-        },
-        "Next": "TuningJob"
-      },
-      "TuningJob": {
-        "Type": "Task",
-        "Resource": "arn:aws:states:::sagemaker:createHyperParameterTuningJob.sync",
-        "Parameters": {
-          "HyperParameterTuningJobName": "TuningJob",
-          "HyperParameterTuningJobConfig": {
-            "Strategy": "Bayesian",
-            "HyperParameterTuningResourceConfig": {
-              "InstanceType": "ml.m5.xlarge",
-              "InstanceCount": 2
-            }
-          },
-          "TrainingJobDefinition": {
-            "AlgorithmSpecification": {
-              "TrainingImage": "your-docker-image-url",
-              "TrainingInputMode": "File"
-            },
-            "RoleArn": "${var.sagemaker_execution_role_arn}",
-            "InputDataConfig": [{
-              "ChannelName": "train",
-              "DataSource": {
-                "S3DataSource": {
-                  "S3Uri": "s3://${var.s3_bucket_name}/train-data/",
-                  "S3DataType": "S3Prefix",
-                  "S3InputMode": "File"
-                }
-              }
-            }],
-            "OutputDataConfig": {
-              "S3OutputPath": "s3://${var.s3_bucket_name}/tuning-output/"
-            },
-            "ResourceConfig": {
-              "InstanceType": "ml.m5.large",
-              "InstanceCount": 1,
-              "VolumeSizeInGB": 50
-            }
-          }
-        },
-        "Next": "TrainingJob"
-      },
-      "TrainingJob": {
-        "Type": "Task",
-        "Resource": "arn:aws:states:::sagemaker:createTrainingJob.sync",
-        "Parameters": {
-          "TrainingJobName": "TrainingJob",
-          "AlgorithmSpecification": {
-            "TrainingImage": "your-docker-image-url",
-            "TrainingInputMode": "File"
-          },
-          "RoleArn": "${var.sagemaker_execution_role_arn}",
-          "InputDataConfig": [{
-            "ChannelName": "train",
-            "DataSource": {
-              "S3DataSource": {
-                "S3Uri": "s3://${var.s3_bucket_name}/train-data/",
-                "S3DataType": "S3Prefix",
-                "S3InputMode": "File"
-              }
-            }
-          }],
-          "OutputDataConfig": {
-            "S3OutputPath": "s3://${var.s3_bucket_name}/training-output/"
-          },
-          "ResourceConfig": {
-            "InstanceType": "ml.m5.large",
-            "InstanceCount": 1,
-            "VolumeSizeInGB": 50
-          }
-        },
-        "Next": "EvaluationJob"
-      },
-      "EvaluationJob": {
-        "Type": "Task",
-        "Resource": "arn:aws:states:::sagemaker:createProcessingJob.sync",
-        "Parameters": {
-          "ProcessingJobName": "EvaluationJob",
-          "ProcessingResources": {
-            "ClusterConfig": {
-              "InstanceCount": 1,
-              "InstanceType": "ml.m5.xlarge",
-              "VolumeSizeInGB": 30
-            }
-          },
-          "AppSpecification": {
-            "ImageUri": "your-docker-image-url",
-            "ContainerEntrypoint": ["python3", "/opt/ml/processing/input/code/evaluating.py"]
-          },
-          "RoleArn": "${var.sagemaker_execution_role_arn}",
-          "ProcessingInputs": [{
-            "InputName": "input-data",
-            "S3Input": {
-              "S3Uri": "s3://${var.s3_bucket_name}/test-data/",
-              "LocalPath": "/opt/ml/processing/input",
-              "S3DataType": "S3Prefix",
-              "S3InputMode": "File",
-              "S3DataDistributionType": "FullyReplicated"
-            }
-          }],
-          "ProcessingOutputConfig": {
-            "Outputs": [{
-              "OutputName": "evaluation-results",
-              "S3Output": {
-                "S3Uri": "s3://${var.s3_bucket_name}/evaluation-output/",
-                "LocalPath": "/opt/ml/processing/output",
-                "S3UploadMode": "EndOfJob"
-              }
-            }]
-          }
-        },
-        "End": true
-      }
-    }
-  })
+  # Step Functions definition (loaded from json file)
+  definition = file(var.MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME)
 }
