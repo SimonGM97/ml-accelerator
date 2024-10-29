@@ -139,9 +139,15 @@ elif [ "${MODEL_BUILDING_ENV}" == "sagemaker" ]; then
     .ml_accel_venv/bin/python ml_accelerator/utils/aws/step_functions_helper.py
 
     # Push new json file to step function
+    if [ "${ENV}" == "prod" ]; then
+        DEFINITION_FILE=file://terraform/production/step_functions/${MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME}
+    else
+        DEFINITION_FILE=file://terraform/development/step_functions/${MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME}
+    fi
+    
     aws stepfunctions update-state-machine \
         --state-machine-arn ${MODEL_BUILDING_STEP_FUNCTIONS_ARN} \
-        --definition file://terraform/step_functions/${MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME}
+        --definition ${DEFINITION_FILE}
 
     # Generate a unique name using timestamp to avoid "ExecutionAlreadyExists" error
     EXECUTION_NAME="${MODEL_BUILDING_STEP_FUNCTIONS_NAME}_$(date +%s)"

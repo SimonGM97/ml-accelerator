@@ -28,5 +28,8 @@ git pull origin ${BASE_BRANCH_NAME}
 # Create new branch
 git checkout -b ${NEW_BRANCH_NAME}
 
+# Change the origin url to AzureDevOps
+git remote set-url origin ${AZURE_DEVOPS_REPO_URL}
+
 # Push to remote repository
 git push -u origin ${NEW_BRANCH_NAME}

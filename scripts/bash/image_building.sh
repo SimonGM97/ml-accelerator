@@ -1,6 +1,6 @@
 #!/bin/bash
 # chmod +x ./scripts/bash/image_building.sh
-# ./scripts/bash/image_building.sh build_new_images
+# ./scripts/bash/image_building.sh
 
 # Set environment variables
 set -o allexport
@@ -27,11 +27,10 @@ echo "  - WEBAPP_HOST: ${WEBAPP_HOST}"
 echo "  - WEBAPP_PORT: ${WEBAPP_PORT}"
 echo "  - RAW_DATASETS_PATH: ${RAW_DATASETS_PATH}"
 echo "  - PROCESSING_DATASETS_PATH: ${PROCESSING_DATASETS_PATH}"
-echo "  - INFERENCE_PATH: ${INFERENCE}"
+echo "  - INFERENCE_PATH: ${INFERENCE_PATH}"
 echo "  - TRANSFORMERS_PATH: ${TRANSFORMERS_PATH}"
 echo "  - MODELS_PATH: ${MODELS_PATH}"
 echo "  - SCHEMAS_PATH: ${SCHEMAS_PATH}"
-echo "  - STEP_FUNCTIONS_PATH: ${STEP_FUNCTIONS_PATH}"
 echo "  - MOCK_PATH: ${MOCK_PATH}"
 echo "  - SEED: ${SEED}"
 echo "  - DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
@@ -48,16 +47,8 @@ if [ "$(docker images -q)" ]; then
 fi
 
 # # Check if at least one variable is not "local"
-# if [[ "$ETL_ENV" != "local" || "$MODEL_BUILDING_ENV" != "local" || "$APP_ENV" != "local" ]]; then
-#     echo "At least one of the variables (ETL_ENV, MODEL_BUILDING_ENV, or APP_ENV) is not set to 'local'."
-#     # Add your code here to execute if the condition is true
-# else
-#     echo "All variables (ETL_ENV, MODEL_BUILDING_ENV, and APP_ENV) are set to 'local'."
-#     # Add your code here if all are "local"
-# fi
-
-if [ $1 == "build_new_images" ]; then
-    # Show message
+if [[ "$ETL_ENV" != "local" || "$MODEL_BUILDING_ENV" != "local" || "$APP_ENV" != "local" ]]; then
+    echo "At least one of the variables (ETL_ENV, MODEL_BUILDING_ENV, or APP_ENV) is not set to 'local'."
     echo "Building new ${ENV} - ${VERSION} docker images..."
 
     # Build base Docker image (compatible with linux/amd64 architecture)
@@ -83,7 +74,6 @@ if [ $1 == "build_new_images" ]; then
         --build-arg TRANSFORMERS_PATH=${TRANSFORMERS_PATH} \
         --build-arg MODELS_PATH=${MODELS_PATH} \
         --build-arg SCHEMAS_PATH=${SCHEMAS_PATH} \
-        --build-arg STEP_FUNCTIONS_PATH=${STEP_FUNCTIONS_PATH} \
         --build-arg MOCK_PATH=${MOCK_PATH} \
         --build-arg SEED=${SEED}
 
@@ -113,7 +103,6 @@ if [ $1 == "build_new_images" ]; then
         --build-arg TRANSFORMERS_PATH=${TRANSFORMERS_PATH} \
         --build-arg MODELS_PATH=${MODELS_PATH} \
         --build-arg SCHEMAS_PATH=${SCHEMAS_PATH} \
-        --build-arg STEP_FUNCTIONS_PATH=${STEP_FUNCTIONS_PATH} \
         --build-arg MOCK_PATH=${MOCK_PATH}
 
     if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
@@ -177,6 +166,9 @@ if [ $1 == "build_new_images" ]; then
     # Delete lambda function
     # aws lambda delete-function --function-name ${ETL_LAMBDA_FUNCTION_NAME}
 else
+    echo "All variables (ETL_ENV, MODEL_BUILDING_ENV, and APP_ENV) are set to 'local'."
+    echo "No new images will be built."
+
     if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
         # Pull images from dockerhub repository
         echo "Pulling images from dockerhub repository..."

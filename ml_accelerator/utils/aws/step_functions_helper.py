@@ -70,7 +70,7 @@ conda deactivate
 .ml_accel_venv/bin/python ml_accelerator/utils/aws/step_functions_helper.py
 """
 if __name__ == "__main__":
-    # Extract step_function_name and file_name
+    # Extract step_function_name & file_name
     step_function_name: str = Env.get("MODEL_BUILDING_STEP_FUNCTIONS_NAME")
     file_name: str = Env.get("MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME")
 
@@ -81,8 +81,17 @@ if __name__ == "__main__":
     LOGGER.info('%s state definitions: %s', step_function_name, json.dumps(state_definitions, indent=4))
 
     # Save state definitions
-    save_to_filesystem(
-        asset=state_definitions, 
-        path=os.path.join('terraform', 'step_functions', file_name),
-        write_mode='overwrite'
-    )
+    ENV: str = Env.get("ENV")
+    if ENV == 'prod':
+        save_to_filesystem(
+            asset=state_definitions, 
+            path=os.path.join('terraform', 'production', 'step_functions', file_name),
+            write_mode='overwrite'
+        )
+    else:
+        save_to_filesystem(
+            asset=state_definitions, 
+            path=os.path.join('terraform', 'development', 'step_functions', file_name),
+            write_mode='overwrite'
+        )
+    

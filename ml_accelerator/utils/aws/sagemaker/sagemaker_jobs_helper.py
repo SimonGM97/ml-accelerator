@@ -270,7 +270,6 @@ def get_environment() -> dict:
         'TRANSFORMERS_PATH': Env.get("TRANSFORMERS_PATH"),
         'MODELS_PATH': Env.get("MODELS_PATH"),
         'SCHEMAS_PATH': Env.get("SCHEMAS_PATH"),
-        'STEP_FUNCTIONS_PATH': Env.get("STEP_FUNCTIONS_PATH"),
         'MOCK_PATH': Env.get("MOCK_PATH"),
 
         'SEED': Env.get("SEED")
@@ -282,7 +281,7 @@ def get_role_arn() -> str:
     RoleArn (string) – [REQUIRED]: The Amazon Resource Name (ARN) of an IAM role that Amazon 
     SageMaker can assume to perform tasks on your behalf.
     """
-    return Env.get("SAGEMAKER_EXECUTION_ROLE_ARN")
+    return Env.get("SAGEMAKER_EXECUTION_ROLE_ARN") # Env.get("BASE_ROLE_ARN") + "/" + 
 
 
 def get_tags() -> List[dict]:

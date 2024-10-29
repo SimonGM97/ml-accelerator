@@ -1,13 +1,37 @@
+from ml_accelerator.utils.filesystem.filesystem_helper import find_paths
 from ml_accelerator.utils.logging.logger_helper import get_logger
 from git.repo.base import Repo
 from git.exc import InvalidGitRepositoryError
 from dotenv import load_dotenv, find_dotenv
 import os
-from typing import Dict, List
+import hcl2
+from typing import Dict, List, Set
 
 
 # Get logger
 LOGGER = get_logger(name=__name__)
+
+# Extract ENV
+ENV: str = os.environ['ENV']
+
+# Find terraform files
+if ENV == 'prod':
+    terraform_files: Set[str] = find_paths(
+        bucket_name='', 
+        directory='terraform/production'
+    )
+else:
+    terraform_files: Set[str] = find_paths(
+        bucket_name='', 
+        directory='terraform/development'
+    )
+
+# Load TF_VARS
+TF_VARS: dict = {}
+for file in terraform_files:
+    if file.endswith('.tfvars'):
+        with open(file, 'r') as f:
+            TF_VARS.update(hcl2.load(f))
 
 
 def get_current_branch() -> str:
@@ -22,6 +46,11 @@ def get_current_branch() -> str:
 
 
 def extract_suffix(parameter_name: str, parameter_value: str) -> str:
+    # Extract : from ARN
+    if ':' in parameter_value:
+        parameter_value = parameter_value.split(':')[-1]
+    
+    # Extract suffix
     if '-' in parameter_value:
         suffix = parameter_value.split('-')[-1]
     elif '_' in parameter_value:
@@ -29,6 +58,7 @@ def extract_suffix(parameter_name: str, parameter_value: str) -> str:
     else:
         raise ValueError(f'{parameter_name} ({parameter_value}) must contain a "-" or "_" separator.')
     
+    # Remove unrequired file extension
     if '.' in suffix:
         suffix = suffix.split('.')[0]
     
@@ -74,23 +104,18 @@ class Env:
 
             # Define parameters to validate
             params: Dict[str, str] = {
-                'BUCKET_NAME': cls.get('BUCKET_NAME'), 
-                'ETL_LAMBDA_FUNCTION_NAME': cls.get('ETL_LAMBDA_FUNCTION_NAME'), 
-                'LAMBDA_EXECUTION_ROLE_NAME': cls.get('LAMBDA_EXECUTION_ROLE_NAME'), 
-                'LAMBDA_EXECUTION_ROLE_ARN': cls.get('LAMBDA_EXECUTION_ROLE_ARN'),
-                'SAGEMAKER_EXECUTION_ROLE_NAME': cls.get('SAGEMAKER_EXECUTION_ROLE_NAME'), 
-                'SAGEMAKER_EXECUTION_ROLE_ARN': cls.get('SAGEMAKER_EXECUTION_ROLE_ARN'), 
+                'BUCKET_NAME': cls.get('BUCKET_NAME'),
+                'DOCKER_REPOSITORY_NAME': cls.get('DOCKER_REPOSITORY_NAME'),
+                'ETL_LAMBDA_FUNCTION_NAME': cls.get('ETL_LAMBDA_FUNCTION_NAME'),
                 'MODEL_BUILDING_STEP_FUNCTIONS_NAME': cls.get('MODEL_BUILDING_STEP_FUNCTIONS_NAME'),
-                'MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME': cls.get('MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME'), 
-                'STEP_FUNCTIONS_EXECUTION_ROLE_NAME': cls.get('STEP_FUNCTIONS_EXECUTION_ROLE_NAME'), 
-                'STEP_FUNCTIONS_EXECUTION_ROLE_ARN': cls.get('STEP_FUNCTIONS_EXECUTION_ROLE_ARN')
+                'MODEL_BUILDING_STEP_FUNCTIONS_ARN': cls.get('MODEL_BUILDING_STEP_FUNCTIONS_ARN'),
+                'MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME': cls.get('MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME'),
             }
         else:
-            # Define parameters to validate
             params: Dict[str, str] = {
                 'BUCKET_NAME': cls.get('BUCKET_NAME')
             }
-
+        
         # Validate parameter suffixes
         for param in params:
             # Extract suffix
@@ -103,12 +128,28 @@ class Env:
 
     @staticmethod
     def get(var_name: str) -> str:
+        def get_terraform_var(var_name: str) -> str:
+            # Extract param_
+            param_: str = TF_VARS.get(var_name) # f'{var_name}_{ENV.upper()}')
+            
+            if isinstance(param_, str):
+                return (
+                    param_
+                    .replace('${', '')
+                    .replace('}', '')
+                    .replace(' ', '')
+                )
+            return param_
+
+        
         # Extract environment parameter
         param: str = os.environ.get(var_name)
-
+        
         # Validate parameter
         if param is None:
-            raise ValueError(f'{var_name} could not be extracted from environment.') 
+            param = get_terraform_var(var_name)
+            if param is None:
+                raise ValueError(f'{var_name} could not be extracted from environment (nor from .tfvars).') 
         
         return param
 

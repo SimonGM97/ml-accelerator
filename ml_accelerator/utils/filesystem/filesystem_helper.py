@@ -1,4 +1,3 @@
-from ml_accelerator.config.env import Env
 from ml_accelerator.utils.logging.logger_helper import get_logger
 import pandas as pd
 import pyarrow.parquet as pq
@@ -170,11 +169,11 @@ def find_paths(
 
     # Define search dir
     search_dir = os.path.join(bucket_name, *directory.split('/'))
-    
     # Append paths
     for root, subdirs, files in os.walk(search_dir):
         for file in files:
-            new_path = os.path.join(*root.split('/'), *'/'.join(subdirs), file)
+            new_path = os.path.join(*root.split('/'), file)
+            # new_path = os.path.join(*root.split('/'), *'/'.join(subdirs), file)
             found_paths.update({new_path})
 
     return found_paths
@@ -295,7 +294,7 @@ def copy_bucket(
 if __name__ == "__main__":
     # Copy bucket into new dummy-bucket
     copy_bucket(
-        source_bucket=Env.get("BUCKET_NAME"), 
+        source_bucket='ml-accelerator-bucket-dev', 
         destination_bucket='dummy-bucket', 
         subdir='',
         delete_destination=True

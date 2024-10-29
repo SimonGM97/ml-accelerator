@@ -1,10 +1,4 @@
-# terraform -chdir=terraform/ecr init: initialize Terraform & download the necessary provider plugins for AWS.
-# terraform -chdir=terraform/ecr validate: validate Terraform configuration before applying it to ensure there are no syntax errors.
-# terraform -chdir=terraform/ecr plan: shows what Terraform will do when applying the configuration (won’t make any changes).
-# terraform -chdir=terraform/ecr apply: apply the configuration to create the resources.
-# terraform -chdir=terraform/ecr destroy: delete all resources created by Terraform.
-
-# Variables
+# VARIABLES
 variable "PROJECT_NAME" {
   description = "Name of the Project."
   type        = string
@@ -15,18 +9,13 @@ variable "VERSION" {
   type        = string
 }
 
-variable "ENV" {
-  description = "Environment to create resources on."
-  type        = string
-}
-
 variable "REGION_NAME" {
   description = "The AWS region where the ECR repository will be created."
   type        = string
 }
 
 variable "DOCKER_REPOSITORY_NAME" {
-  description = "Name of the ECR repository that will be created."
+  description = "Name of the ECR repository that will be created (on Dev environment)."
   type        = string
 }
 
@@ -35,8 +24,8 @@ provider "aws" {
   region = var.REGION_NAME
 }
 
-# Create an ECR repository
-resource "aws_ecr_repository" "my_ecr_repo" {
+# ECR REPOSITORY
+resource "aws_ecr_repository" "ecr_repository_dev" {
   # ECR repository name
   name                     = var.DOCKER_REPOSITORY_NAME
 
@@ -53,8 +42,8 @@ resource "aws_ecr_repository" "my_ecr_repo" {
   
   # Tags
   tags = {
-    Project     = var.PROJECT_NAME
-    Version     = var.VERSION
-    Environment = var.ENV
+    Project       = var.PROJECT_NAME
+    Version       = var.VERSION
+    Environment = "dev"
   }
 }

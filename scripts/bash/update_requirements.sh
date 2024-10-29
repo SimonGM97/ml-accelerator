@@ -6,7 +6,7 @@
 pip install pip-tools
 
 # Compile and update requirements.txt
-pip-compile --upgrade
+pip-compile --upgrade --strip-extras
 
 # Re-install library
 pip install -e .
