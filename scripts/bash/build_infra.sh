@@ -23,9 +23,6 @@ else
     exit 1
 fi
 
-# Define ETL_LAMBDA_LOG_GROUP
-ETL_LAMBDA_LOG_GROUP="/aws/lambda/${ETL_LAMBDA_FUNCTION_NAME}"
-
 # Show variables
 echo "Infrastructure variables:"
 echo "  - PROJECT_NAME: ${PROJECT_NAME}"
@@ -34,17 +31,7 @@ echo "  - ENV: ${ENV}"
 echo "  - REGION_NAME: ${REGION_NAME}"
 echo "  - BUCKET_NAME: ${BUCKET_NAME}"
 echo ""
-# echo "  - SECRET_ARN: ${SECRET_ARN}"
-echo "  - LAMBDA_EXECUTION_ROLE_NAME: ${LAMBDA_EXECUTION_ROLE_NAME}"
-echo "  - ETL_LAMBDA_FUNCTION_NAME: ${ETL_LAMBDA_FUNCTION_NAME}"
 echo "  - ETL_LAMBDA_IMAGE_URI: ${ETL_LAMBDA_IMAGE_URI}"
-echo "  - ETL_LAMBDA_LOG_GROUP: ${ETL_LAMBDA_LOG_GROUP}"
-echo "  - ETL_LAMBDA_FUNCTION_MEMORY_SIZE: ${ETL_LAMBDA_FUNCTION_MEMORY_SIZE}"
-echo "  - ETL_LAMBDA_FUNCTION_TIMEOUT: ${ETL_LAMBDA_FUNCTION_TIMEOUT}"
-echo "  - SAGEMAKER_EXECUTION_ROLE_NAME: ${SAGEMAKER_EXECUTION_ROLE_NAME}"
-echo "  - MODEL_BUILDING_STEP_FUNCTIONS_NAME: ${MODEL_BUILDING_STEP_FUNCTIONS_NAME}"
-echo "  - STEP_FUNCTIONS_EXECUTION_ROLE_NAME: ${STEP_FUNCTIONS_EXECUTION_ROLE_NAME}"
-echo "  - DOCKER_REPOSITORY_NAME: ${DOCKER_REPOSITORY_NAME}"
 echo "  - DATA_STORAGE_ENV: ${DATA_STORAGE_ENV}"
 echo "  - ETL_ENV: ${ETL_ENV}"
 echo "  - MODEL_BUILDING_ENV: ${MODEL_BUILDING_ENV}"
@@ -54,114 +41,80 @@ echo ""
 # Define terraform variables
 export TF_VAR_PROJECT_NAME=${PROJECT_NAME}
 export TF_VAR_VERSION=${VERSION}
-export TF_VAR_ENV=${ENV}
 export TF_VAR_REGION_NAME=${REGION_NAME}
-export TF_VAR_BUCKET_NAME=${BUCKET_NAME}
-
-export TF_VAR_SECRET_ARN=${SECRET_ARN}
-export TF_VAR_LAMBDA_EXECUTION_ROLE_NAME=${LAMBDA_EXECUTION_ROLE_NAME}
-export TF_VAR_ETL_LAMBDA_FUNCTION_NAME=${ETL_LAMBDA_FUNCTION_NAME}
 export TF_VAR_ETL_LAMBDA_IMAGE_URI=${ETL_LAMBDA_IMAGE_URI}
-export TF_VAR_ETL_LAMBDA_LOG_GROUP=${ETL_LAMBDA_LOG_GROUP}
-export TF_VAR_ETL_LAMBDA_FUNCTION_MEMORY_SIZE=${ETL_LAMBDA_FUNCTION_MEMORY_SIZE}
-export TF_VAR_ETL_LAMBDA_FUNCTION_TIMEOUT=${ETL_LAMBDA_FUNCTION_TIMEOUT}
-export TF_VAR_SAGEMAKER_EXECUTION_ROLE_NAME=${SAGEMAKER_EXECUTION_ROLE_NAME}
-export TF_VAR_MODEL_BUILDING_STEP_FUNCTIONS_NAME=${MODEL_BUILDING_STEP_FUNCTIONS_NAME}
-export TF_VAR_STEP_FUNCTIONS_EXECUTION_ROLE_NAME=${STEP_FUNCTIONS_EXECUTION_ROLE_NAME}
-export TF_VAR_MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME=${MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME}
-export TF_VAR_DOCKER_REPOSITORY_NAME=${DOCKER_REPOSITORY_NAME}
+
+# terraform -chdir=terraform/... -var-file="resource.tfvars" init: initialize Terraform & download the necessary provider plugins for AWS.
+# terraform -chdir=terraform/... -var-file="resource.tfvars" validate: validate Terraform configuration before applying it to ensure there are no syntax errors.
+# terraform -chdir=terraform/... -var-file="resource.tfvars" plan: shows what Terraform will do when applying the configuration (won’t make any changes).
+# terraform -chdir=terraform/... -var-file="resource.tfvars" apply: apply the configuration to create the resources.
+# terraform -chdir=terraform/... -var-file="resource.tfvars" destroy: delete all resources created by Terraform.
 
 # Build S3 bucket
 if [ "${DATA_STORAGE_ENV}" == "S3" ]; then
-    echo "Building S3 bucket with Terraform..."
-    echo ""
+    if [ "${ENV}" == "prod" ]; then
+        echo "Building S3 production bucket with Terraform..."
+        echo ""
 
-    # Initialize Terraform
-    terraform -chdir=terraform/s3 init
-    
-    # Validate Terraform configuration
-    # terraform -chdir=terraform/s3 validate
+        # Initialize Terraform
+        terraform -chdir=terraform/production/s3 init -var-file="s3.tfvars"
 
-    # Shows what Terraform will apply
-    # terraform -chdir=terraform/s3 plan
+        # Apply the configurations and create resources
+        terraform -chdir=terraform/production/s3 apply -auto-approve -var-file="s3.tfvars"
+    else
+        echo "Building S3 development bucket with Terraform..."
+        echo ""
 
-    # Apply the configurations and create resources
-    terraform -chdir=terraform/s3 apply -auto-approve
+        # Initialize Terraform
+        terraform -chdir=terraform/development/s3 init -var-file="s3.tfvars"
 
-    # Delete all resources created by terraform
-    # terraform -chdir=terraform/s3 destroy -auto-approve
+        # Apply the configurations and create resources
+        terraform -chdir=terraform/development/s3 apply -auto-approve -var-file="s3.tfvars"
+    fi
 fi
 
 # Build ETL lambda function
 if [ "${ETL_ENV}" == "lambda" ]; then
-    echo "Building ETL lambda function with Terraform..."
-    echo ""
+    if [ "${ENV}" == "prod" ]; then
+        echo "Building production ETL lambda function with Terraform..."
+        echo ""
 
-    # Initialize Terraform
-    terraform -chdir=terraform/lambda init
+        # Initialize Terraform
+        terraform -chdir=terraform/production/lambda init -var-file="lambda.tfvars"
 
-    # Validate Terraform configuration
-    # terraform -chdir=terraform/lambda validate
+        # Apply the configurations and create resources
+        terraform -chdir=terraform/production/lambda apply -auto-approve -var-file="lambda.tfvars"
+    else
+        echo "Building development ETL lambda function with Terraform..."
+        echo ""
 
-    # Shows what Terraform will apply
-    # terraform -chdir=terraform/lambda plan
+        # Initialize Terraform
+        terraform -chdir=terraform/development/lambda init -var-file="lambda.tfvars"
 
-    # Apply the configurations and create resources
-    terraform -chdir=terraform/lambda apply -auto-approve
-
-    # Destroy all resources created by terraform
-    # terraform -chdir=terraform/lambda destroy -auto-approve
+        # Apply the configurations and create resources
+        terraform -chdir=terraform/development/lambda apply -auto-approve -var-file="lambda.tfvars"
+    fi
 fi
 
 # Build Model Building Step Function
 if [ "${MODEL_BUILDING_ENV}" == "sagemaker" ]; then
-    echo "Building Model Building Step Function with Terraform..."
+    if [ "${ENV}" == "prod" ]; then
+        echo "Building production Model Building Step Function with Terraform..."
 
-    # Delete the current step function
-    # echo "Deleating ${MODEL_BUILDING_STEP_FUNCTIONS_NAME} step function..."
-    # aws stepfunctions delete-state-machine \
-    #     --state-machine-arn ${MODEL_BUILDING_STEP_FUNCTIONS_ARN}
+        # Initialize Terraform
+        terraform -chdir=terraform/production/step_functions init -compact-warnings -var-file="step_functions.tfvars"
 
-    # Wait for step function to be deleted
-    # sleep 30
+        # Apply the configurations and create resources
+        terraform -chdir=terraform/production/step_functions apply -compact-warnings  -auto-approve -var-file="step_functions.tfvars"
+    else
+        echo "Building development Model Building Step Function with Terraform..."
 
-    # Initialize Terraform
-    terraform -chdir=terraform/step_functions init
+        # Initialize Terraform
+        terraform -chdir=terraform/development/step_functions init -compact-warnings  -var-file="step_functions.tfvars"
 
-    # Validate Terraform configuration
-    # terraform -chdir=terraform/step_functions validate
-
-    # Shows what Terraform will apply
-    # terraform -chdir=terraform/step_functions plan
-
-    # Apply the configurations and create resources
-    terraform -chdir=terraform/step_functions apply -auto-approve
-
-    # Destroy all resources created by terraform
-    # terraform -chdir=terraform/step_functions destroy -auto-approve
-
-    echo ""
-fi
-
-# Build ECR repository
-if [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
-    echo "Building ECR repository with Terraform..."
-    echo ""
-
-    # Initialize Terraform
-    terraform -chdir=terraform/ecr init
-    
-    # Validate Terraform configuration
-    # terraform -chdir=terraform/ecr validate
-
-    # Shows what Terraform will apply
-    # terraform -chdir=terraform/ecr plan
-
-    # Apply the configurations and create resources
-    terraform -chdir=terraform/ecr apply -auto-approve
-
-    # Delete all resources created by terraform
-    # terraform -chdir=terraform/ecr destroy -auto-approve
+        # Apply the configurations and create resources
+        terraform -chdir=terraform/development/step_functions apply -compact-warnings  -auto-approve -var-file="step_functions.tfvars"
+    fi
 fi
 
 # Remove terraform.tfstate

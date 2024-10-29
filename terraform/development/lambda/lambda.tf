@@ -1,9 +1,3 @@
-# terraform -chdir=terraform/lambda init: initialize Terraform & download the necessary provider plugins for AWS.
-# terraform -chdir=terraform/lambda validate: validate Terraform configuration before applying it to ensure there are no syntax errors.
-# terraform -chdir=terraform/lambda plan: shows what Terraform will do when applying the configuration (won’t make any changes).
-# terraform -chdir=terraform/lambda apply: apply the configuration to create the resources.
-# terraform -chdir=terraform/lambda destroy: delete all resources created by Terraform.
-
 # VARIABLES
 variable "PROJECT_NAME" {
   description = "Name of the Project."
@@ -15,43 +9,38 @@ variable "VERSION" {
   type        = string
 }
 
-variable "ENV" {
-  description = "Environment to create resources on."
-  type        = string
-}
-
 variable "REGION_NAME" {
   description = "AWS region where the S3 bucket will be created."
   type        = string
 }
 
-variable "LAMBDA_EXECUTION_ROLE_NAME" {
-  description = "Execution role name to run Lambda functions."
+variable "ETL_LAMBDA_FUNCTION_NAME" {
+  description = "ETL lambda function name (on Dev environment)."
   type        = string
 }
 
-variable "ETL_LAMBDA_FUNCTION_NAME" {
-  description = "ETL lambda function name"
+variable "LAMBDA_EXECUTION_ROLE_NAME" {
+  description = "Execution role name to run Lambda functions (on Dev environment)."
   type        = string
 }
 
 variable "ETL_LAMBDA_IMAGE_URI" {
-  description = "Docker image that will be ran by the ETL lambda function."
+  description = "Docker image that will be ran by the ETL lambda function (on Dev environment)."
   type        = string
 }
 
 variable "ETL_LAMBDA_LOG_GROUP" {
-  description = "Log group where the logg messages will be saved."
+  description = "Log group where the logg messages will be saved (on Dev environment)."
   type        = string
 } 
 
 variable "ETL_LAMBDA_FUNCTION_MEMORY_SIZE" {
-  description = "Memory assigned to the lambda function"
+  description = "Memory assigned to the lambda function (on Dev environment)."
   type        = string
 }
 
 variable "ETL_LAMBDA_FUNCTION_TIMEOUT" {
-  description = "Amount of time in seconds that the lambda function is allowed to run"
+  description = "Amount of time in seconds that the lambda function is allowed to run (on Dev environment)."
   type        = string
 }
 
@@ -67,7 +56,7 @@ provider "aws" {
 }
 
 # LAMBDA EXECUTION ROLE
-resource "aws_iam_role" "lambda_execution_role" {
+resource "aws_iam_role" "lambda_execution_role_dev" {
   # Lambda execution role name
   name = var.LAMBDA_EXECUTION_ROLE_NAME
 
@@ -75,7 +64,7 @@ resource "aws_iam_role" "lambda_execution_role" {
   tags = {
     Project     = var.PROJECT_NAME
     Version     = var.VERSION
-    Environment = var.ENV
+    Environment = "dev"
   }
   
   # Role definition
@@ -93,15 +82,15 @@ resource "aws_iam_role" "lambda_execution_role" {
   })
 }
 
-# Attach AWSLambdaBasicExecutionRole policy to lambda_execution_role
+# Attach AWSLambdaBasicExecutionRole policy to lambda_execution_role_dev
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.lambda_execution_role.name
+  role       = aws_iam_role.lambda_execution_role_dev.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Attach AmazonS3FullAccess policy to lambda_execution_role
+# Attach AmazonS3FullAccess policy to lambda_execution_role_dev
 resource "aws_iam_role_policy_attachment" "lambda_s3_full_access" {
-  role       = aws_iam_role.lambda_execution_role.name
+  role       = aws_iam_role.lambda_execution_role_dev.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
@@ -125,14 +114,14 @@ resource "aws_iam_policy" "secrets_manager_access" {
   })
 }
 
-# Attach Secrets Manager policy to lambda_execution_role
+# Attach Secrets Manager policy to lambda_execution_role_dev
 resource "aws_iam_role_policy_attachment" "lambda_secrets_manager_access" {
-  role       = aws_iam_role.lambda_execution_role.name
+  role       = aws_iam_role.lambda_execution_role_dev.name
   policy_arn = aws_iam_policy.secrets_manager_access.arn
 }
 
 # LAMBDA FUNCTION
-resource "aws_lambda_function" "my_lambda" {
+resource "aws_lambda_function" "etl_lambda_dev" {
   # Lambda function name
   function_name                  = var.ETL_LAMBDA_FUNCTION_NAME
 
@@ -140,7 +129,7 @@ resource "aws_lambda_function" "my_lambda" {
   description                    = "Lambda function that will run the etl.py script."
   
   # Execution role
-  role                           = aws_iam_role.lambda_execution_role.arn
+  role                           = aws_iam_role.lambda_execution_role_dev.arn
 
   # Lambda deployment package type
   package_type                   = "Image"
@@ -158,7 +147,7 @@ resource "aws_lambda_function" "my_lambda" {
   tags                           = {
     Project     = var.PROJECT_NAME
     Version     = var.VERSION
-    Environment = var.ENV
+    Environment = "dev"
   }
 
   # Logging configuration

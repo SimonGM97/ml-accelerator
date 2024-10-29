@@ -1,9 +1,3 @@
-# terraform -chdir=terraform/step_functions init: initialize Terraform & download the necessary provider plugins for AWS.
-# terraform -chdir=terraform/step_functions validate: validate Terraform configuration before applying it to ensure there are no syntax errors.
-# terraform -chdir=terraform/step_functions plan: shows what Terraform will do when applying the configuration (won’t make any changes).
-# terraform -chdir=terraform/step_functions apply: apply the configuration to create the resources.
-# terraform -chdir=terraform/step_functions destroy: delete all resources created by Terraform.
-
 # VARIABLES
 variable "PROJECT_NAME" {
   description = "Name of the Project."
@@ -15,38 +9,28 @@ variable "VERSION" {
   type        = string
 }
 
-variable "ENV" {
-  description = "Environment to create resources on."
-  type        = string
-}
-
 variable "REGION_NAME" {
   description = "AWS region where the resources will be created."
   type        = string
 }
 
-variable "BUCKET_NAME" {
-  description = "S3 bucket name where processing datasets will be stored."
-  type        = string
-}
-
 variable "SAGEMAKER_EXECUTION_ROLE_NAME" {
-  description = "Execution role name to run SageMaker Processing jobs."
+  description = "Execution role name to run SageMaker Processing jobs (on Prod environment)."
   type        = string
 }
 
 variable "MODEL_BUILDING_STEP_FUNCTIONS_NAME" {
-  description = "Step Functions name."
+  description = "Step Functions name (on Prod environment)."
   type        = string
 }
 
 variable "STEP_FUNCTIONS_EXECUTION_ROLE_NAME" {
-  description = "Execution role name to run Step Functions."
+  description = "Execution role name to run Step Functions (on Prod environment)."
   type        = string
 }
 
 variable "MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME" {
-  description = "Model Building Step Functions file name describing Step Functions steps."
+  description = "Model Building Step Functions file name describing Step Functions steps (on Prod environment)."
   type        = string
 }
 
@@ -56,7 +40,7 @@ provider "aws" {
 }
 
 # SAGEMAKER EXECUTION ROLE
-resource "aws_iam_role" "sagemaker_execution_role" {
+resource "aws_iam_role" "sagemaker_execution_role_prod" {
   # SageMaker execution role name
   name = var.SAGEMAKER_EXECUTION_ROLE_NAME
   
@@ -64,7 +48,7 @@ resource "aws_iam_role" "sagemaker_execution_role" {
   tags = {
     Project     = var.PROJECT_NAME
     Version     = var.VERSION
-    Environment = var.ENV
+    Environment = "prod"
   }
 
   # Role policy
@@ -82,11 +66,11 @@ resource "aws_iam_role" "sagemaker_execution_role" {
   })
 }
 
-# Attach permissions to sagemaker_execution_role
-resource "aws_iam_role_policy" "sagemaker_custom_policy" {
-  name = "SageMakerCustomPermissions"
+# Attach permissions to sagemaker_execution_role_prod
+resource "aws_iam_role_policy" "sagemaker_custom_policy_prod" {
+  name = "SageMakerCustomPermissionsProd"
 
-  role = aws_iam_role.sagemaker_execution_role.name
+  role = aws_iam_role.sagemaker_execution_role_prod.name
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -115,13 +99,13 @@ resource "aws_iam_role_policy" "sagemaker_custom_policy" {
 }
 
 # STEP FUNCTIONS EXECUTION ROLE
-resource "aws_iam_role" "step_functions_execution_role" {
+resource "aws_iam_role" "step_functions_execution_role_prod" {
   name = var.STEP_FUNCTIONS_EXECUTION_ROLE_NAME
   
   tags = {
     Project     = var.PROJECT_NAME
     Version     = var.VERSION
-    Environment = var.ENV
+    Environment = "prod"
   }
 
   assume_role_policy = jsonencode({
@@ -137,10 +121,10 @@ resource "aws_iam_role" "step_functions_execution_role" {
 }
 
 # Attach permissions for Step Functions to create and manage state machines
-resource "aws_iam_role_policy" "step_functions_custom_policy" {
-  name = "StepFunctionsCustomPermissions"
+resource "aws_iam_role_policy" "step_functions_custom_policy_prod" {
+  name = "StepFunctionsCustomPermissionsProd"
 
-  role = aws_iam_role.step_functions_execution_role.name
+  role = aws_iam_role.step_functions_execution_role_prod.name
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -176,13 +160,27 @@ resource "aws_iam_role_policy" "step_functions_custom_policy" {
 }
 
 # MODEL BUILDING WORKFLOW STEP FUNCTION
-resource "aws_sfn_state_machine" "model_building_workflow" {
+resource "aws_sfn_state_machine" "model_building_workflow_prod" {
   # Step function name
   name     = var.MODEL_BUILDING_STEP_FUNCTIONS_NAME
 
   # Role ARN
-  role_arn = aws_iam_role.step_functions_execution_role.arn
+  role_arn = aws_iam_role.step_functions_execution_role_prod.arn
 
   # Step Functions definition (loaded from json file)
   definition = file(var.MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME)
+
+  # Tags
+  tags = {
+    Project     = var.PROJECT_NAME
+    Version     = var.VERSION
+    Environment = "prod"
+  }
+
+  # Specify logging configuration
+  # logging_configuration {
+  #   log_destination        = "${aws_cloudwatch_log_group.log_group_for_sfn.arn}:*"
+  #   include_execution_data = true
+  #   level                  = "INFO"
+  # }
 }
