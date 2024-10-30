@@ -134,6 +134,9 @@ __archive/
 *.xlsx
 *.parquet
 
+# Legal
+resources/legal
+
 # Output files
 *output.txt
 *output.json
@@ -184,8 +187,8 @@ celerybeat.pid
 .ml_accel_venv/
 .env
 .venv
-env/
-venv/
+.env/
+.venv/
 ENV/
 env.bak/
 venv.bak/

@@ -4,7 +4,7 @@
 
 # PROJECT PARAMETERS
 PROJECT_PARAMS:
-  PROJECT_NAME: ml_accelerator
+  PROJECT_NAME: ml-accelerator
   VERSION: v1.0.0
   TARGET: diagnosis # target column
   # species (iris), wine_class (wine), diagnosis (breast_cancer), disease_progression (diabetes), MedHouseVal (california_housing)

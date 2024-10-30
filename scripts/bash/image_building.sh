@@ -7,49 +7,54 @@ set -o allexport
 source .env
 set +o allexport
 
-# Extract variables from config file
-CONFIG_FILE="config/config.yaml"
-
-VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
-
-# Show variables
-echo "Docker image building variables:"
-echo "  - VERSION: ${VERSION}"
-echo "  - ENV: ${ENV}"
-echo "  - DATA_STORAGE_ENV: ${DATA_STORAGE_ENV}"
-echo "  - MODEL_STORAGE_ENV: ${MODEL_STORAGE_ENV}"
-echo "  - REGION_NAME: ${REGION_NAME}"
-echo "  - BUCKET_NAME: ${BUCKET_NAME}"
-# echo "  - KXY_API_KEY: ${KXY_API_KEY}"
-echo "  - INFERENCE_HOST: ${INFERENCE_HOST}"
-echo "  - INFERENCE_PORT: ${INFERENCE_PORT}"
-echo "  - WEBAPP_HOST: ${WEBAPP_HOST}"
-echo "  - WEBAPP_PORT: ${WEBAPP_PORT}"
-echo "  - RAW_DATASETS_PATH: ${RAW_DATASETS_PATH}"
-echo "  - PROCESSING_DATASETS_PATH: ${PROCESSING_DATASETS_PATH}"
-echo "  - INFERENCE_PATH: ${INFERENCE_PATH}"
-echo "  - TRANSFORMERS_PATH: ${TRANSFORMERS_PATH}"
-echo "  - MODELS_PATH: ${MODELS_PATH}"
-echo "  - SCHEMAS_PATH: ${SCHEMAS_PATH}"
-echo "  - MOCK_PATH: ${MOCK_PATH}"
-echo "  - SEED: ${SEED}"
-echo "  - DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
-echo ""
-
-# Clean containers
-if [ "$(docker ps -aq)" ]; then
-    docker rm -f $(docker ps -aq)
-fi
-
-# Clean local images
-if [ "$(docker images -q)" ]; then
-    docker rmi -f $(docker images -q)
-fi
-
-# # Check if at least one variable is not "local"
-if [[ "$ETL_ENV" != "local" || "$MODEL_BUILDING_ENV" != "local" || "$APP_ENV" != "local" ]]; then
-    echo "At least one of the variables (ETL_ENV, MODEL_BUILDING_ENV, or APP_ENV) is not set to 'local'."
+# Check if at least one variable is not "local"
+if [[ 
+    "$ETL_ENV" != "local" || 
+    "$MODEL_BUILDING_ENV" != "local" || 
+    "$APP_ENV" != "local" 
+]]; then
     echo "Building new ${ENV} - ${VERSION} docker images..."
+
+    # Extract variables from config file
+    CONFIG_FILE="config/config.yaml"
+
+    VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
+
+    # Show variables
+    echo "Docker image building variables:"
+    echo "  - ENV: ${ENV}"
+    echo "  - VERSION: ${VERSION}"
+    echo "  - REGION_NAME: ${REGION_NAME}"
+    echo "  - BUCKET_NAME: ${BUCKET_NAME}"
+    echo "  - DATA_STORAGE_ENV: ${DATA_STORAGE_ENV}"
+    echo "  - MODEL_STORAGE_ENV: ${MODEL_STORAGE_ENV}"
+    # echo "  - KXY_API_KEY: ${KXY_API_KEY}"
+    echo "  - INFERENCE_HOST: ${INFERENCE_HOST}"
+    echo "  - INFERENCE_PORT: ${INFERENCE_PORT}"
+    echo "  - WEBAPP_HOST: ${WEBAPP_HOST}"
+    echo "  - WEBAPP_PORT: ${WEBAPP_PORT}"
+    echo "  - RAW_DATASETS_PATH: ${RAW_DATASETS_PATH}"
+    echo "  - PROCESSING_DATASETS_PATH: ${PROCESSING_DATASETS_PATH}"
+    echo "  - INFERENCE_PATH: ${INFERENCE_PATH}"
+    echo "  - TRANSFORMERS_PATH: ${TRANSFORMERS_PATH}"
+    echo "  - MODELS_PATH: ${MODELS_PATH}"
+    echo "  - SCHEMAS_PATH: ${SCHEMAS_PATH}"
+    echo "  - MOCK_PATH: ${MOCK_PATH}"
+    echo "  - SEED: ${SEED}"
+    echo "  - DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
+    echo ""
+
+    echo "Cleaning current docker images and containers..."
+
+    # Clean containers
+    if [ "$(docker ps -aq)" ]; then
+        docker rm -f $(docker ps -aq)
+    fi
+
+    # Clean local images
+    if [ "$(docker images -q)" ]; then
+        docker rmi -f $(docker images -q)
+    fi
 
     # Build base Docker image (compatible with linux/amd64 architecture)
     # docker buildx build \
@@ -166,21 +171,6 @@ if [[ "$ETL_ENV" != "local" || "$MODEL_BUILDING_ENV" != "local" || "$APP_ENV" !=
     # Delete lambda function
     # aws lambda delete-function --function-name ${ETL_LAMBDA_FUNCTION_NAME}
 else
-    echo "All variables (ETL_ENV, MODEL_BUILDING_ENV, and APP_ENV) are set to 'local'."
-    echo "No new images will be built."
-
-    if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
-        # Pull images from dockerhub repository
-        echo "Pulling images from dockerhub repository..."
-        docker pull ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
-        docker pull ${DOCKERHUB_USERNAME}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
-    elif [ "${DOCKER_REPOSITORY_TYPE}" == "ECR" ]; then
-        # Pull images from repository
-        echo "Pulling images from ECR repository..."
-        docker pull ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-image-${VERSION}
-        docker pull ${ECR_REPOSITORY_URI}/${DOCKER_REPOSITORY_NAME}:${ENV}-etl-lambda-image-${VERSION}
-    else
-        echo "Unable to pull docker images - Invalid DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
-        exit 1
-    fi
+    echo "Skipping docker image building..."
+    echo ""
 fi
