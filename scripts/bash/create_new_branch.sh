@@ -21,6 +21,8 @@ if [ -z "$BASE_BRANCH_NAME" ]; then
     exit 1
 fi
 
+echo "Creating new branch: ${NEW_BRANCH_NAME} based on ${BASE_BRANCH_NAME}"
+
 # Pull latest changes from base branch
 git checkout ${BASE_BRANCH_NAME}
 git pull origin ${BASE_BRANCH_NAME}

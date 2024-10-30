@@ -20,28 +20,19 @@ if [[
 
     VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
 
+    # Extract variables from terraform env
+    BUCKET_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param BUCKET_NAME)
+    DOCKER_REPOSITORY_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param DOCKER_REPOSITORY_NAME)
+    ECR_REPOSITORY_URI=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param ECR_REPOSITORY_URI)
+    ETL_LAMBDA_FUNCTION_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param ETL_LAMBDA_FUNCTION_NAME)
+
     # Show variables
-    echo "Docker image building variables:"
-    echo "  - ENV: ${ENV}"
+    echo "Extracted variables:"
     echo "  - VERSION: ${VERSION}"
-    echo "  - REGION_NAME: ${REGION_NAME}"
     echo "  - BUCKET_NAME: ${BUCKET_NAME}"
-    echo "  - DATA_STORAGE_ENV: ${DATA_STORAGE_ENV}"
-    echo "  - MODEL_STORAGE_ENV: ${MODEL_STORAGE_ENV}"
-    # echo "  - KXY_API_KEY: ${KXY_API_KEY}"
-    echo "  - INFERENCE_HOST: ${INFERENCE_HOST}"
-    echo "  - INFERENCE_PORT: ${INFERENCE_PORT}"
-    echo "  - WEBAPP_HOST: ${WEBAPP_HOST}"
-    echo "  - WEBAPP_PORT: ${WEBAPP_PORT}"
-    echo "  - RAW_DATASETS_PATH: ${RAW_DATASETS_PATH}"
-    echo "  - PROCESSING_DATASETS_PATH: ${PROCESSING_DATASETS_PATH}"
-    echo "  - INFERENCE_PATH: ${INFERENCE_PATH}"
-    echo "  - TRANSFORMERS_PATH: ${TRANSFORMERS_PATH}"
-    echo "  - MODELS_PATH: ${MODELS_PATH}"
-    echo "  - SCHEMAS_PATH: ${SCHEMAS_PATH}"
-    echo "  - MOCK_PATH: ${MOCK_PATH}"
-    echo "  - SEED: ${SEED}"
-    echo "  - DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
+    echo "  - DOCKER_REPOSITORY_NAME: ${DOCKER_REPOSITORY_NAME}"
+    echo "  - ECR_REPOSITORY_URI: ${ECR_REPOSITORY_URI}"
+    echo "  - ETL_LAMBDA_FUNCTION_NAME: ${ETL_LAMBDA_FUNCTION_NAME}"
     echo ""
 
     echo "Cleaning current docker images and containers..."
@@ -64,10 +55,9 @@ if [[
         -f docker/Dockerfile.Base . \
         --load \
         --build-arg ENV=${ENV} \
+        --build-arg REGION_NAME=${REGION_NAME} \
         --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
         --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
-        --build-arg REGION_NAME=${REGION_NAME} \
-        --build-arg BUCKET_NAME=${BUCKET_NAME} \
         --build-arg KXY_API_KEY=${KXY_API_KEY} \
         --build-arg INFERENCE_HOST=${INFERENCE_HOST} \
         --build-arg INFERENCE_PORT=${INFERENCE_PORT} \
@@ -98,10 +88,10 @@ if [[
         -f docker/Dockerfile.ETLLambda . \
         --load \
         --build-arg ENV=${ENV} \
+        --build-arg REGION_NAME=${REGION_NAME} \
         --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
         --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
-        --build-arg REGION_NAME=${REGION_NAME} \
-        --build-arg BUCKET_NAME=${BUCKET_NAME} \
+        --build-arg KXY_API_KEY=${KXY_API_KEY} \
         --build-arg RAW_DATASETS_PATH=${RAW_DATASETS_PATH} \
         --build-arg PROCESSING_DATASETS_PATH=${PROCESSING_DATASETS_PATH} \
         --build-arg INFERENCE_PATH=${INFERENCE_PATH} \

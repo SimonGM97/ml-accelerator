@@ -27,8 +27,16 @@ EVALUATE_DEV_PIPES=$(yq eval '.MODEL_BUILDING_PARAMS.EVALUATE_DEV_PIPES' ${CONFI
 UPDATE_MODEL_STAGES=$(yq eval '.MODEL_BUILDING_PARAMS.UPDATE_MODEL_STAGES' ${CONFIG_FILE})
 UPDATE_PROD_MODEL=$(yq eval '.MODEL_BUILDING_PARAMS.UPDATE_PROD_MODEL' ${CONFIG_FILE})
 
+# Extract variables from terraform env
+BUCKET_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param BUCKET_NAME)
+DOCKER_REPOSITORY_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param DOCKER_REPOSITORY_NAME)
+ECR_REPOSITORY_URI=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param ECR_REPOSITORY_URI)
+MODEL_BUILDING_STEP_FUNCTIONS_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param MODEL_BUILDING_STEP_FUNCTIONS_NAME)
+MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME)
+MODEL_BUILDING_STEP_FUNCTIONS_ARN=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param MODEL_BUILDING_STEP_FUNCTIONS_ARN)
+
 # Show variables
-echo "Model Building Workflow variables:"
+echo "Extracted variables:"
 echo "  - VERSION: ${VERSION}"
 
 echo "  - FIT_TRANSFORMERS: ${FIT_TRANSFORMERS}"
@@ -45,6 +53,13 @@ echo "  - EVALUATE_STAGING_PIPES: ${EVALUATE_STAGING_PIPES}"
 echo "  - EVALUATE_DEV_PIPES: ${EVALUATE_DEV_PIPES}"
 echo "  - UPDATE_MODEL_STAGES: ${UPDATE_MODEL_STAGES}"
 echo "  - UPDATE_PROD_MODEL: ${UPDATE_PROD_MODEL}"
+
+echo "  - BUCKET_NAME: ${BUCKET_NAME}"
+echo "  - DOCKER_REPOSITORY_NAME: ${DOCKER_REPOSITORY_NAME}"
+echo "  - ECR_REPOSITORY_URI: ${ECR_REPOSITORY_URI}"
+echo "  - MODEL_BUILDING_STEP_FUNCTIONS_NAME: ${MODEL_BUILDING_STEP_FUNCTIONS_NAME}"
+echo "  - MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME: ${MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME}"
+echo "  - MODEL_BUILDING_STEP_FUNCTIONS_ARN: ${MODEL_BUILDING_STEP_FUNCTIONS_ARN}"
 echo ""
 
 if [ "${MODEL_BUILDING_ENV}" == "local" ]; then
@@ -107,6 +122,7 @@ elif [ "${MODEL_BUILDING_ENV}" == "docker-compose" ]; then
         EVALUATE_DEV_PIPES=${EVALUATE_DEV_PIPES} \
         UPDATE_MODEL_STAGES=${UPDATE_MODEL_STAGES} \
         UPDATE_PROD_MODEL=${UPDATE_PROD_MODEL} \
+        BUCKET_NAME=${BUCKET_NAME} \
         docker-compose \
         -f docker/compose/docker-compose-model-building.yaml \
         --env-file .env \
@@ -127,6 +143,7 @@ elif [ "${MODEL_BUILDING_ENV}" == "docker-compose" ]; then
         EVALUATE_DEV_PIPES=${EVALUATE_DEV_PIPES} \
         UPDATE_MODEL_STAGES=${UPDATE_MODEL_STAGES} \
         UPDATE_PROD_MODEL=${UPDATE_PROD_MODEL} \
+        BUCKET_NAME=${BUCKET_NAME} \
         docker-compose \
         -f docker/compose/docker-compose-model-building.yaml \
         --env-file .env \
