@@ -3,9 +3,10 @@
 SAGEMAKER_EXECUTION_ROLE_NAME           = "SageMakerExecutionRole-MLAccelerator-Dev"
 SAGEMAKER_EXECUTION_ROLE_ARN            = "arn:aws:iam::097866913509:role/SageMakerExecutionRole-MLAccelerator-Dev"
 MODEL_BUILDING_STEP_FUNCTIONS_NAME      = "ModelBuildingWorkflow_Dev"
+MODEL_BUILDING_STEP_FUNCTIONS_ARN       = "arn:aws:states:sa-east-1:097866913509:stateMachine:ModelBuildingWorkflow_Dev"
+MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME = "model_building_workflow_dev.json"
 STEP_FUNCTIONS_EXECUTION_ROLE_NAME      = "StepFunctionsExecutionRole-MLAccelerator-Dev"
 STEP_FUNCTIONS_EXECUTION_ROLE_ARN       = "arn:aws:iam::097866913509:role/StepFunctionsExecutionRole-MLAccelerator-Dev"
-MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME = "model_building_workflow_dev.json"
 
 PROCESSING_INSTANCE_TYPE                = "ml.t3.large"
 PROCESSING_INSTANCE_COUNT               = 1

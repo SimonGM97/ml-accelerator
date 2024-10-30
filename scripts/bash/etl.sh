@@ -14,15 +14,21 @@ VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
 PERSIST_DATASETS=$(yq eval '.MODEL_BUILDING_PARAMS.PERSIST_DATASETS' ${CONFIG_FILE})
 WRITE_MODE=$(yq eval '.MODEL_BUILDING_PARAMS.WRITE_MODE' ${CONFIG_FILE})
 
+# Extract variables from terraform env
+BUCKET_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param BUCKET_NAME)
+ETL_LAMBDA_FUNCTION_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param ETL_LAMBDA_FUNCTION_NAME)
+DOCKER_REPOSITORY_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param DOCKER_REPOSITORY_NAME)
+ECR_REPOSITORY_URI=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param ECR_REPOSITORY_URI)
+
 # Show variables
-echo "ETL variables:"
+echo "Extracted variables:"
 echo "  - VERSION: ${VERSION}"
-echo "  - ENV: ${ENV}"
-echo "  - BUCKET_NAME: ${BUCKET_NAME}"
-echo "  - ETL_LAMBDA_FUNCTION_NAME: ${ETL_LAMBDA_FUNCTION_NAME}"
 echo "  - PERSIST_DATASETS: ${PERSIST_DATASETS}"
 echo "  - WRITE_MODE: ${WRITE_MODE}"
-echo "  - ETL_ENV: ${ETL_ENV}"
+echo "  - BUCKET_NAME: ${BUCKET_NAME}"
+echo "  - ETL_LAMBDA_FUNCTION_NAME: ${ETL_LAMBDA_FUNCTION_NAME}"
+echo "  - DOCKER_REPOSITORY_NAME: ${DOCKER_REPOSITORY_NAME}"
+echo "  - ECR_REPOSITORY_URI: ${ECR_REPOSITORY_URI}"
 echo ""
 
 if [ "${ETL_ENV}" == "local" ]; then
@@ -56,6 +62,7 @@ elif [ "${ETL_ENV}" == "docker-compose" ]; then
         VERSION=${VERSION} \
         PERSIST_DATASETS=${PERSIST_DATASETS} \
         WRITE_MODE=${WRITE_MODE} \
+        BUCKET_NAME=${BUCKET_NAME} \
         docker-compose \
         -f docker/compose/docker-compose-etl.yaml \
         --env-file .env \
@@ -66,6 +73,7 @@ elif [ "${ETL_ENV}" == "docker-compose" ]; then
         VERSION=${VERSION} \
         PERSIST_DATASETS=${PERSIST_DATASETS} \
         WRITE_MODE=${WRITE_MODE} \
+        BUCKET_NAME=${BUCKET_NAME} \
         docker-compose \
         -f docker/compose/docker-compose-etl.yaml \
         --env-file .env \

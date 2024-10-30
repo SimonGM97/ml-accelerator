@@ -43,11 +43,11 @@ COPY ml_accelerator/utils/timing ml_accelerator/utils/timing
 
 # Define build arguments
 ARG ENV
+ARG REGION_NAME
 ARG DATA_STORAGE_ENV
 ARG MODEL_STORAGE_ENV
 
-ARG REGION_NAME
-ARG BUCKET_NAME
+ARG KXY_API_KEY
 
 ARG RAW_DATASETS_PATH
 ARG PROCESSING_DATASETS_PATH
@@ -59,11 +59,11 @@ ARG MOCK_PATH
 
 # Set environment variables from the build argument
 ENV ENV=${ENV}
+ENV REGION_NAME=${REGION_NAME}
 ENV DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
 ENV MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
 
-ENV REGION_NAME=${REGION_NAME}
-ENV BUCKET_NAME=${BUCKET_NAME}
+ENV KXY_API_KEY=${KXY_API_KEY}
 
 ENV RAW_DATASETS_PATH=${RAW_DATASETS_PATH}
 ENV PROCESSING_DATASETS_PATH=${PROCESSING_DATASETS_PATH}
@@ -72,6 +72,22 @@ ENV TRANSFORMERS_PATH=${TRANSFORMERS_PATH}
 ENV MODELS_PATH=${MODELS_PATH}
 ENV SCHEMAS_PATH=${SCHEMAS_PATH}
 ENV MOCK_PATH=${MOCK_PATH}
+
+# Copy development Terraform files
+COPY terraform/development/ec2/ec2.tfvars terraform/development/ec2/ec2.tfvars
+COPY terraform/development/ecr/ecr.tfvars terraform/development/ecr/ecr.tfvars
+COPY terraform/development/event_bridge/event_bridge.tfvars terraform/development/event_bridge/event_bridge.tfvars
+COPY terraform/development/lambda/lambda.tfvars terraform/development/lambda/lambda.tfvars
+COPY terraform/development/s3/s3.tfvars terraform/development/s3/s3.tfvars
+COPY terraform/development/step_functions/step_functions.tfvars terraform/development/step_functions/step_functions.tfvars
+
+# Copy production Terraform files
+COPY terraform/production/ec2/ec2.tfvars terraform/production/ec2/ec2.tfvars
+COPY terraform/production/ecr/ecr.tfvars terraform/production/ecr/ecr.tfvars
+COPY terraform/production/event_bridge/event_bridge.tfvars terraform/production/event_bridge/event_bridge.tfvars
+COPY terraform/production/lambda/lambda.tfvars terraform/production/lambda/lambda.tfvars
+COPY terraform/production/s3/s3.tfvars terraform/production/s3/s3.tfvars
+COPY terraform/production/step_functions/step_functions.tfvars terraform/production/step_functions/step_functions.tfvars
 
 # Copy required files & directories into the container at /app
 COPY config config

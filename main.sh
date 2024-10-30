@@ -2,6 +2,10 @@
 # chmod +x ./main.sh
 # ./main.sh
 
+# Unset environment variables
+chmod +x ./scripts/bash/unset_env.sh
+source ./scripts/bash/unset_env.sh
+
 # Set environment variables
 set -o allexport
 source .env

@@ -15,6 +15,26 @@ if [[
 ]]; then
     echo "Pulling ${ENV} - ${VERSION} docker images..."
 
+    # Extract variables from config file
+    CONFIG_FILE="config/config.yaml"
+
+    VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
+
+    # Extract variables from terraform env
+    DOCKER_REPOSITORY_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param DOCKER_REPOSITORY_NAME)
+    ECR_REPOSITORY_URI=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param ECR_REPOSITORY_URI)
+
+    # Show variables
+    echo "Extracted variables:"
+    echo "  - VERSION: ${VERSION}"
+    echo "  - PERSIST_DATASETS: ${PERSIST_DATASETS}"
+    echo "  - WRITE_MODE: ${WRITE_MODE}"
+    echo "  - BUCKET_NAME: ${BUCKET_NAME}"
+    echo "  - ETL_LAMBDA_FUNCTION_NAME: ${ETL_LAMBDA_FUNCTION_NAME}"
+    echo "  - DOCKER_REPOSITORY_NAME: ${DOCKER_REPOSITORY_NAME}"
+    echo "  - ECR_REPOSITORY_URI: ${ECR_REPOSITORY_URI}"
+    echo ""
+
     if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
         # Pull images from dockerhub repository
         echo "Pulling images from dockerhub repository..."

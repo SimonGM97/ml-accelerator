@@ -21,14 +21,10 @@ if [[
     PROJECT_NAME=$(yq eval '.PROJECT_PARAMS.PROJECT_NAME' ${CONFIG_FILE})
     VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
 
-
     # Show variables
-    echo "Docker repository variables:"
+    echo "Extracted variables:"
     echo "  - PROJECT_NAME: ${PROJECT_NAME}"
-    echo "  - ENV: ${ENV}"
     echo "  - VERSION: ${VERSION}"
-    echo "  - REGION_NAME: ${REGION_NAME}"
-    echo "  - DOCKER_REPOSITORY_TYPE: ${DOCKER_REPOSITORY_TYPE}"
     echo ""
 
     # Define terraform variables
@@ -43,19 +39,33 @@ if [[
             echo ""
 
             # Initialize Terraform
-            terraform -chdir=terraform/production/ecr init -var-file="ecr.tfvars"
+            terraform \
+                -chdir=terraform/production/ecr init \
+                -compact-warnings \
+                -var-file="ecr.tfvars"
 
             # Apply the configurations and create resources
-            terraform -chdir=terraform/production/ecr apply -auto-approve -var-file="ecr.tfvars"
+            terraform \
+                -chdir=terraform/production/ecr apply \
+                -compact-warnings \
+                -auto-approve \
+                -var-file="ecr.tfvars"
         else
             echo "Building development ECR repository with Terraform..."
             echo ""
 
             # Initialize Terraform
-            terraform -chdir=terraform/development/ecr init -var-file="ecr.tfvars"
+            terraform \
+                -chdir=terraform/development/ecr init \
+                -compact-warnings \
+                -var-file="ecr.tfvars"
 
             # Apply the configurations and create resources
-            terraform -chdir=terraform/development/ecr apply -auto-approve -var-file="ecr.tfvars"
+            terraform \
+                -chdir=terraform/development/ecr apply \
+                -compact-warnings \
+                -auto-approve \
+                -var-file="ecr.tfvars"
         fi
     fi
 

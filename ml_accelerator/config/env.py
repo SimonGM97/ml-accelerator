@@ -5,6 +5,7 @@ from git.exc import InvalidGitRepositoryError
 from dotenv import load_dotenv, find_dotenv
 import os
 import hcl2
+import argparse
 from typing import Dict, List, Set
 
 
@@ -32,7 +33,6 @@ for file in terraform_files:
     if file.endswith('.tfvars'):
         with open(file, 'r') as f:
             TF_VARS.update(hcl2.load(f))
-
 
 def get_current_branch() -> str:
     try:
@@ -81,7 +81,7 @@ class Env:
         if cls.initialized:
             return
         
-        LOGGER.info('Initializing Env.')
+        # LOGGER.debug('Initializing Env.')
 
         # Set environment parameters from .env
         load_dotenv(
@@ -154,6 +154,22 @@ class Env:
         return param
 
 
-# .ml_accel_venv/bin/python ml_accelerator/config/env.py
+# Initialize environment
 if not Env.initialized:
     Env.initialize()
+
+# .ml_accel_venv/bin/python ml_accelerator/config/env.py --env_param None
+if __name__ == "__main__":
+    # Define parser
+    parser = argparse.ArgumentParser(description='Environment script.')
+
+    # Add arguments
+    parser.add_argument('--env_param', type=str, default=None)
+
+    # Extract arguments from parser
+    args = parser.parse_args()
+    env_param: str = args.env_param
+
+    if env_param is not None:
+        # Get Env value
+        print(Env.get(env_param))

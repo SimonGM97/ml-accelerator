@@ -10,15 +10,20 @@ set +o allexport
 # Unset environment variables
 unset VERSION
 
-# Extract variables
+# Extract variables from config file
 CONFIG_FILE="config/config.yaml"
 
 VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
 
+# Extract variables from terraform env
+DOCKER_REPOSITORY_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param DOCKER_REPOSITORY_NAME)
+ECR_REPOSITORY_URI=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param ECR_REPOSITORY_URI)
+
 # Show variables
 echo "Model Building Workflow variables:"
 echo "  - VERSION: ${VERSION}"
-echo "  - ENV: ${ENV}"
+echo "  - DOCKER_REPOSITORY_NAME: ${DOCKER_REPOSITORY_NAME}"
+echo "  - ECR_REPOSITORY_URI: ${ECR_REPOSITORY_URI}"
 echo ""
 
 # Clean containers
@@ -50,6 +55,7 @@ elif [ "${APP_ENV}" == "docker-compose" ]; then
     IMAGE_NAME=${IMAGE_NAME} \
         ENV=${ENV} \
         VERSION=${VERSION} \
+        BUCKET_NAME=${BUCKET_NAME} \
         docker-compose \
         -f docker/compose/docker-compose-app.yaml \
         --env-file .env \

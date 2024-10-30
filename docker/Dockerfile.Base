@@ -39,14 +39,9 @@ WORKDIR /app
 
 # Define build arguments
 ARG ENV
+ARG REGION_NAME
 ARG DATA_STORAGE_ENV
 ARG MODEL_STORAGE_ENV
-ARG ETL_ENV
-ARG MODEL_BUILDING_ENV
-ARG APP_ENV
-
-ARG REGION_NAME
-ARG BUCKET_NAME
 
 ARG KXY_API_KEY
 
@@ -67,11 +62,9 @@ ARG SEED
 
 # Set environment variables from the build argument
 ENV ENV=${ENV}
+ENV REGION_NAME=${REGION_NAME}
 ENV DATA_STORAGE_ENV=${DATA_STORAGE_ENV}
 ENV MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV}
-
-ENV REGION_NAME=${REGION_NAME}
-ENV BUCKET_NAME=${BUCKET_NAME}
 
 ENV KXY_API_KEY=${KXY_API_KEY}
 
@@ -95,6 +88,22 @@ COPY config config
 COPY .env .env
 COPY .aws /root/.aws
 COPY resources resources
+
+# Copy development Terraform files
+COPY terraform/development/ec2/ec2.tfvars terraform/development/ec2/ec2.tfvars
+COPY terraform/development/ecr/ecr.tfvars terraform/development/ecr/ecr.tfvars
+COPY terraform/development/event_bridge/event_bridge.tfvars terraform/development/event_bridge/event_bridge.tfvars
+COPY terraform/development/lambda/lambda.tfvars terraform/development/lambda/lambda.tfvars
+COPY terraform/development/s3/s3.tfvars terraform/development/s3/s3.tfvars
+COPY terraform/development/step_functions/step_functions.tfvars terraform/development/step_functions/step_functions.tfvars
+
+# Copy production Terraform files
+COPY terraform/production/ec2/ec2.tfvars terraform/production/ec2/ec2.tfvars
+COPY terraform/production/ecr/ecr.tfvars terraform/production/ecr/ecr.tfvars
+COPY terraform/production/event_bridge/event_bridge.tfvars terraform/production/event_bridge/event_bridge.tfvars
+COPY terraform/production/lambda/lambda.tfvars terraform/production/lambda/lambda.tfvars
+COPY terraform/production/s3/s3.tfvars terraform/production/s3/s3.tfvars
+COPY terraform/production/step_functions/step_functions.tfvars terraform/production/step_functions/step_functions.tfvars
 
 # TRAINING JOBS directory convention:
 # /opt/ml/input/: This is typically used for training jobs to store input data.
