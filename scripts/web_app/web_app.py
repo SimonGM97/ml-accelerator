@@ -15,7 +15,7 @@ if __name__ == '__main__':
     col0, col1, col2 = st.columns([3, 3, 3])
 
     # Show Ed Machina Logo
-    col1.image(Image.open(os.path.join("resources", "images", "ml_accelerator_logo.png")), use_column_width=True)
+    col1.image(Image.open(os.path.join("resources", "logo", "ml_accelerator_logo.png")), use_column_width=True)
     
     # Blank space
     st.write("#")
