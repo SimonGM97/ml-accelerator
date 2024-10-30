@@ -113,15 +113,15 @@ if [[
             terraform -chdir=terraform/production/step_functions init -compact-warnings -var-file="step_functions.tfvars"
 
             # Apply the configurations and create resources
-            terraform -chdir=terraform/production/step_functions apply -compact-warnings  -auto-approve -var-file="step_functions.tfvars"
+            terraform -chdir=terraform/production/step_functions apply -compact-warnings -auto-approve -var-file="step_functions.tfvars"
         else
             echo "Building development Model Building Step Function with Terraform..."
 
             # Initialize Terraform
-            terraform -chdir=terraform/development/step_functions init -compact-warnings  -var-file="step_functions.tfvars"
+            terraform -chdir=terraform/development/step_functions init -compact-warnings -var-file="step_functions.tfvars"
 
             # Apply the configurations and create resources
-            terraform -chdir=terraform/development/step_functions apply -compact-warnings  -auto-approve -var-file="step_functions.tfvars"
+            terraform -chdir=terraform/development/step_functions apply -compact-warnings -auto-approve -var-file="step_functions.tfvars"
         fi
     fi
 

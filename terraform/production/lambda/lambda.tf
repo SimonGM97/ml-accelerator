@@ -44,11 +44,6 @@ variable "ETL_LAMBDA_FUNCTION_TIMEOUT" {
   type        = string
 }
 
-variable "SECRET_ARN" {
-  description = "ARN of the secret to be accessed by the Lambda function."
-  type        = string
-}
-
 # AWS PROVIDER
 provider "aws" {
   # Region name
@@ -82,42 +77,34 @@ resource "aws_iam_role" "lambda_execution_role_prod" {
   })
 }
 
-# Attach AWSLambdaBasicExecutionRole policy to lambda_execution_role_prod
-resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.lambda_execution_role_prod.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
+# Attach permissions to lambda_execution_role_prod
+resource "aws_iam_role_policy" "sagemaker_custom_policy_prod" {
+  name = "SageMakerCustomPermissionsProd"
 
-# Attach AmazonS3FullAccess policy to lambda_execution_role_prod
-resource "aws_iam_role_policy_attachment" "lambda_s3_full_access" {
-  role       = aws_iam_role.lambda_execution_role_prod.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
-}
-
-# Secrets Manager access policy for Lambda to read/write specific secrets
-resource "aws_iam_policy" "secrets_manager_access" {
-  name        = "${var.LAMBDA_EXECUTION_ROLE_NAME}_SecretsManagerAccess"
-  description = "IAM policy to allow Lambda function to read and write secrets from Secrets Manager"
+  role = aws_iam_role.lambda_execution_role_prod.name
 
   policy = jsonencode({
-    "Version": "2012-10-17",
-    "Statement": [
+    Version = "2012-10-17",
+    Statement = [
       {
-        "Effect": "Allow",
-        "Action": [
+        Effect = "Allow",
+        Action = [
+          # S3 full access
+          "s3:*",
+          "s3-object-lambda:*",
+          # ECR Full access
+          "ecr:*",
+          # CloudWatch full access
+          "logs:*",
+          "cloudwatch:*",
+          # Secrets Manager
           "secretsmanager:GetSecretValue",
           "secretsmanager:PutSecretValue"
         ],
-        "Resource": var.SECRET_ARN
+        Resource = "*"
       }
     ]
   })
-}
-
-# Attach Secrets Manager policy to lambda_execution_role_prod
-resource "aws_iam_role_policy_attachment" "lambda_secrets_manager_access" {
-  role       = aws_iam_role.lambda_execution_role_prod.name
-  policy_arn = aws_iam_policy.secrets_manager_access.arn
 }
 
 # LAMBDA FUNCTION
