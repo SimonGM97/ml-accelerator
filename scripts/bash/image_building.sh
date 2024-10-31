@@ -55,6 +55,7 @@ if [[
         -f docker/Dockerfile.Base . \
         --load \
         --build-arg ENV=${ENV} \
+        --build-arg BUCKET_NAME=${BUCKET_NAME} \
         --build-arg REGION_NAME=${REGION_NAME} \
         --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
         --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
@@ -88,6 +89,7 @@ if [[
         -f docker/Dockerfile.ETLLambda . \
         --load \
         --build-arg ENV=${ENV} \
+        --build-arg BUCKET_NAME=${BUCKET_NAME} \
         --build-arg REGION_NAME=${REGION_NAME} \
         --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
         --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
