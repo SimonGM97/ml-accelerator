@@ -43,6 +43,7 @@ COPY ml_accelerator/utils/timing ml_accelerator/utils/timing
 
 # Define build arguments
 ARG ENV
+ARG BUCKET_NAME
 ARG REGION_NAME
 ARG DATA_STORAGE_ENV
 ARG MODEL_STORAGE_ENV
