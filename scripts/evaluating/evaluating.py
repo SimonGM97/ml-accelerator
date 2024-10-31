@@ -83,12 +83,13 @@ def evaluating_pipeline(
         pipeline: MLPipeline = MR.load_prod_pipe()
 
         # Evaluate Model
-        LOGGER.info('Evaluating %s Production MLPipeline.', pipeline.pipeline_id)
-        evaluate_pipeline(
-            pipeline=pipeline,
-            X_test=X_test.copy(),
-            y_test=y_test.copy()
-        )
+        if pipeline is not None:
+            LOGGER.info('Evaluating %s Production MLPipeline.', pipeline.pipeline_id)
+            evaluate_pipeline(
+                pipeline=pipeline,
+                X_test=X_test.copy(),
+                y_test=y_test.copy()
+            )
 
     # Fit staging pipelines
     if evaluate_staging_pipes:

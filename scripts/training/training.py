@@ -115,6 +115,9 @@ def training_pipeline(
                 X_train=X_train.copy(),
                 y_train=y_train.copy()
             )
+    
+    # Show trained Models
+    LOGGER.info("%s", MR)
 
 
 """

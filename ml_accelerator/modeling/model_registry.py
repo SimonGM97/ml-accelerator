@@ -682,11 +682,24 @@ class ModelRegistry:
             models = [self.load_model(model_id=model_id) for model_id in model_ids]
 
         def extract_tuple_attrs(model: Model):
+            def round_param(param):
+                if isinstance(param, float):
+                    round_n = len(str(param).split('.')[1]) - 1
+                    return round(param, round_n)
+                elif isinstance(param, int) and param > 10:
+                    round_n = -1
+                    return round(param, round_n)
+                else:
+                    return param
+
             # Define base attrs to add
             attrs = {'algorithm': model.algorithm}
 
             # Add hyperparameters
-            attrs.update(model.hyper_parameters)
+            attrs.update(**{
+                k: round_param(v) for k, v in model.hyper_parameters.items()
+                if k in ['n_estimators', 'max_depth', 'boosting_type', 'booster']
+            })
 
             return tuple(attrs.items())
 
@@ -737,7 +750,7 @@ class ModelRegistry:
         # Drop repeated models
         for model, repeated_models in repeated_models_dict.items():
             if len(repeated_models) > 0:
-                LOGGER.warning('Model %s (%s) has repeated models.', model.model_id, model.stage)
+                # LOGGER.warning('Model %s (%s) has repeated models.', model.model_id, model.stage)
 
                 # Sort models
                 sorted_models = self.sort_models(
@@ -749,11 +762,12 @@ class ModelRegistry:
                     try:
                         models.remove(drop_model)
                     except Exception as e:
-                        LOGGER.warning(
-                            'Unable to delete Model %s (%s).\n'
-                            'Exception: %s.\n',
-                            drop_model.model_id, drop_model.stage, e
-                        )
+                        # LOGGER.warning(
+                        #     'Unable to delete Model %s (%s).\n'
+                        #     'Exception: %s.\n',
+                        #     drop_model.model_id, drop_model.stage, e
+                        # )
+                        pass
 
         # Delete repeated_models_dict & sorted_models
         del repeated_models_dict
@@ -890,7 +904,10 @@ class ModelRegistry:
 
     def __repr__(self) -> str:
         def extract_score(model: Model, score_name: str) -> float:
-            return round(getattr(model, score_name) * 100, 2)
+            score = getattr(model, score_name)
+            if score is not None:
+                return round(score * 100, 2)
+            return None
         
         output: str = "Model Registry:"
 
