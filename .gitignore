@@ -47,16 +47,14 @@ cover/
 # Archive
 .archive/
 
-# Ignore Terraform state files
+# Ignore Terraform related files
 *.tfstate
 *.tfstate.backup
-
-# Ignore Terraform crash logs
 crash.log
-
-# Ignore local .terraform directories
 .terraform/
 .terraform.*
+model_building_workflow_prod.json
+model_building_workflow_dev.json
 
 # Ignore plan output files
 *.tfplan
