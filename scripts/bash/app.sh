@@ -1,6 +1,6 @@
 #!/bin/bash
-# chmod +x ./scripts/bash/model_building_workflow.sh
-# ./scripts/bash/model_building_workflow.sh
+# chmod +x ./scripts/bash/app.sh
+# ./scripts/bash/app.sh
 
 # Set environment variables
 set -o allexport
@@ -16,12 +16,14 @@ CONFIG_FILE="config/config.yaml"
 VERSION=$(yq eval '.PROJECT_PARAMS.VERSION' ${CONFIG_FILE})
 
 # Extract variables from terraform env
+BUCKET_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param BUCKET_NAME)
 DOCKER_REPOSITORY_NAME=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param DOCKER_REPOSITORY_NAME)
 ECR_REPOSITORY_URI=$(.ml_accel_venv/bin/python ml_accelerator/config/env.py  --env_param ECR_REPOSITORY_URI)
 
 # Show variables
-echo "Model Building Workflow variables:"
+echo "Extracted variables:"
 echo "  - VERSION: ${VERSION}"
+echo "  - BUCKET_NAME: ${BUCKET_NAME}"
 echo "  - DOCKER_REPOSITORY_NAME: ${DOCKER_REPOSITORY_NAME}"
 echo "  - ECR_REPOSITORY_URI: ${ECR_REPOSITORY_URI}"
 echo ""

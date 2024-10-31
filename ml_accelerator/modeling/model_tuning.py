@@ -556,13 +556,13 @@ class ModelTuner:
         #     )
 
         # Evaluate dev models
-        self.evaluate_dev_models(
-            X_train=X_train,
-            X_test=X_test,
-            y_train=y_train,
-            y_test=y_test,
-            debug=debug
-        )
+        # self.evaluate_dev_models(
+        #     X_train=X_train,
+        #     X_test=X_test,
+        #     y_train=y_train,
+        #     y_test=y_test,
+        #     debug=debug
+        # )
 
         # Save dev models
         for model in self.models:
@@ -578,10 +578,13 @@ class ModelTuner:
         LOGGER.info('New self.model_registry.registry_dict:\n%s\n', pformat(self.model_registry.registry_dict))
 
         # Update model stages
-        self.model_registry.update_model_stages(
-            update_prod_model=False,
-            debug=debug
-        )
+        # self.model_registry.update_model_stages(
+        #     update_prod_model=False,
+        #     debug=debug
+        # )
+
+        # Save self.registry_dict
+        self.model_registry.save_registry_dict()
 
         # Show ModelRegistry
         LOGGER.info('%s', self.model_registry)

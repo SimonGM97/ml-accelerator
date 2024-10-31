@@ -22,40 +22,16 @@ class RegressionModel(Model):
     """
 
     # Pickled attrs
-    pickled_attrs = [
-        # Register Parameters
-        'model_id',
-        'version',
-        'stage',
-
-        # General Parameters
-        'algorithm',
-        'hyper_parameters',
-        'fitted',
-
-        # Feature Importance
-        'shap_values',
-        'importance_method',
-
-        # Regression Parameters
-        'mape',
-
-        'cv_scores',
-        'test_score'
-    ]
+    pickled_attrs = []
 
     # csv attrs
-    csv_attrs = [
-        'feature_importance_df'
-    ]
+    csv_attrs = []
 
     # Parquet attrs
     parquet_attrs = []
 
     # Metrics
-    metric_names = [
-        'mape'
-    ]
+    metric_names = []
 
     def __init__(
         self,
@@ -64,7 +40,7 @@ class RegressionModel(Model):
         stage: str = 'development',
         algorithm: str = None,
         hyper_parameters: dict = {},
-        target: str = Params.TARGET_COLUMN,
+        target_column: str = Params.TARGET_COLUMN,
         selected_features: List[str] = None,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
         importance_method: str = Params.IMPORTANCE_METHOD
@@ -76,7 +52,7 @@ class RegressionModel(Model):
             stage=stage,
             algorithm=algorithm,
             hyper_parameters=hyper_parameters,
-            target=target,
+            target_column=target_column,
             selected_features=selected_features,
             optimization_metric=optimization_metric,
             importance_method=importance_method

@@ -36,3 +36,8 @@ unset ENV \
     SCHEMAS_PATH \
     MOCK_PATH \
     SEED
+
+# Set environment variables
+set -o allexport
+source .env
+set +o allexport

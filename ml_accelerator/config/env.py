@@ -65,12 +65,18 @@ def extract_suffix(parameter_name: str, parameter_value: str) -> str:
     return suffix
 
 
-def validate_suffix(env: str, parameter_name: str, suffix: str, valid_sufixes: List[str]) -> None:
+def validate_suffix(
+    env: str, 
+    parameter_name: str, 
+    parameter_value,
+    suffix: str, 
+    valid_sufixes: List[str]
+) -> None:
     if suffix.upper() not in [s.upper() for s in valid_sufixes]:
         raise ValueError(f'{parameter_name} suffix ({suffix}) must be one of: {valid_sufixes}')
     
     if env.upper() != suffix.upper():
-        raise ValueError(f'ENV ({env}) and {parameter_name} suffix ({suffix}) must match.')
+        raise ValueError(f'ENV ({env}) and {parameter_name} ({parameter_value}) suffix ({suffix}) must match.')
 
 
 class Env:
@@ -122,7 +128,7 @@ class Env:
             suffix: str = extract_suffix(param, params[param])
 
             # Validate suffix
-            validate_suffix(ENV, param, suffix, ['dev', 'prod'])
+            validate_suffix(ENV, param, params[param], suffix, ['dev', 'prod'])
 
         cls.initialized = True
 
@@ -153,9 +159,54 @@ class Env:
         
         return param
 
+    @staticmethod
+    def clean_env():
+        for var_name in [
+            'ENV',
+            'DATA_STORAGE_ENV',
+            'MODEL_STORAGE_ENV',
+            'ETL_ENV',
+            'MODEL_BUILDING_ENV',
+            'APP_ENV',
+            'REGION_NAME',
+            'BUCKET_NAME',
+            'ETL_LAMBDA_FUNCTION_NAME',
+            'MODEL_BUILDING_STEP_FUNCTIONS_NAME',
+            'MODEL_BUILDING_STEP_FUNCTIONS_ARN',
+            'MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME',
+            'DOCKER_REPOSITORY_TYPE',
+            'DOCKER_REPOSITORY_NAME',
+            'ECR_REPOSITORY_URI',
+            'DOCKERHUB_USERNAME',
+            'KXY_API_KEY',
+            'GITHUB_PAT',
+            'DOCKERHUB_TOKEN',
+            'AZURE_DEVOPS_REPO_URL',
+            'AZURE_DEVOPS_USERNAME',
+            'AZURE_DEVOPS_PAT',
+            'INFERENCE_HOST',
+            'INFERENCE_PORT',
+            'WEBAPP_HOST',
+            'WEBAPP_PORT',
+            'RAW_DATASETS_PATH',
+            'PROCESSING_DATASETS_PATH',
+            'INFERENCE_PATH',
+            'TRANSFORMERS_PATH',
+            'MODELS_PATH',
+            'SCHEMAS_PATH',
+            'MOCK_PATH',
+            'SEED'
+        ]:
+            # Unset environment variable
+            os.environ.pop(var_name, None)
+
 
 # Initialize environment
 if not Env.initialized:
+    # Clean environment
+    Env.clean_env()
+
+    # Instanciate Env class
     Env.initialize()
 
 # .ml_accel_venv/bin/python ml_accelerator/config/env.py --env_param None

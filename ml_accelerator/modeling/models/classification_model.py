@@ -93,7 +93,7 @@ class ClassificationModel(Model):
         task: str = Params.TASK,
         algorithm: str = None,
         hyper_parameters: dict = None,
-        target: str = Params.TARGET_COLUMN,
+        target_column: str = Params.TARGET_COLUMN,
         selected_features: List[str] = None,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
         importance_method: str = Params.IMPORTANCE_METHOD,
@@ -107,7 +107,7 @@ class ClassificationModel(Model):
             task=task,
             algorithm=algorithm,
             hyper_parameters=hyper_parameters,
-            target=target,
+            target_column=target_column,
             selected_features=selected_features,
             optimization_metric=optimization_metric,
             importance_method=importance_method
@@ -214,7 +214,7 @@ class ClassificationModel(Model):
             
             hyper_parameters.update(**{
                 "use_rmm": True,
-                "device": 'cuda', # 'cpu', 'cuda' # cuda -> GPU
+                "device": 'cpu', # cpu, cuda, gpu
                 "nthread": -1,
                 "max_delta_step": 0,
                 "gamma": 0,

@@ -4,7 +4,7 @@
     "States": {
         "data-processing-job": {
             "Parameters": {
-                "ProcessingJobName": "dev--data-processing--2024-10-30-182550",
+                "ProcessingJobName": "dev--data-processing--2024-10-31-145454",
                 "ProcessingResources": {
                     "ClusterConfig": {
                         "InstanceCount": 1,
@@ -110,7 +110,7 @@
         },
         "tuning-job": {
             "Parameters": {
-                "ProcessingJobName": "dev--tuning--2024-10-30-182550",
+                "ProcessingJobName": "dev--tuning--2024-10-31-145454",
                 "ProcessingResources": {
                     "ClusterConfig": {
                         "InstanceCount": 1,
@@ -209,7 +209,7 @@
         },
         "training-job": {
             "Parameters": {
-                "ProcessingJobName": "dev--training--2024-10-30-182550",
+                "ProcessingJobName": "dev--training--2024-10-31-145454",
                 "ProcessingResources": {
                     "ClusterConfig": {
                         "InstanceCount": 1,
@@ -232,7 +232,7 @@
                         "--train_staging_pipes",
                         "True",
                         "--train_dev_pipes",
-                        "False"
+                        "True"
                     ]
                 },
                 "Environment": {
@@ -304,7 +304,7 @@
         },
         "evaluating-job": {
             "Parameters": {
-                "ProcessingJobName": "dev--evaluating--2024-10-30-182550",
+                "ProcessingJobName": "dev--evaluating--2024-10-31-145454",
                 "ProcessingResources": {
                     "ClusterConfig": {
                         "InstanceCount": 1,
@@ -331,7 +331,7 @@
                         "--update_model_stages",
                         "True",
                         "--update_prod_model",
-                        "False"
+                        "True"
                     ]
                 },
                 "Environment": {
