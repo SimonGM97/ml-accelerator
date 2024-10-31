@@ -47,7 +47,7 @@ mkdir -p "$DIST_DIR"
 # Create the zip file with the specified files and directories
 zip -r "$DIST_DIR/$ZIP_NAME" "${INCLUDE_FILES[@]}" \
     -x "*/__pycache__/*" "*/legal/*" "*.terraform/*" \
-    "*terraform.lock.hcl*" "*terraform.tfstate*" "*terraform.tfstate.backup*" 
+    "*terraform.lock.hcl*" "*terraform.tfstate*" "*terraform.tfstate.backup*"
     # "*/.git/*"
 
 # Check if the zip was successful
