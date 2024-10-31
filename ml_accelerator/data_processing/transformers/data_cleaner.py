@@ -26,7 +26,7 @@ class DataCleaner(Transformer):
     def __init__(
         self,
         transformer_id: str = None,
-        target: str = Params.TARGET,
+        target_column: str = Params.TARGET_COLUMN,
         dataset_name: str = Params.DATASET_NAME,
         z_threshold: float = Params.OUTLIER_Z_THRESHOLD
     ) -> None:
@@ -34,7 +34,7 @@ class DataCleaner(Transformer):
         super().__init__(transformer_id=transformer_id)
 
         # Set attributes
-        self.target: str = target
+        self.target_column: str = target_column
         self.dataset_name: str = dataset_name
         self.z_threshold: float = z_threshold
 
@@ -179,9 +179,9 @@ class DataCleaner(Transformer):
         self,
         df: pd.DataFrame
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        if self.target is not None and self.target in df.columns:
+        if self.target_column is not None and self.target_column in df.columns:
             # Divide df into X & y
-            X, y = df.drop(columns=[self.target]), df[[self.target]]
+            X, y = df.drop(columns=[self.target_column]), df[[self.target_column]]
 
             return X, y
         else:

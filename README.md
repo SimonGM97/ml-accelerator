@@ -29,11 +29,13 @@ In addition to this, the repository is designed to:
 # Table of Contents
 
 - [Installation](#installation)
-- [Example Usage](#example-usage)
+- [Usage](#usage)
 - [Documentation](#documentation)
   - [Infrastructure](#infrastructure)
-  - [Class Structure](#class-structure)
-  - [Workflow](#workflow)
+  - [Repository Structure](#repository-structure)
+  - [Scripts](#scripts)
+  - [Config Parameters](#config-parametrs)
+  - [Environment Parameters](#environment-parameters)
 
 &nbsp;
 # Installation
@@ -109,7 +111,34 @@ git push -u azure main
 17. Clone the GitHub repository in the code-editor space.
 
 &nbsp;
-# Example Usage
+# Usage
+
+Define required parameters in the `config/config.yaml` file to specify specific functionalities:
+- `PROJECT_PARAMS`: general project parameters.
+  - Note: currently only *binary_classification* is available.
+- `ETL_PARAMS`: parameters to define ETL workflow.
+  - Note: currently, ETL is designed to ingest datasets from *sklearn*.
+- `STORAGE_PARAMS`: parameters to define how to store datasets.
+- `DATA_CLEANING_PARAMS`: parameters to define data cleaning pipeline.
+- `FEATURE_ENRICHER_PARAMS`: parameters to define feature engineering pipeline.
+- `DATA_TRANSFORMING_PARAMS`: parameters to define data transformation pipeline.
+- `FEATURE_SELECTION_PARAMS`: parameters to define feature selection pipeline.
+- `ML_DATASETS_PARAMS`: parameters to define train-val-test splits.
+- `CLASSIFICATION_PARAMS`: parameters specific for classification projects.
+- `REGRESSION_PARAMS`: parameters specific for regression projects.
+  - Note: currently not implemented.
+- `FORECASTING_PARAMS`: parameters specific for forecasting projects.
+  - Note: currently not implemented.
+- `HYPER_PARAMETER_TUNING_PARAMS`: parameters to define hyperparameter-tunning tasks.
+- `FEATURE_IMPORTANCE_PARAMS`: parameters to define how to measure feature importance in ML models.
+- `MLPIPELINE_PARAMS`: parameters to define how to create MLPipelines.
+- `MODEL_BUILDING_PARAMS`: parameters to define model building workflow.
+- `STEP_FUNCTION_STATES`: parameters to define step function states.
+- `LOG_PARAMS`: parameters to define logging configuration.
+
+(See [Config Parameter](#config-parametrs) for more details on each of these groups).
+
+(Optionally) Define `.env` & `.tfvars` parameters (see [Environment Parameters](#environment-parameters)) for more details on each of these groups.
 
 Run `./main.sh` bash script (entrypoint) in order to:
 1. Build an `ECR repository` with *Terraform*, where the Docker images will be stored.
@@ -118,15 +147,18 @@ Run `./main.sh` bash script (entrypoint) in order to:
 4. Build the infrastructure required to run the workflows, including:
   - `S3 Bucket` to store datasets & models.
   - `Lambda function` to run ETL pipeline.
-  - `Step Function` to orchestrate the following `SageMaker Processing Jobs`:
-    - `data-processing`: run a data processing pippeline that leverages the following classes (ran sequentially):
-      - *DataCleaner*: applies data cleaning methods.
-      - *FeatureEnricher*: applies feature engineering methods to create new features.
-      - *DataStandardizer*: applies data transformation steps to standardize numerical features, one-hot-encode categorical features & encode target.
-      - *FeatureSelector*: applies various feature selection methods to pick the subset of features that add the most predictive power.
-    - `tuning`: utilizes the *ModelTuner* class to tune hyperparameters & select the top performant models based on their performance on validation datasets.
-    - `training`: utilizes top performant models to build & train *MLPipelines*.
-    - `evaluating`: evaluates built MLPipelines with test datasets & picks champion MLPipeline.
+  - `Step Function` to orchestrate Model Builing Jobs. `SageMaker Processing Jobs`.
+5. Run `ETL workflow`, through a `lambda` function. 
+6. Run a `Model Building workflow`, through a `Step Function` that orchestrate the following `SageMaker Processing jobs`:
+  - `data-processing`: run a data processing pipeline that leverages the following classes (ran sequentially):
+    - *DataCleaner*: applies data cleaning methods.
+    - *FeatureEnricher*: applies feature engineering methods to create new features.
+    - *DataStandardizer*: applies data transformation steps to standardize numerical features, one-hot-encode categorical features & encode target.
+    - *FeatureSelector*: applies various feature selection methods to pick the subset of features that add the most predictive power.
+  - `tuning`: utilizes the *ModelTuner* class to tune hyperparameters & select the top performant models based on their performance on validation datasets.
+  - `training`: utilizes top performant models to build & train *MLPipelines*.
+  - `evaluating`: evaluates built MLPipelines with test datasets & picks champion MLPipeline.
+7. Run a `streamlit web-app` to visualize model performances.
 
 &nbsp;
 # Documentation
@@ -134,13 +166,17 @@ Run `./main.sh` bash script (entrypoint) in order to:
 ## Infrastructure
 
 <div align="center">
-<img src="./docs/diagrams/infrastructure.png" width="85%">
+<img src="./docs/diagrams/Infrastructure.png" width="85%">
 </div>
 
 ## Class Structure
 
 <div align="center">
-<img src="./docs/diagrams/ClassStructure.png" width="60%">
+<img src="./docs/diagrams/RepositoryStructure.png" width="60%">
 </div>
 
-## Workflows
+## Scripts
+
+## Config Parametrs
+
+## Environment Parameters

@@ -52,7 +52,7 @@ class Model(ABC):
         task: str = Params.TASK,
         algorithm: str = None,
         hyper_parameters: dict = None,
-        target: str = Params.TARGET,
+        target_column: str = Params.TARGET_COLUMN,
         selected_features: List[str] = None,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
         importance_method: str = Params.IMPORTANCE_METHOD
@@ -79,7 +79,7 @@ class Model(ABC):
         self.fitted: bool = False
 
         # Data Parameters
-        self.target: str = target
+        self.target_column: str = target_column
         self.selected_features: List[str] = deepcopy(selected_features)
 
         # Performance Parameters
@@ -121,7 +121,7 @@ class Model(ABC):
             'algorithm': self.algorithm,
 
             # Data Parameters
-            'target': self.target,
+            'target_column': self.target_column,
             'selected_features': self.selected_features,
 
             # Performance Parameters

@@ -210,7 +210,7 @@ class FeatureEnricher(FeatureSelector):
 
             # Encode target
             encoder: LabelEncoder = LabelEncoder()
-            y[self.target] = encoder.fit_transform(y=y[self.target].values)
+            y[self.target_column] = encoder.fit_transform(y=y[self.target_column].values)
 
         # Define initial features
         initial_features: List[str] = X.columns.tolist().copy()

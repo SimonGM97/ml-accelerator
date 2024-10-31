@@ -93,7 +93,7 @@ class ClassificationModel(Model):
         task: str = Params.TASK,
         algorithm: str = None,
         hyper_parameters: dict = None,
-        target: str = Params.TARGET,
+        target: str = Params.TARGET_COLUMN,
         selected_features: List[str] = None,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
         importance_method: str = Params.IMPORTANCE_METHOD,

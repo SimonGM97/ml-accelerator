@@ -49,7 +49,7 @@ class Params:
     # PROJECT PARAMETERS
     PROJECT_NAME: str
     VERSION: str
-    TARGET: str
+    TARGET_COLUMN: str
     TASK: str
 
     """
@@ -81,7 +81,7 @@ class Params:
     HOLIDAY_COUNTRY: str
 
     # DATA TRANSFORMING PARAMETERS
-    ENCODE_TARGET: bool
+    ENCODE_TARGET_COLUMN: bool
     SCALE_NUM_FEATURES: bool
     ENCODE_CAT_FEATURES: bool
 

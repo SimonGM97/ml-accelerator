@@ -40,7 +40,7 @@ class ModelTuner:
         self,
         algorithms: List[str] = Params.ALGORITHMS,
         search_space: List[dict] = Params.SEARCH_SPACE,
-        target: str = Params.TARGET,
+        target_column: str = Params.TARGET_COLUMN,
         task: str = Params.TASK,
         optimization_metric: str = Params.OPTIMIZATION_METRIC,
         importance_method: str = Params.IMPORTANCE_METHOD,
@@ -52,7 +52,7 @@ class ModelTuner:
         self.algorithms: List[str] = algorithms
         self.search_space: List[dict] = search_space
 
-        self.target: str = target
+        self.target_column: str = target_column
         self.task: str = task
 
         self.optimization_metric: str = optimization_metric
@@ -296,8 +296,8 @@ class ModelTuner:
             parameters['task'] = self.task
 
         # Data Parameters
-        if 'target' not in parameters.keys():
-            parameters['target'] = self.target
+        if 'target_column' not in parameters.keys():
+            parameters['target_column'] = self.target_column
         if 'selected_features' not in parameters.keys():
             parameters['selected_features'] = deepcopy(selected_features)
 

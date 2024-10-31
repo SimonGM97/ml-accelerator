@@ -385,7 +385,7 @@ class FeatureSelector(Transformer):
 
         # Run KXY variable selection
         data_val_df: pd.DataFrame = full_df.kxy.variable_selection(
-            self.target,
+            self.target_column,
             problem_type=find_problem_type(),
             anonymize=True
         )
@@ -467,7 +467,7 @@ class FeatureSelector(Transformer):
                     _, p_value = f_oneway(*groups)
                 else:
                     # Perform Pearson correlation for continuous target
-                    corr, p_value = pearsonr(X[feature].values, y[self.target].values)
+                    corr, p_value = pearsonr(X[feature].values, y[self.target_column].values)
             
             elif self.task == 'binary_classification':
                 if X[feature].dtype in ['string', 'object'] or len(X[feature].unique()) < 10:
@@ -476,10 +476,10 @@ class FeatureSelector(Transformer):
                     _, p_value, _, _ = chi2_contingency(contingency_table)
                 else:
                     # T-test for continuous features in binary classification
-                    full_df: pd.DataFrame = pd.concat([X[[feature]], y[[self.target]]], axis=1)
-                    y_unique = np.unique(y[self.target])
-                    group1 = full_df.loc[full_df[self.target] == y_unique[0], feature]
-                    group2 = full_df.loc[full_df[self.target] == y_unique[1], feature]
+                    full_df: pd.DataFrame = pd.concat([X[[feature]], y[[self.target_column]]], axis=1)
+                    y_unique = np.unique(y[self.target_column])
+                    group1 = full_df.loc[full_df[self.target_column] == y_unique[0], feature]
+                    group2 = full_df.loc[full_df[self.target_column] == y_unique[1], feature]
                     _, p_value = ttest_ind(group1, group2)
             
             elif self.task == 'multiclass_classification':
@@ -501,14 +501,14 @@ class FeatureSelector(Transformer):
             if debug:
                 LOGGER.debug(
                     'p_value between %s (%s) and %s (%s): %s',
-                    self.target, y[self.target].values.tolist()[:5],
+                    self.target_column, y[self.target_column].values.tolist()[:5],
                     feature, X[feature].values.tolist()[:5], p_value
                 )
             
             if np.isnan(p_value):
                 LOGGER.warning(
                     'p_value was nan (%s), when comparing %s (%s) with %s (%s)', 
-                    p_value, self.target, y[self.target].values.tolist()[:5],
+                    p_value, self.target_column, y[self.target_column].values.tolist()[:5],
                     feature, X[feature].values.tolist()[:5]
                 )
         
@@ -565,9 +565,9 @@ class FeatureSelector(Transformer):
         X, y = self.prepare_correlation_datasets(X=X, y=y)
 
         # Calculate Correlations with target
-        tf_corr_df: pd.DataFrame = pd.DataFrame(columns=[self.target])
+        tf_corr_df: pd.DataFrame = pd.DataFrame(columns=[self.target_column])
         for c in X.columns:
-            tf_corr_df.loc[c] = [abs(y[self.target].corr(X[c]))]
+            tf_corr_df.loc[c] = [abs(y[self.target_column].corr(X[c]))]
 
         # Delete X & y from memory
         del X
@@ -575,13 +575,13 @@ class FeatureSelector(Transformer):
         gc.collect()
 
         # Filter features
-        threshold = np.quantile(tf_corr_df[self.target].dropna(), quantile_threshold)
-        tf_corr_df = tf_corr_df.loc[tf_corr_df[self.target] >= threshold]
+        threshold = np.quantile(tf_corr_df[self.target_column].dropna(), quantile_threshold)
+        tf_corr_df = tf_corr_df.loc[tf_corr_df[self.target_column] >= threshold]
 
         # Filter features
         selected_features: List[str] = (
             tf_corr_df
-            .sort_values(by=[self.target], ascending=False)
+            .sort_values(by=[self.target_column], ascending=False)
             .index
             .tolist()
         )
