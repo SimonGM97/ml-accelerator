@@ -31,14 +31,14 @@ class DataHelper:
 
     def __init__(
         self,
-        target: str = Params.TARGET,
+        target_column: str = Params.TARGET_COLUMN,
         task: str = Params.TASK,
         dataset_name: str = Params.DATASET_NAME,
         data_extention: str = Params.DATA_EXTENTION,
         partition_cols: str = Params.PARTITION_COLUMNS
     ) -> None:
         # Set attributes
-        self.target: str = target
+        self.target_column: str = target_column
         self.task: str = task
         self.dataset_name: str = dataset_name
         self.data_extention: str = data_extention
@@ -71,7 +71,7 @@ class DataHelper:
     ]:
         if df is not None:
             # Divide df into X & y
-            X, y = df.drop(columns=[self.target]), df[[self.target]]
+            X, y = df.drop(columns=[self.target_column]), df[[self.target_column]]
             
             # Delete df_raw from memory
             del df
@@ -132,8 +132,8 @@ class DataHelper:
             LOGGER.debug(
                 "train balance: \n%s\n\n"
                 "test balance: \n%s\n",
-                y_train.groupby(self.target)[self.target].count() / y_train.shape[0],
-                y_test.groupby(self.target)[self.target].count() / y_test.shape[0] if y_test is not None else None
+                y_train.groupby(self.target_column)[self.target_column].count() / y_train.shape[0],
+                y_test.groupby(self.target_column)[self.target_column].count() / y_test.shape[0] if y_test is not None else None
             )
         
         return X_train, X_test, y_train, y_test
@@ -225,7 +225,7 @@ class DataHelper:
                 seen_values: list = None
             
             # Add allowed classification values
-            if 'classification' in self.task and col_name == self.target:
+            if 'classification' in self.task and col_name == self.target_column:
                 seen_values.extend(list(range(len(seen_values))))
 
             return seen_values

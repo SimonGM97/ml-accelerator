@@ -24,7 +24,7 @@ class ExtractTransformLoad(DataHelper):
     def __init__(
         self,        
         source: str = Params.ETL_SOURCE,
-        target: str = Params.TARGET,
+        target_column: str = Params.TARGET_COLUMN,
         dataset_name: str = Params.DATASET_NAME,
     ) -> None:
         # Instanciate parent class to inherit attrs & methods
@@ -34,7 +34,7 @@ class ExtractTransformLoad(DataHelper):
 
         # Define ETL specific attributes
         self.source: str = source
-        self.target: str = target 
+        self.target_column: str = target_column 
 
     def extract(
         self,
@@ -68,24 +68,24 @@ class ExtractTransformLoad(DataHelper):
             )
             
             # Extract y
-            target_col = {
-                'iris': 'species',
-                'wine': 'wine_class',
-                'breast_cancer': 'diagnosis',
-                'diabetes': 'disease_progression',
-                'california_housing': 'average_price'
-            }.get(self.dataset_name)
+            # target_col = {
+            #     'iris': 'species',
+            #     'wine': 'wine_class',
+            #     'breast_cancer': 'diagnosis',
+            #     'diabetes': 'disease_progression',
+            #     'california_housing': 'average_price'
+            # }.get(self.dataset_name)
 
             y: pd.DataFrame = pd.DataFrame(
                 data=data['target'],
-                columns=[target_col]
+                columns=[self.target_column]
             )
 
             # Map target names
             if 'target_names' in data and len(data['target_names']) > 1:
                 target_names: List[str] = data['target_names']
                 mapping_dict = {i: target_names[i] for i in range(len(target_names))}
-                y[target_col] = y[target_col].map(mapping_dict)
+                y[self.target_column] = y[self.target_column].map(mapping_dict)
 
             # Concatenate datasets
             df: pd.DataFrame = pd.concat([y, X], axis=1)

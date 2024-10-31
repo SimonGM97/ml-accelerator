@@ -25,8 +25,8 @@ class DataStandardizer(Transformer):
     def __init__(
         self,
         transformer_id: str = None,
-        target: str = Params.TARGET,
-        encode_target: bool = Params.ENCODE_TARGET,
+        target_column: str = Params.TARGET_COLUMN,
+        encode_target: bool = Params.ENCODE_TARGET_COLUMN,
         scale_num_features: bool = Params.SCALE_NUM_FEATURES,
         encode_cat_features: bool = Params.ENCODE_CAT_FEATURES
     ) -> None:
@@ -34,7 +34,7 @@ class DataStandardizer(Transformer):
         super().__init__(transformer_id=transformer_id)
 
         # Set non-load attributes
-        self.target: str = target
+        self.target_column: str = target_column
         self.encode_target: bool = encode_target
         self.scale_num_features: bool = scale_num_features
         self.encode_cat_features: bool = encode_cat_features
@@ -137,14 +137,14 @@ class DataStandardizer(Transformer):
         self.label_encoder: LabelEncoder = LabelEncoder()
         
         # Fit self.label_encoder
-        self.label_encoder.fit(y=y[self.target].values)
+        self.label_encoder.fit(y=y[self.target_column].values)
 
     def _encode_target(
         self,
         y: pd.DataFrame
     ) -> pd.DataFrame:
         # Apply self.label_encoder
-        y[self.target] = self.label_encoder.transform(y=y[self.target].values)
+        y[self.target_column] = self.label_encoder.transform(y=y[self.target_column].values)
 
         return y
 

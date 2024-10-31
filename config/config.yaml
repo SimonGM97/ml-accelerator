@@ -6,10 +6,10 @@
 PROJECT_PARAMS:
   PROJECT_NAME: ml-accelerator
   VERSION: v1.0.0
-  TARGET: diagnosis # target column
-  # species (iris), wine_class (wine), diagnosis (breast_cancer), disease_progression (diabetes), MedHouseVal (california_housing)
   TASK: binary_classification 
   # regression, binary_classification, multiclass_classification, forecasting
+  TARGET_COLUMN: diagnosis
+  # species (iris), wine_class (wine), diagnosis (breast_cancer), disease_progression (diabetes), MedHouseVal (california_housing)
 
 # # # # #
 # DATA PROCESSING PARAMETERS
@@ -50,7 +50,7 @@ FEATURE_ENRICHER_PARAMS:
 
 # DATA TRANSFORMING PARAMETERS
 DATA_TRANSFORMING_PARAMS:
-  ENCODE_TARGET: True
+  ENCODE_TARGET_COLUMN: True
   SCALE_NUM_FEATURES: True
   ENCODE_CAT_FEATURES: True
 
