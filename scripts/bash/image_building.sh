@@ -59,7 +59,6 @@ if [[
         --build-arg REGION_NAME=${REGION_NAME} \
         --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
         --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
-        --build-arg KXY_API_KEY=${KXY_API_KEY} \
         --build-arg INFERENCE_HOST=${INFERENCE_HOST} \
         --build-arg INFERENCE_PORT=${INFERENCE_PORT} \
         --build-arg WEBAPP_HOST=${WEBAPP_HOST} \
@@ -72,6 +71,7 @@ if [[
         --build-arg SCHEMAS_PATH=${SCHEMAS_PATH} \
         --build-arg MOCK_PATH=${MOCK_PATH} \
         --build-arg SEED=${SEED}
+        # --build-arg KXY_API_KEY=${KXY_API_KEY} \
 
     # Build Docker image (compatible with linux/amd64 architecture)
     docker build \
@@ -93,7 +93,6 @@ if [[
         --build-arg REGION_NAME=${REGION_NAME} \
         --build-arg DATA_STORAGE_ENV=${DATA_STORAGE_ENV} \
         --build-arg MODEL_STORAGE_ENV=${MODEL_STORAGE_ENV} \
-        --build-arg KXY_API_KEY=${KXY_API_KEY} \
         --build-arg RAW_DATASETS_PATH=${RAW_DATASETS_PATH} \
         --build-arg PROCESSING_DATASETS_PATH=${PROCESSING_DATASETS_PATH} \
         --build-arg INFERENCE_PATH=${INFERENCE_PATH} \
@@ -101,6 +100,7 @@ if [[
         --build-arg MODELS_PATH=${MODELS_PATH} \
         --build-arg SCHEMAS_PATH=${SCHEMAS_PATH} \
         --build-arg MOCK_PATH=${MOCK_PATH}
+        # --build-arg KXY_API_KEY=${KXY_API_KEY} \
 
     if [ "${DOCKER_REPOSITORY_TYPE}" == "dockerhub" ]; then
         # login to docker

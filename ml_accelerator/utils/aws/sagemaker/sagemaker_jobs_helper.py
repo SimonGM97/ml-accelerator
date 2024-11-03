@@ -257,7 +257,7 @@ def get_environment() -> dict:
         'REGION_NAME': Env.get("REGION_NAME"),
         'BUCKET_NAME': Env.get("BUCKET_NAME"),
 
-        'KXY_API_KEY': Env.get("KXY_API_KEY"),
+        # 'KXY_API_KEY': Env.get("KXY_API_KEY"),
 
         'INFERENCE_HOST': Env.get("INFERENCE_HOST"),
         'INFERENCE_PORT': Env.get("INFERENCE_PORT"),
