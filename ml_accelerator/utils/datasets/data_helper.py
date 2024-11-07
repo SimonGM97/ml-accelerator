@@ -11,10 +11,6 @@ from ml_accelerator.utils.aws.s3_helper import (
 from ml_accelerator.config.env import Env
 
 import pandas as pd
-from imblearn.over_sampling import RandomOverSampler
-from imblearn.under_sampling import RandomUnderSampler
-from imblearn.over_sampling import SMOTE
-from sklearn.model_selection import train_test_split
 import os
 import gc
 from typing import List, Tuple
@@ -53,90 +49,6 @@ class DataHelper:
         self.inference_path: str = Env.get("INFERENCE_PATH")
         self.transformers_path: str = Env.get("TRANSFORMERS_PATH")
         self.schemas_path: str = Env.get("SCHEMAS_PATH")
-
-    def divide_datasets(
-        self,
-        df: pd.DataFrame = None,
-        X: pd.DataFrame = None,
-        y: pd.DataFrame = None,
-        test_size: float = 0,
-        balance_train: bool = False,
-        balance_method: str = None,
-        debug: bool = False
-    ) -> Tuple[
-        pd.DataFrame, 
-        pd.DataFrame, 
-        pd.DataFrame, 
-        pd.DataFrame
-    ]:
-        if df is not None:
-            # Divide df into X & y
-            X, y = df.drop(columns=[self.target_column]), df[[self.target_column]]
-            
-            # Delete df_raw from memory
-            del df
-            gc.collect()
-
-        # Divide into X_train, y_train, X_test, y_test
-        if test_size > 0:
-            if self.task in ['binary_classification', 'multiclass_classification']:
-                X_train, X_test, y_train, y_test = train_test_split(
-                    X, y, 
-                    test_size=test_size, 
-                    random_state=int(Env.get("SEED")),
-                    stratify=y
-                )
-            elif self.task == 'regression':
-                X_train, X_test, y_train, y_test = train_test_split(
-                    X, y, 
-                    test_size=test_size, 
-                    random_state=int(Env.get("SEED"))
-                )
-            elif self.task == 'forecasting':
-                train_periods: int = int(test_size * X.shape[0])
-
-                X_train: pd.DataFrame = X.iloc[:train_periods]
-                X_test: pd.DataFrame = X.iloc[train_periods:]
-                y_train: pd.DataFrame = y.iloc[:train_periods]
-                y_test: pd.DataFrame = y.iloc[train_periods:]
-            else:
-                raise NotImplementedError(f'Task "{self.task}" has not been implemented.')
-        else:
-            X_train, X_test, y_train, y_test = X, None, y, None
-        
-        # Delete X & y
-        del X
-        del y
-        gc.collect()
-        
-        # Balance Train Dataset
-        if self.task in ['binary_classification', 'multiclass_classification'] and balance_train:
-            if balance_method == 'RandomOverSampler':
-                # Utilize over-sampling methodology
-                RO = RandomOverSampler(random_state=0)
-                X_train, y_train = RO.fit_resample(X_train, y_train)
-            elif balance_method == 'RandomUnderSampler':
-                # Utilize under-sampling methodology
-                RU = RandomUnderSampler(return_indices=False, random_state=0)
-                X_train, y_train = RU.fit_resample(X_train, y_train)
-            elif balance_method == 'SMOTE':
-                # Utilize Synthetic minority over-sampling technique (SMOTE) methodology
-                smote = SMOTE(sampling_strategy='minority', random_state=0, n_jobs=-1)
-                X_train, y_train = smote.fit_resample(X_train, y_train)
-            else:
-                raise ValueError(f'Invalid "balance_method" parameter was chosen: {balance_method}.\n')
-        else:
-            LOGGER.warning('balance_train is False, therefore test datasets will not be balanced.')
-
-        if debug and 'classification' in self.task:
-            LOGGER.debug(
-                "train balance: \n%s\n\n"
-                "test balance: \n%s\n",
-                y_train.groupby(self.target_column)[self.target_column].count() / y_train.shape[0],
-                y_test.groupby(self.target_column)[self.target_column].count() / y_test.shape[0] if y_test is not None else None
-            )
-        
-        return X_train, X_test, y_train, y_test
 
     def load_schema(self) -> dict:
         # Extract schema path
@@ -418,6 +330,20 @@ class DataHelper:
             raise NotImplementedError(f'Storage environment "{self.storage_env}" has not been implemented yet.')
         
         return df
+    
+    def load_datasets(
+        self,
+        df_names: List[str],
+        filters: List[Tuple[str, str, List[str]]] = None,
+        mock: bool = False
+    ) -> List[pd.DataFrame]:
+        # Load datasets
+        datasets: List[pd.DataFrame] = [
+            self.load_dataset(df_name, filters, mock)
+            for df_name in df_names
+        ]
+        
+        return datasets
 
     def save_transformer(self) -> None:
         # Extract path

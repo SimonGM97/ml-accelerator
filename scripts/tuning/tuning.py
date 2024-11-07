@@ -17,16 +17,11 @@ def tuning_pipeline() -> None:
     DH: DataHelper = DataHelper()
 
     # Load persisted datasets
-    X: pd.DataFrame = DH.load_dataset(df_name=f'X_{Params.TRANSFORMERS_STEPS[-1]}', filters=None)
-    y: pd.Series = DH.load_dataset(df_name=f'y_{Params.TRANSFORMERS_STEPS[-1]}', filters=None)
-
-    # Divide into X_train, X_test, y_train & y_test
-    X_train, X_test, y_train, y_test = DH.divide_datasets(
-        X=X, y=y, 
-        test_size=Params.TEST_SIZE, 
-        balance_train=Params.BALANCE_TRAIN,
-        balance_method=Params.BALANCE_METHOD,
-        debug=False
+    last_trans: str = Params.TRANSFORMERS_STEPS[-1]
+    X_train, y_train = DH.load_datasets(
+        df_names=[f'X_train_{last_trans}', f'y_train_{last_trans}'], 
+        filters=None,
+        mock=False
     )
 
     # Instanciate ModelTuner
@@ -35,9 +30,7 @@ def tuning_pipeline() -> None:
     # Tune models
     MT.tune_models(
         X_train=X_train,
-        X_test=X_test,
         y_train=y_train,
-        y_test=y_test,
         selected_features=X_train.columns.tolist(),
         use_warm_start=True,
         max_evals=Params.MAX_EVALS,

@@ -30,21 +30,25 @@ def data_processing() -> json:
     write_mode: str = request.args.get("write_mode", "append")
 
     # Run data pipeline
-    X, y = data_pipeline(
+    X_train, X_test, y_train, y_test = data_pipeline(
         fit_transformers=fit_transformers,
         save_transformers=save_transformers,
         persist_datasets=persist_datasets,
         write_mode=write_mode
     )
 
-    X: pd.DataFrame = X
-    y: pd.DataFrame = y
+    X_train: pd.DataFrame = X_train
+    X_test: pd.DataFrame = X_test
+    y_train: pd.DataFrame = y_train
+    y_test: pd.DataFrame = y_test
 
     return jsonify({
-        'X_columns': X.columns.tolist(),
-        'X_values': X.values.tolist(),
-        'y_columns': y.columns.tolist(),
-        'y_values': y.values.tolist()
+        'X_columns': X_train.columns.tolist(),
+        'X_train_values': X_train.values.tolist(),
+        'X_test_values': X_test.values.tolist(),
+        'y_columns': y_train.columns.tolist(),
+        'y_train_values': y_train.values.tolist(),
+        'y_test_values': y_test.values.tolist()
     })
 
 # Define tuning method

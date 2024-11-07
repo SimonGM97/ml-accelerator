@@ -37,6 +37,9 @@ def inference_pipeline(pred_id = None) -> dict:
         test_size=0, 
         balance_train=False,
         balance_method=None,
+        persist_datasets=False,
+        write_mode=None,
+        mock_datasets=False,
         debug=False
     )[0]
 

@@ -39,6 +39,7 @@ class MLPipeline:
         y: pd.DataFrame = None,
         persist_datasets: bool = False,
         write_mode: str = None,
+        train_datasets: bool = False,
         debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         # Run transforer steps
@@ -55,10 +56,18 @@ class MLPipeline:
 
             # Persist datasets
             if persist_datasets:
+                # Define save_names
+                if train_datasets:
+                    X_df_name = f'X_train_{transformer.__class__.__name__}'
+                    y_df_name = f'y_train_{transformer.__class__.__name__}'
+                else:
+                    X_df_name = f'X_test_{transformer.__class__.__name__}'
+                    y_df_name = f'y_test_{transformer.__class__.__name__}'
+
                 # Persist X
                 transformer.persist_dataset(
                     df=X,
-                    df_name=f'X_{transformer.__class__.__name__}',
+                    df_name=X_df_name,
                     write_mode=write_mode,
                     mock=False
                 )
@@ -66,7 +75,7 @@ class MLPipeline:
                 # Persist y
                 transformer.persist_dataset(
                     df=y,
-                    df_name=f'y_{transformer.__class__.__name__}',
+                    df_name=y_df_name,
                     write_mode=write_mode,
                     mock=False
                 )
@@ -81,6 +90,7 @@ class MLPipeline:
         ignore_steps: List[str] = None,
         persist_datasets: bool = False,
         write_mode: str = None,
+        train_datasets: bool = True,
         debug: bool = False
     ) -> Tuple[pd.DataFrame, pd.Series]:
         # Run transforer steps
@@ -110,10 +120,18 @@ class MLPipeline:
 
             # Persist datasets
             if persist_datasets:
+                # Define save_names
+                if train_datasets:
+                    X_df_name = f'X_train_{transformer.__class__.__name__}'
+                    y_df_name = f'y_train_{transformer.__class__.__name__}'
+                else:
+                    X_df_name = f'X_test_{transformer.__class__.__name__}'
+                    y_df_name = f'y_test_{transformer.__class__.__name__}'
+
                 # Persist X
                 transformer.persist_dataset(
                     df=X,
-                    df_name=f'X_{transformer.__class__.__name__}',
+                    df_name=X_df_name,
                     write_mode=write_mode,
                     mock=False
                 )
@@ -121,7 +139,7 @@ class MLPipeline:
                 # Persist y
                 transformer.persist_dataset(
                     df=y,
-                    df_name=f'y_{transformer.__class__.__name__}',
+                    df_name=y_df_name,
                     write_mode=write_mode,
                     mock=False
                 )
@@ -158,15 +176,13 @@ class MLPipeline:
             X_train, y_train = self.fit_transform(
                 X=X_train, y=y_train,
                 ignore_steps=ignore_steps,
-                persist_datasets=False,
-                write_mode=None
+                persist_datasets=False
             )
         else:
             # Run transform method
             X_train, y_train = self.transform(
                 X=X_train, y=y_train,
-                persist_datasets=False,
-                write_mode=None
+                persist_datasets=False
             )
 
         # Fit the model
@@ -179,13 +195,15 @@ class MLPipeline:
         X_train: pd.DataFrame,
         X_test: pd.DataFrame,
         y_train: pd.DataFrame,
-        fit_transformers: bool = True
+        fit_transformers: bool = True,
+        ignore_steps: List[str] = None
     ) -> np.ndarray:
         # Fit pipeline with X_train & y_train
         self.fit(
             X_train=X_train, 
             y_train=y_train,
-            fit_transformers=fit_transformers
+            fit_transformers=fit_transformers,
+            ignore_steps=ignore_steps
         )
 
         # Predict with y_test

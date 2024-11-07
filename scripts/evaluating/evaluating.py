@@ -59,19 +59,11 @@ def evaluating_pipeline(
     # Instanciate DataHelper
     DH: DataHelper = DataHelper()
 
-    # Load input dataset
-    df_raw: pd.DataFrame = DH.load_dataset(
-        df_name='df_raw',
-        filters=None
-    )
-
-    # Divide into X_train, X_test, y_train & y_test
-    _, X_test, _, y_test = DH.divide_datasets(
-        df=df_raw, 
-        test_size=Params.TEST_SIZE, 
-        balance_train=Params.BALANCE_TRAIN,
-        balance_method=Params.BALANCE_METHOD,
-        debug=debug
+    # Load raw datasets
+    X_test, y_test = DH.load_datasets(
+        df_names=['X_test_raw', 'y_test_raw'],
+        filters=None,
+        mock=False
     )
 
     # Instanciate ModelRegistry
