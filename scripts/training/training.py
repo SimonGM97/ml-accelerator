@@ -54,19 +54,11 @@ def training_pipeline(
     # Instanciate DataHelper
     DH: DataHelper = DataHelper()
 
-    # Load input dataset
-    df_raw: pd.DataFrame = DH.load_dataset(
-        df_name='df_raw',
-        filters=None
-    )
-
-    # Divide into X_train, X_test, y_train & y_test
-    X_train, _, y_train, _ = DH.divide_datasets(
-        df=df_raw, 
-        test_size=Params.TEST_SIZE, 
-        balance_train=Params.BALANCE_TRAIN,
-        balance_method=Params.BALANCE_METHOD,
-        debug=debug
+    # Load raw datasets
+    X_train, y_train = DH.load_datasets(
+        df_names=['X_train_raw', 'y_train_raw'],
+        filters=None,
+        mock=False
     )
 
     # Instanciate ModelRegistry

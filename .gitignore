@@ -61,7 +61,6 @@ model_building_workflow_dev.json
 
 # Distribution / packaging
 .Python
-build/
 develop-eggs/
 dist/
 downloads/

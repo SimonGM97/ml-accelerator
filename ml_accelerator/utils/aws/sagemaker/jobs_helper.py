@@ -1,16 +1,48 @@
 from ml_accelerator.config.env import Env
 from ml_accelerator.config.params import Params
 from ml_accelerator.utils.logging.logger_helper import get_logger
+from sagemaker import Session, LocalSession
+from sagemaker.workflow.parameters import (
+    ParameterInteger,
+    ParameterString
+)
+from sagemaker.processing import ProcessingInput, ProcessingOutput
+from sagemaker.dataset_definition.inputs import S3Input
+from sagemaker.utils import Tags
 import boto3
 from datetime import datetime
 import argparse
 from typing import List
 from pprint import pformat
-# Guide: https://docs.aws.amazon.com/sagemaker/latest/dg/notebook-auto-run.html
 
 
 # Get logger
 LOGGER = get_logger(name=__name__)
+
+
+def get_session() -> Session | LocalSession:
+    # Extract region_name
+    region_name = Env.get("REGION_NAME")
+
+    # Instanciate a boto3 session
+    boto_session = boto3.Session(region_name=region_name)
+
+    if Env.get("MODEL_BUILDING_ENV") == 'sagemaker':
+        # Instanciate a SageMaker client & feature store runtime client
+        sagemaker_client = boto_session.client(service_name="sagemaker", region_name=region_name)
+        featurestore_runtime = boto_session.client(
+            service_name="sagemaker-featurestore-runtime", region_name=region_name
+        )
+
+        return Session(
+            boto_session=boto_session,
+            sagemaker_client=sagemaker_client,
+            sagemaker_featurestore_runtime_client=featurestore_runtime
+        )
+    else:
+        return LocalSession(
+            boto_session=boto_session
+        )
 
 
 def define_job_name(job_name: str) -> str:
@@ -29,55 +61,89 @@ def define_job_name(job_name: str) -> str:
     return f"{Env.get('ENV')}--{job_name}--{year}-{month}-{day}-{hs}{mins}{secs}"
 
 
-def get_instance_count(job_name: str) -> int:
+def transform_job_name(job_name: str) -> str:
+    return ''.join([word.title() for word in job_name.split('-')])
+
+
+def get_instance_count(job_name: str) -> ParameterInteger:
+    # Extract instance count
     if 'data-processing' in job_name:
-        return int(Env.get('PROCESSING_INSTANCE_COUNT'))
+        instance_count = int(Env.get('PROCESSING_INSTANCE_COUNT'))
     elif 'tuning' in job_name:
-        return int(Env.get('TUNING_INSTANCE_COUNT'))
+        instance_count = int(Env.get('TUNING_INSTANCE_COUNT'))
     elif 'training' in job_name:
-        return int(Env.get('TRAINING_INSTANCE_COUNT'))
+        instance_count = int(Env.get('TRAINING_INSTANCE_COUNT'))
     elif 'evaluating' in job_name:
-        return int(Env.get('EVALUATING_INSTANCE_COUNT'))
+        instance_count = int(Env.get('EVALUATING_INSTANCE_COUNT'))
     else:
         LOGGER.warning(
             "Unexpected job_name was received %s\n."
             "Using default instance count.", job_name
         )
-        return int(Env.get('DEFAULT_INSTANCE_COUNT'))
+        instance_count = int(Env.get('DEFAULT_INSTANCE_COUNT'))
+    
+    # Return Parameter
+    return ParameterInteger(
+        name=f"{transform_job_name(job_name)}InstanceCount",
+        default_value=instance_count
+    )
+
+    # return instance_count
 
 
-def get_instance_type(job_name: str) -> str:
-    if 'data-processing' in job_name:
-        return Env.get('PROCESSING_INSTANCE_TYPE')
-    elif 'tuning' in job_name:
-        return Env.get('TUNING_INSTANCE_TYPE')
-    elif 'training' in job_name:
-        return Env.get('TRAINING_INSTANCE_TYPE')
-    elif 'evaluating' in job_name:
-        return Env.get('EVALUATING_INSTANCE_TYPE')
+def get_instance_type(job_name: str) -> ParameterString:
+    # Extract instance type
+    if Env.get("MODEL_BUILDING_ENV") == 'sagemaker':
+        if 'data-processing' in job_name:
+            instance_type = Env.get('PROCESSING_INSTANCE_TYPE')
+        elif 'tuning' in job_name:
+            instance_type = Env.get('TUNING_INSTANCE_TYPE')
+        elif 'training' in job_name:
+            instance_type = Env.get('TRAINING_INSTANCE_TYPE')
+        elif 'evaluating' in job_name:
+            instance_type = Env.get('EVALUATING_INSTANCE_TYPE')
+        else:
+            LOGGER.warning(
+                "Unexpected job_name was received %s\n."
+                "Using default instance type.", job_name
+            )
+            instance_type = Env.get('DEFAULT_INSTANCE_TYPE')
     else:
-        LOGGER.warning(
-            "Unexpected job_name was received %s\n."
-            "Using default instance type.", job_name
-        )
-        return Env.get('DEFAULT_INSTANCE_TYPE')
+        instance_type = "local"
+
+    # Return Parameter
+    return ParameterString(
+        name=f"{transform_job_name(job_name)}InstanceType",
+        default_value=instance_type
+    )
+
+    # return instance_type
     
 
 def get_volume_size(job_name: str) -> int:
+    # Define volume_size
     if 'data-processing' in job_name:
-        return int(Env.get('PROCESSING_VOLUME_SIZE'))
+        volume_size = int(Env.get('PROCESSING_VOLUME_SIZE'))
     elif 'tuning' in job_name:
-        return int(Env.get('TUNING_VOLUME_SIZE'))
+        volume_size = int(Env.get('TUNING_VOLUME_SIZE'))
     elif 'training' in job_name:
-        return int(Env.get('TRAINING_VOLUME_SIZE'))
+        volume_size = int(Env.get('TRAINING_VOLUME_SIZE'))
     elif 'evaluating' in job_name:
-        return int(Env.get('EVALUATING_VOLUME_SIZE'))
+        volume_size = int(Env.get('EVALUATING_VOLUME_SIZE'))
     else:
         LOGGER.warning(
             "Unexpected job_name was received %s\n."
             "Using default volume size.", job_name
         )
-        return int(Env.get('DEFAULT_VOLUME_SIZE'))
+        volume_size = int(Env.get('DEFAULT_VOLUME_SIZE'))
+
+    # Return Parameter
+    # return ParameterInteger(
+    #     name=f"{transform_job_name(job_name)}VolumeSize",
+    #     default_value=volume_size
+    # )
+
+    return volume_size
     
 
 def get_processing_resources(job_name: str) -> dict:
@@ -112,20 +178,29 @@ def get_processing_resources(job_name: str) -> dict:
 
 
 def get_max_runtime(job_name: str) -> int:
+    # Define max_runtime
     if 'data-processing' in job_name:
-        return int(Env.get('PROCESSING_MAX_RUNTIME'))
+        max_runtime = int(Env.get('PROCESSING_MAX_RUNTIME'))
     elif 'tuning' in job_name:
-        return int(Env.get('TUNING_MAX_RUNTIME'))
+        max_runtime = int(Env.get('TUNING_MAX_RUNTIME'))
     elif 'training' in job_name:
-        return int(Env.get('TRAINING_MAX_RUNTIME'))
+        max_runtime = int(Env.get('TRAINING_MAX_RUNTIME'))
     elif 'evaluating' in job_name:
-        return int(Env.get('EVALUATING_MAX_RUNTIME'))
+        max_runtime = int(Env.get('EVALUATING_MAX_RUNTIME'))
     else:
         LOGGER.warning(
             "Unexpected job_name was received %s\n."
             "Using default max runtime.", job_name
         )
-        return int(Env.get('DEFAULT_MAX_RUNTIME'))
+        max_runtime = int(Env.get('DEFAULT_MAX_RUNTIME'))
+
+    # Return Parameter
+    # return ParameterInteger(
+    #     name=f"{transform_job_name(job_name)}MaxRuntime",
+    #     default_value=max_runtime
+    # )
+
+    return max_runtime
     
 
 def get_stopping_condition(job_name: str) -> dict:
@@ -141,8 +216,8 @@ def get_stopping_condition(job_name: str) -> dict:
     }
 
 
-def get_image_uri() -> str:
-    # Extract parameters
+def get_image_uri() -> str | ParameterString:
+    # Extract env parameters
     docker_repository_type: str = Env.get("DOCKER_REPOSITORY_TYPE")
     docker_repository_name: str = Env.get("DOCKER_REPOSITORY_NAME")
     dockerhub_username: str = Env.get("DOCKERHUB_USERNAME")
@@ -150,23 +225,60 @@ def get_image_uri() -> str:
     env: str = Env.get("ENV")
     version: str = Params.VERSION
 
+    # Define image_uri
     if docker_repository_type == "dockerhub":
-        return f"{dockerhub_username}/{docker_repository_name}:{env}-image-{version}"
+        image_uri = f"{dockerhub_username}/{docker_repository_name}:{env}-image-{version}"
     elif docker_repository_type == "ECR":
-        return f"{ecr_repository_uri}/{docker_repository_name}:{env}-image-{version}"
+        image_uri = f"{ecr_repository_uri}/{docker_repository_name}:{env}-image-{version}"
     else:
         raise ValueError(f"Invalid docker_repository_type: {docker_repository_type}")
     
+    # Return parameter
+    # return ParameterString(
+    #     name="ImageUri",
+    #     default_value=image_uri
+    # )
 
-def get_entrypoint(job_name: str) -> str:
+    return image_uri
+    
+
+def get_entrypoint(job_name: str) -> List[str]:
     # Define file_name
-    file_name = job_name.split('--')[1].replace('-', '_')
+    file_name = job_name.replace('-', '_')
     
     # Define entrypoint
     entrypoint = f"scripts/{file_name}/{file_name}.py"
     # f'/opt/ml/processing/{script_name}'
 
     return ['python3', entrypoint]
+
+
+def get_script_arg(
+    pipeline_name: str, 
+    arg_name: str, 
+    as_parameter: bool = True
+) -> ParameterString | str:
+    if 'ModelBuildingPipeline' in pipeline_name:
+        params: dict = getattr(Params, 'MODEL_BUILDING_PARAMS')
+    elif 'ModelUpdatingPipeline' in pipeline_name:
+        params: dict = getattr(Params, 'MODEL_UPDATING_PARAMS')
+    elif 'InferencePipeline' in pipeline_name:
+        params: dict = getattr(Params, 'INFERENCE_PARAMS')
+    else:
+        raise Exception(f'Invalid "pipeline_name" was received: {pipeline_name}')
+    
+    arg_value = params.get(arg_name.upper())
+
+    if arg_value is None:
+        raise Exception(f'Argument "{arg_name}" was not found for "{pipeline_name}" pipeline params.')
+
+    if as_parameter:
+        return ParameterString(
+            name=arg_name,
+            default_value=str(arg_value)
+        )
+    else:
+        return str(arg_value)
 
 
 def get_container_arguments(job_name: str) -> List[str]:
@@ -260,9 +372,9 @@ def get_environment() -> dict:
         # 'KXY_API_KEY': Env.get("KXY_API_KEY"),
 
         'INFERENCE_HOST': Env.get("INFERENCE_HOST"),
-        'INFERENCE_PORT': Env.get("INFERENCE_PORT"),
+        'INFERENCE_PORT': str(Env.get("INFERENCE_PORT")),
         'WEBAPP_HOST': Env.get("WEBAPP_HOST"),
-        'WEBAPP_PORT': Env.get("WEBAPP_PORT"),
+        'WEBAPP_PORT': str(Env.get("WEBAPP_PORT")),
 
         'RAW_DATASETS_PATH': Env.get("RAW_DATASETS_PATH"),
         'PROCESSING_DATASETS_PATH': Env.get("PROCESSING_DATASETS_PATH"),
@@ -272,16 +384,32 @@ def get_environment() -> dict:
         'SCHEMAS_PATH': Env.get("SCHEMAS_PATH"),
         'MOCK_PATH': Env.get("MOCK_PATH"),
 
-        'SEED': Env.get("SEED")
+        'SEED': str(Env.get("SEED"))
     }
 
 
-def get_role_arn() -> str:
+def get_role_arn() -> str | ParameterString:
     """
     RoleArn (string) – [REQUIRED]: The Amazon Resource Name (ARN) of an IAM role that Amazon 
     SageMaker can assume to perform tasks on your behalf.
     """
-    return Env.get("SAGEMAKER_EXECUTION_ROLE_ARN") # Env.get("BASE_ROLE_ARN") + "/" + 
+    # Define role_arn
+    role_arn = Env.get("SAGEMAKER_EXECUTION_ROLE_ARN")
+
+    # Return Parameter
+    # return ParameterString(
+    #     name="RoleArn",
+    #     default_value=role_arn
+    # )
+
+    return role_arn
+
+
+def get_framework_version(job_name: str) -> str:
+    if 'data-processing' in job_name:
+        return Env.get("SKLEARN_PROCESSOR_FRAMEWORK_VERSION")
+    
+    raise NotImplementedError(f"Unable to extract frarmework for {job_name} job_name.")
 
 
 def get_tags() -> List[dict]:
@@ -310,25 +438,174 @@ def get_tags() -> List[dict]:
 
 
 def get_data_uri(dataset_name: str) -> str:
-    # Find subdir
-    if 'raw' in dataset_name:
-        subdir = Env.get('RAW_DATASETS_PATH')
-    else:
-        subdir = Env.get('PROCESSING_DATASETS_PATH')
-
     # Find bucket name
     bucket_name = Env.get('BUCKET_NAME')
+
+    # Find prefix
+    if 'raw' in dataset_name:
+        prefix = Env.get('RAW_DATASETS_PATH')
+    else:
+        prefix = Env.get('PROCESSING_DATASETS_PATH')
 
     # Find extention
     extention = Params.DATA_EXTENTION
 
     if extention == "csv":
-        return f"s3://{bucket_name}/{subdir}/{dataset_name}.csv"
+        return f"s3://{bucket_name}/{prefix}/{dataset_name}.csv"
     elif extention == "parquet":
-        return f"s3://{bucket_name}/{subdir}/{dataset_name}/"
+        return f"s3://{bucket_name}/{prefix}/{dataset_name}/"
     else:
         raise ValueError(f"Invalid data_extention: {extention}")
 
+
+def get_models_uri():
+    # Find bucket name
+    bucket_name = Env.get('BUCKET_NAME')
+
+    # Find prefix
+    prefix = Env.get("MODELS_PATH")
+
+    return f"s3://{bucket_name}/{prefix}"
+
+
+def get_inputs(job_name: str) -> List[ProcessingInput]:
+    """
+    ProcessingInputs (list): An array of inputs configuring the data to download into the 
+    processing container.
+        - The inputs for a processing job. The processing input must specify exactly one of 
+          either S3Input or DatasetDefinition types.
+    
+    ProcessingInput(
+        # The source for the input. If a local path is provided, it will automatically be uploaded to S3 under
+        source: str | PipelineVariable | None = None,
+
+        # The destination of the input, which will be saved in the container
+        destination: str | PipelineVariable | None = None,
+
+        # The name for the processing job input.
+        input_name: str | PipelineVariable | None = None,
+
+        # Whether you use an S3Prefix or a ManifestFile for the data type. 
+        #   - If you choose S3Prefix, S3Uri identifies a key name prefix. 
+        #       - Amazon SageMaker uses all objects with the specified key name prefix for 
+        #         the processing job.
+        #   - If you choose ManifestFile, S3Uri identifies an object that is a manifest file 
+        #     containing a list of object keys that you want Amazon SageMaker to use for the 
+        #     processing job.
+        s3_data_type: "ManifestFile" | "S3Prefix",
+
+        # Whether to use File or Pipe input mode. 
+        #   - In File mode, Amazon SageMaker copies the data from the input source onto the 
+        #     local ML storage volume before starting your processing container. This is the 
+        #     most commonly used input mode. 
+        #   - In Pipe mode, Amazon SageMaker streams input data from the source directly to 
+        #     your processing container into named pipes without using the ML storage volume.
+        s3_input_mode: "Pipe" | "File",
+
+        # Whether to distribute the data from Amazon S3 to all processing instances with 
+        # FullyReplicated, or whether the data from Amazon S3 is shared by Amazon S3 key, 
+        # downloading one shard of data to each processing instance.
+        s3_data_distribution_type: "FullyReplicated" | "ShardedByS3Key",
+
+        # Whether to GZIP-decompress the data in Amazon S3 as it is streamed into the processing 
+        # container. Gzip can only be used when Pipe mode is specified as the S3InputMode. In 
+        # Pipe mode, Amazon SageMaker streams input data from the source directly to your 
+        # container without using the EBS volume.
+        s3_compression_type: "None" | "Gzip"
+
+        # When True, input operations such as data download are managed natively by the 
+        # processing job application. 
+        # When False (default), input operations are managed by Amazon SageMaker.
+        app_managed: True | False,
+    """
+    if Env.get("DATA_STORAGE_ENV") != "S3":
+        raise ValueError(
+            f"SageMaker jobs can only be ran within an S3 storage environment.\n"
+            f"Current starage env: {Env.get('DATA_STORAGE_ENV')}"
+        )
+
+    # Find last Transformer step
+    last_transformer: str = Params.TRANSFORMERS_STEPS[-1]
+    
+    if 'data-processing' in job_name:
+        return [
+            # X_train
+            ProcessingInput(
+                source=get_data_uri('X_train_raw'),
+                destination=Env.get("SM_PROCESSING_INPUT_DEST"),
+                input_name="XTrainRaw",
+                s3_data_type=Env.get("SM_S3_DATA_TYPE"),
+                s3_input_mode=Env.get("SM_INPUT_MODE"),
+                s3_data_distribution_type=Env.get("SM_DATA_DISTRIBUTION_TYPE"),
+                s3_compression_type=Env.get("SM_S3_COMPRESSION_TYPE"),
+                app_managed=Env.get("SM_APP_MANAGED")
+            ),
+            # X_test
+            ProcessingInput(
+                source=get_data_uri('X_test_raw'),
+                destination=Env.get("SM_PROCESSING_INPUT_DEST"),
+                input_name="XTestRaw",
+                s3_data_type=Env.get("SM_S3_DATA_TYPE"),
+                s3_input_mode=Env.get("SM_INPUT_MODE"),
+                s3_data_distribution_type=Env.get("SM_DATA_DISTRIBUTION_TYPE"),
+                s3_compression_type=Env.get("SM_S3_COMPRESSION_TYPE"),
+                app_managed=Env.get("SM_APP_MANAGED")
+            ),
+            # y_train
+            ProcessingInput(
+                source=get_data_uri('y_train_raw'),
+                destination=Env.get("SM_PROCESSING_INPUT_DEST"),
+                input_name="YTrainRaw",
+                s3_data_type=Env.get("SM_S3_DATA_TYPE"),
+                s3_input_mode=Env.get("SM_INPUT_MODE"),
+                s3_data_distribution_type=Env.get("SM_DATA_DISTRIBUTION_TYPE"),
+                s3_compression_type=Env.get("SM_S3_COMPRESSION_TYPE"),
+                app_managed=Env.get("SM_APP_MANAGED")
+            ),
+            # y_test
+            ProcessingInput(
+                source=get_data_uri('y_test_raw'),
+                destination=Env.get("SM_PROCESSING_INPUT_DEST"),
+                input_name="YTestRaw",
+                s3_data_type=Env.get("SM_S3_DATA_TYPE"),
+                s3_input_mode=Env.get("SM_INPUT_MODE"),
+                s3_data_distribution_type=Env.get("SM_DATA_DISTRIBUTION_TYPE"),
+                s3_compression_type=Env.get("SM_S3_COMPRESSION_TYPE"),
+                app_managed=Env.get("SM_APP_MANAGED")
+            )
+        ]
+    elif 'tuning' in job_name:
+        return [
+            # X_train
+            ProcessingInput(
+                source=get_data_uri(f'X_train_{last_transformer}'),
+                destination=Env.get("SM_TUNING_INPUT_DEST"),
+                input_name="XTrainTrans",
+                s3_data_type=Env.get("SM_S3_DATA_TYPE"),
+                s3_input_mode=Env.get("SM_INPUT_MODE"),
+                s3_data_distribution_type=Env.get("SM_DATA_DISTRIBUTION_TYPE"),
+                s3_compression_type=Env.get("SM_S3_COMPRESSION_TYPE"),
+                app_managed=Env.get("SM_APP_MANAGED")
+            ),
+            # y_train
+            ProcessingInput(
+                source=get_data_uri(f'y_train_{last_transformer}'),
+                destination=Env.get("SM_TUNING_INPUT_DEST"),
+                input_name="YTrainTrans",
+                s3_data_type=Env.get("SM_S3_DATA_TYPE"),
+                s3_input_mode=Env.get("SM_INPUT_MODE"),
+                s3_data_distribution_type=Env.get("SM_DATA_DISTRIBUTION_TYPE"),
+                s3_compression_type=Env.get("SM_S3_COMPRESSION_TYPE"),
+                app_managed=Env.get("SM_APP_MANAGED")
+            )
+        ]
+    elif 'training' in job_name:
+        return []
+    elif 'evaluating' in job_name:
+        return []
+    else:
+        raise NotImplementedError(f"Processing inputs for {job_name} have not been implemented yet.")
+    
 
 def get_processing_inputs(job_name: str) -> List[str]:
     """
@@ -471,6 +748,106 @@ def get_processing_inputs(job_name: str) -> List[str]:
                 }
             }
         ]
+    else:
+        raise NotImplementedError(f"Processing inputs for {job_name} have not been implemented yet.")
+
+
+def get_outputs(job_name: str) -> List[ProcessingOutput]:
+    """
+    ProcessingOutputConfig: Output configuration for the processing job.
+        - An array of outputs configuring the data to upload from the processing container.
+
+    Describes the results of a processing job. The processing output must specify exactly one of
+    either S3Output or FeatureStoreOutput types.
+
+    ProcessingOutput(
+        # The source for the output.
+        source: str | PipelineVariable | None = None,
+
+        # The destination of the output, where the file will be exported to (in S3)
+        destination: str | PipelineVariable | None = None,
+
+        # The name for the processing job output.
+        output_name: str | PipelineVariable | None = None,
+
+        # Whether to upload the results of the processing job continuously or after the job 
+        # completes.
+        s3_upload_mode: "Continuous" | "EndOfJob",
+
+        # When True, output operations such as data upload are managed natively by the processing 
+        # job application. When False (default), output operations are managed by Amazon SageMaker.
+        app_managed: True | False,
+
+        # The name of the Amazon SageMaker FeatureGroup to use as the destination for 
+        # processing job output. Note that your processing script is responsible for putting 
+        # records into your Feature Store.
+        feature_store_output: FeatureStoreOutput | None = None
+    )
+    """
+    if Env.get("DATA_STORAGE_ENV") != "S3":
+        raise ValueError(
+            f"SageMaker jobs can only be ran within an S3 storage environment.\n"
+            f"Current starage env: {Env.get('DATA_STORAGE_ENV')}"
+        )
+
+    # Find last Transformer step
+    last_transformer: str = Params.TRANSFORMERS_STEPS[-1]
+    
+    if 'data-processing' in job_name:
+        return [
+            # X_train
+            ProcessingOutput(
+                source=Env.get("SM_PROCESSING_OUTPUT_SOURCE"),
+                destination=get_data_uri(f"X_train_{last_transformer}"),
+                output_name="XTrainTrans",
+                s3_upload_mode=Env.get("SM_S3_UPLOAD_MODE"),
+                app_managed=Env.get("SM_APP_MANAGED"),
+                feature_store_output=None
+            ),
+            # X_test
+            ProcessingOutput(
+                source=Env.get("SM_PROCESSING_OUTPUT_SOURCE"),
+                destination=get_data_uri(f"X_test_{last_transformer}"),
+                output_name="XTestTrans",
+                s3_upload_mode=Env.get("SM_S3_UPLOAD_MODE"),
+                app_managed=Env.get("SM_APP_MANAGED"),
+                feature_store_output=None
+            ),
+            # y_train
+            ProcessingOutput(
+                source=Env.get("SM_PROCESSING_OUTPUT_SOURCE"),
+                destination=get_data_uri(f"y_train_{last_transformer}"),
+                output_name="YTrainTrans",
+                s3_upload_mode=Env.get("SM_S3_UPLOAD_MODE"),
+                app_managed=Env.get("SM_APP_MANAGED"),
+                feature_store_output=None
+            ),
+            # y_test
+            ProcessingOutput(
+                source=Env.get("SM_PROCESSING_OUTPUT_SOURCE"),
+                destination=get_data_uri(f"y_test_{last_transformer}"),
+                output_name="YTestTrans",
+                s3_upload_mode=Env.get("SM_S3_UPLOAD_MODE"),
+                app_managed=Env.get("SM_APP_MANAGED"),
+                feature_store_output=None
+            )
+        ]
+    elif 'tuning' in job_name:
+        return [
+            # models
+            ProcessingOutput(
+                source=Env.get("SM_TUNING_OUTPUT_SOURCE"),
+                destination=get_models_uri(),
+                output_name="Models",
+                s3_upload_mode=Env.get("SM_S3_UPLOAD_MODE"),
+                app_managed=Env.get("SM_APP_MANAGED"),
+                feature_store_output=None
+            )
+        ]
+    elif 'training' in job_name:
+        return []
+    elif 'evaluating' in job_name:
+        return []
     else:
         raise NotImplementedError(f"Processing inputs for {job_name} have not been implemented yet.")
     

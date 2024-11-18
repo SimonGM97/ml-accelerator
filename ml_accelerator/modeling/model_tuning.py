@@ -486,9 +486,7 @@ class ModelTuner:
     def tune_models(
         self,
         X_train: pd.DataFrame,
-        X_test: pd.DataFrame,
         y_train: pd.DataFrame,
-        y_test: pd.DataFrame,
         selected_features: List[str],
         use_warm_start: bool = True,
         max_evals: int = Params.MAX_EVALS,

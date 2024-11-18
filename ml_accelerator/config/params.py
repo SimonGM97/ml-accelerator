@@ -100,10 +100,10 @@ class Params:
     """
     # ML DATASETS PARAMETERS
     TEST_SIZE: float
-
-    # CLASSIFICATION PARAMETERS
     BALANCE_TRAIN: bool
     BALANCE_METHOD: str
+
+    # CLASSIFICATION PARAMETERS
     CLASS_WEIGHT: dict
     CUTOFF: float
 

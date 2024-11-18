@@ -34,19 +34,11 @@ def data_pipeline(
     # Instanciate DataHelper
     DH: DataHelper = DataHelper()
 
-    # Load input dataset
-    df_raw: pd.DataFrame = DH.load_dataset(
-        df_name='df_raw',
-        filters=None
-    )
-
-    # Divide datasets
-    X, _, y, _ = DH.divide_datasets(
-        df=df_raw,
-        test_size=0,
-        balance_train=False,
-        balance_method=None,
-        debug=True
+    # Load raw datasets
+    X_train, X_test, y_train, y_test = DH.load_datasets(
+        df_names=['X_train_raw', 'X_test_raw', 'y_train_raw', 'y_test_raw'],
+        filters=None,
+        mock=False
     )
     
     # Extract transformers
@@ -58,27 +50,43 @@ def data_pipeline(
         estimator=None
     )
 
-    # Run ML Pipeline
+    # Transform train datasets
     if fit_transformers:
-        X, y = MLP.fit_transform(
-            X=X, y=y,
+        # Fit transformers & transform train datasets
+        X_train, y_train = MLP.fit_transform(
+            X=X_train, y=y_train,
             persist_datasets=persist_datasets,
             write_mode=write_mode,
+            train_datasets=True,
             debug=True
         )
     else:
-        X, y = MLP.transform(
-            X=X, y=y,
+        # Load fitted transformers
+        MLP.load()
+
+        # Transform train datasets
+        X_train, y_train = MLP.transform(
+            X=X_train, y=y_train,
             persist_datasets=persist_datasets,
             write_mode=write_mode,
+            train_datasets=True,
             debug=False
         )
+
+    # Transform test datasets
+    X_test, y_test = MLP.transform(
+        X=X_test, y=y_test,
+        persist_datasets=persist_datasets,
+        write_mode=write_mode,
+        train_datasets=False,
+        debug=False
+    )
 
     # Save transformers
     if save_transformers:
         MLP.save()
 
-    return X, y
+    return X_train, X_test, y_train, y_test
 
 
 """
