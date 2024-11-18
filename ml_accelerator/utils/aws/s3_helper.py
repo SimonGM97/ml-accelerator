@@ -471,14 +471,15 @@ def copy_bucket(
 # .ml_accel_venv/bin/python ml_accelerator/utils/aws/s3_helper.py
 if __name__ == "__main__":
     # Copy bucket into new dummy-bucket-ml-accelerator
-    copy_bucket(
-        source_bucket=Env.get("BUCKET_NAME"), 
-        destination_bucket='dummy-bucket-ml-accelerator', 
-        subdir='',
-        delete_destination=True,
-        debug=True
-    )
+    # copy_bucket(
+    #     source_bucket=Env.get("BUCKET_NAME"), 
+    #     destination_bucket='dummy-bucket-ml-accelerator', 
+    #     subdir='',
+    #     delete_destination=True,
+    #     debug=True
+    # )
 
     # Delete dummy-bucket-ml-accelerator
-    delete_bucket(bucket_name='dummy-bucket-ml-accelerator')
+    # delete_bucket(bucket_name='dummy-bucket-ml-accelerator')
+    delete_bucket(bucket_name=Env.get("BUCKET_NAME"))
 

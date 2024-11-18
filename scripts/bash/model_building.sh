@@ -152,6 +152,12 @@ elif [ "${MODEL_BUILDING_ENV}" == "docker-compose" ]; then
 elif [ "${MODEL_BUILDING_ENV}" == "sagemaker" ]; then
     echo "Starting model-building workflow in SageMaker environment."
 
+    # Run model_building.py script
+    .ml_accel_venv/bin/python pipelines/model_building.py
+
+elif [ "${MODEL_BUILDING_ENV}" == "deprecated" ]; then
+    echo "Starting model-building workflow in SageMaker environment."
+
     # Update step functions json file
     .ml_accel_venv/bin/python ml_accelerator/utils/aws/step_functions_helper.py
 

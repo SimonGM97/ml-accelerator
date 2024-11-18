@@ -52,6 +52,7 @@ def data_pipeline(
 
     # Transform train datasets
     if fit_transformers:
+        # Fit transformers & transform train datasets
         X_train, y_train = MLP.fit_transform(
             X=X_train, y=y_train,
             persist_datasets=persist_datasets,
@@ -60,6 +61,10 @@ def data_pipeline(
             debug=True
         )
     else:
+        # Load fitted transformers
+        MLP.load()
+
+        # Transform train datasets
         X_train, y_train = MLP.transform(
             X=X_train, y=y_train,
             persist_datasets=persist_datasets,

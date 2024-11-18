@@ -1,10 +1,8 @@
 from ml_accelerator.config.env import Env
 from ml_accelerator.config.params import Params
-from ml_accelerator.utils.aws.sagemaker.sagemaker_jobs_helper import get_job_parameters
+from ml_accelerator.utils.aws.sagemaker.jobs_helper import get_job_parameters
 from ml_accelerator.utils.filesystem.filesystem_helper import save_to_filesystem
-from ml_accelerator.utils.aws.s3_helper import save_to_s3
 from ml_accelerator.utils.logging.logger_helper import get_logger
-import argparse
 import json
 import os
 

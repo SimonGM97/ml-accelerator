@@ -157,7 +157,10 @@ class Env:
             if param is None:
                 raise ValueError(f'{var_name} could not be extracted from environment (nor from .tfvars).') 
         
-        return param
+        try:
+            return eval(str(param))
+        except:
+            return str(param)
 
     @staticmethod
     def clean_env():

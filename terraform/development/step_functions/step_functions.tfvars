@@ -8,6 +8,8 @@ MODEL_BUILDING_STEP_FUNCTIONS_FILE_NAME = "model_building_workflow_dev.json"
 STEP_FUNCTIONS_EXECUTION_ROLE_NAME      = "StepFunctionsExecutionRole-MLAccelerator-Dev"
 STEP_FUNCTIONS_EXECUTION_ROLE_ARN       = "arn:aws:iam::097866913509:role/StepFunctionsExecutionRole-MLAccelerator-Dev"
 
+SKLEARN_PROCESSOR_FRAMEWORK_VERSION     = "0.23-1"
+
 PROCESSING_INSTANCE_TYPE                = "ml.t3.large"
 PROCESSING_INSTANCE_COUNT               = 1
 PROCESSING_VOLUME_SIZE                  = 30

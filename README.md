@@ -5,11 +5,13 @@
 &nbsp;
 &nbsp;
 # ml-accelerator
-ml_accelerator is a propietary library designed to accelerate the development of various Machine Learning proyects; including:
+ml_accelerator is a library designed to accelerate the development of various Machine Learning proyects; including:
 - `Binary classification` projects
 - `Multi class classification` projects
 - `Regression` projects
 - `Forecasting` projects
+
+*Note: the current version only allows for binary classification tasks*
 
 The repository is equipped with modules that will automate:
 - `Data cleaning` tasks
@@ -23,7 +25,7 @@ The repository is equipped with modules that will automate:
 In addition to this, the repository is designed to:
 - Manage the ent-to-end `ML lifecycle`, from model development to model deployment
 - Deploy a streamlit `web-app` to visualize model performances
-- Build, deploy and mantain the `infrastructure` required to run ML workflows, leveraging various `AWS` services
+- Build, deploy and mantain the `infrastructure` required to run ML workflows, leveraging `terraform` scripts.
 
 &nbsp;
 # Table of Contents
@@ -147,9 +149,9 @@ Run `./main.sh` bash script (entrypoint) in order to:
 4. Build the infrastructure required to run the workflows, including:
   - `S3 Bucket` to store datasets & models.
   - `Lambda function` to run ETL pipeline.
-  - `Step Function` to orchestrate Model Builing Jobs. `SageMaker Processing Jobs`.
-5. Run `ETL workflow`, through a `lambda` function. 
-6. Run a `Model Building workflow`, through a `Step Function` that orchestrate the following `SageMaker Processing jobs`:
+  - `SageMaker Pipeline` to orchestrate Model Builing Processing Jobs.
+5. Run a `ETL workflow`, through a `lambda` function. 
+6. Run a `SageMaker Pipeline`, that orchestrates the following `SageMaker Processing jobs`:
   - `data-processing`: run a data processing pipeline that leverages the following classes (ran sequentially):
     - *DataCleaner*: applies data cleaning methods.
     - *FeatureEnricher*: applies feature engineering methods to create new features.
@@ -167,6 +169,12 @@ Run `./main.sh` bash script (entrypoint) in order to:
 
 <div align="center">
 <img src="./docs/diagrams/Infrastructure.png" width="85%">
+</div>
+
+## To-Be Infrastructure
+
+<div align="center">
+<img src="./docs/diagrams/To-Be Infrastructure.png" width="85%">
 </div>
 
 ## Class Structure
